@@ -1,9 +1,12 @@
-import streamlit as st
+import streamlit as st 
+from st_pages import show_pages_from_config
 
-st.set_page_config(
+cst.set_page_config(
     page_title="TextViz Studio",
     layout="wide"
 )
+show_pages_from_config()
+
 
 st.sidebar.markdown("[ Documentation](https://alcocer-jj.github.io)")
 

@@ -1,0 +1,16 @@
+streamlit==1.24.1
+pandas
+numpy  # Supports Python 3.11
+openai
+bertopic
+sentence-transformers
+umap-learn
+scikit-learn==1.2.0  # Supports Python 3.11
+transformers
+PyPDF2
+wordcloud
+matplotlib
+streamlit-extras
+extra-streamlit-components
+streamlit-elements
+st-pages==0.4.3
