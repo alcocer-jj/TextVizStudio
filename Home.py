@@ -1,6 +1,6 @@
 import streamlit as st 
 
-cst.set_page_config(
+st.set_page_config(
     page_title="TextViz Studio",
     layout="wide"
 )
