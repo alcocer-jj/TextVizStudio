@@ -1,10 +1,9 @@
-streamlit==1.24.1
+streamlit
 pandas
 numpy  # Supports Python 3.11
 openai
 bertopic
 sentence-transformers
-setuptools
 umap-learn
 scikit-learn==1.2.0  # Supports Python 3.11
 transformers
