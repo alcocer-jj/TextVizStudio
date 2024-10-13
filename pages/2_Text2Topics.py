@@ -57,7 +57,7 @@ st.markdown("""
 **Text2Topic Analysis** is an interactive tool for extracting and visualizing topics from text data.
 Upload a CSV file containing your text data for analysis. Select topic generation
 preferences define a specific number of topics or let the model determine the optimal
-number. Choose advanced options** like outlier reduction and the use of OpenAI's 
+number. Choose advanced options like outlier reduction and the use of OpenAI's 
 GPT-4o for improved topic labels. Visualize the results through a topic summary, 
 intertopic distance map, and document-topic probabilities. Results can be downloaded 
 for further analyses of topics. Configure the parameters to customize your topic 
