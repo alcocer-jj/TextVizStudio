@@ -2,7 +2,7 @@
 
 ## Overview
 
-TextViz Studio is an intuitive web-based platform designed to simplify text analysis for social scientists and researchers. The platform provides a coding-free environment for users to explore text data and extract meaningful insights with ease. By bridging the gap between data science and social science, the goal of TextViz Studio is to democratize access to advanced text analysis tools, empowering users to focus on content rather than code.
+TextViz Studio is an intuitive web-based platform designed to simplify text analysis for social scientists and researchers. This Python-based application performs all analyses 'under-the-hood' using existing libraries so that users experience a coding-free environment to explore text data and extract meaningful insights with ease. By bridging the gap between data science and social science, the goal of TextViz Studio is to democratize access to advanced text analysis tools, empowering users to focus on content rather than code.
 
 
 ## Application Tools
