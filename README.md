@@ -30,3 +30,11 @@ This advanced tool uses transformer-based models to perform topic modeling, reve
 - Multiple Representations: Compare different topic representations for clarity.
 - Text Summarization: Summarize topics and generate concise reports.
 - Exportable Results: Download topics, summaries, and visualizations for reporting.
+
+## Future Updates
+
+This web-based Python application will continue to be updated and host additional tools for text analysis and eventually beyond this area. The following are big application tools that will be added in the following months:
+
+  - **Text2Sentiment:** NLP tool to conduct both sentiment and emotion analyses on text from PDFs and CSVs, and display them in tables and visuals breaking them down.
+  - **Data2Viz:** Exploratory data tool that will allow users to display relationships with customizable plots (e.g., line, bar, kernal, box, etc.).
+  - **Stats2Viz:** Statistical data tool that will allow users to conduct regressions, inference, clustering/classification, time-series, and causal inference while producing output tables and plots.
