@@ -3,7 +3,7 @@ pandas==2.2.2
 numpy==1.26.4
 PyPDF2==3.0.1
 wordcloud==1.9.3 
-matplotlib==3.9.1
+matplotlib
 openai==1.51.2
 bertopic==0.16.3
 sentence-transformers==3.1.1
