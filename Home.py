@@ -6,7 +6,7 @@ st.set_page_config(
 )
 
 
-st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://alcocer-jj.github.io)")
+st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
 #st.title("Welcome to TextViz Studio")
 st.markdown("<h1 style='text-align: center'>Welcome to TextViz Studio</h1>", unsafe_allow_html=True)
