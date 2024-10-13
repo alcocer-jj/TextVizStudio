@@ -32,11 +32,10 @@ feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to better 
 # Submit feedback
 if st.sidebar.button("Submit"):
     if feedback:
-        sheet.append_row([feedback])
+        sheet.append_row(["Text2Keywords: ", feedback])
         st.sidebar.success("Thank you for your feedback!")
     else:
         st.sidebar.error("Feedback cannot be empty!")
-
 
 st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
