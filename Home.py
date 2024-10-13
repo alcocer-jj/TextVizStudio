@@ -108,16 +108,6 @@ expander.write('''
         - Integrate option for users to conduct dynamic topic modeling (across time) and zero-shot topic modeling (when you have existing topics in mind).
 ''')    
 
-expander = st.expander("**Data Visualization**")
-expander.write('''
-    Introduce more sophisticated visualization tools for presenting your findings.
-''')   
-
-expander = st.expander("**Multilingual Support**")
-expander.write('''
-    Expand language options to cater to a more diverse research community.
-''')   
-
 st.text("")
 st.text("")
 
