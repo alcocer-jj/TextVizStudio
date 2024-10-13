@@ -27,7 +27,7 @@ sheet = client.open("TextViz Studio Feedback").sheet1
 
 # Feedback form in the sidebar
 st.sidebar.markdown("### **Feedback**")
-feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to better the application tool?", placeholder="Leave your feedback here")
+feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to better the application tool?", placeholder="Leave feedback or error code here")
 
 # Submit feedback
 if st.sidebar.button("Submit"):
