@@ -93,9 +93,9 @@ st.text("")
 
 st.markdown("### **Future Plans**")
         
-expander = st.expander("**Sentiment and Emotion**")
+expander = st.expander("**Application Tools**")
 expander.write('''
-    Integrate intuitive tools to assess user sentiment and emotional tones within texts.
+    - Integrate intuitive tools to assess user sentiment and emotional tones within texts.
 ''')    
 
 expander = st.expander("**Networks**")
