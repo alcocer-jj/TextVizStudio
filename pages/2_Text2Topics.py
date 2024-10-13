@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio/tree/main)")
+st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
 
 # Sidebar: Title and description (sticky)
