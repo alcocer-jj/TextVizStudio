@@ -11,21 +11,41 @@ from sklearn.feature_extraction.text import CountVectorizer
 import ast  # To safely evaluate string input to list format
 import hashlib  # To create unique identifiers
 from transformers import pipeline
-
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(
     page_title="Text2Topics",
     layout="wide"
 )
 
+# Authenticate with Google Sheets API using Streamlit Secrets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+client = gspread.authorize(creds)
+
+# Open the Google Sheet
+sheet = client.open("TextViz Studio Feedback").sheet1
+
+
+# Feedback form in the sidebar
+st.sidebar.markdown("### **Feedback**")
+feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to better the application tool?", placeholder="Leave feedback or error code here")
+
+# Submit feedback
+if st.sidebar.button("Submit"):
+    if feedback:
+        sheet.append_row(["Text2Topics: ", feedback])
+        st.sidebar.success("Thank you for your feedback!")
+    else:
+        st.sidebar.error("Feedback cannot be empty!")
+
+st.sidebar.markdown("")
+
 st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
-
 # Sidebar: Title and description (sticky)
-#st.sidebar.image("https://your-image-url-here.com", width=150)  # Optional logo
-#st.title("Text2Topics: Large Language Topic Modeling")
 st.markdown("<h1 style='text-align: center'>Text2Topics: Large Language Topic Modeling</h1>", unsafe_allow_html=True)
-
 
 st.markdown("")
 st.markdown("")
