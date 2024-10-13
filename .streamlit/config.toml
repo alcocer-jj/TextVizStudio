@@ -1,5 +1,2 @@
-[runtime]
-python_version = "3.11.5"
-
 [theme]
 base = "light"
