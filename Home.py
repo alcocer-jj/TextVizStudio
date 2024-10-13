@@ -103,7 +103,9 @@ expander.write('''
 expander = st.expander("**Current Applications**")
 expander.write('''
     - Text2Topics: 
-        - s
+        - Allow users to select their embedding model of choice or stick to the default one.
+        - Integrate LLAMA 3.2 as baseline LLM representation model for topic labeling instead of Transformer models.
+        - Integrate option for users to conduct dynamic topic modeling (across time) and zero-shot topic modeling (when you have existing topics in mind).
 ''')    
 
 expander = st.expander("**Data Visualization**")
