@@ -37,6 +37,9 @@ if st.sidebar.button("Submit"):
     else:
         st.sidebar.error("Feedback cannot be empty!")
 
+st.sidebar.markdown("")
+st.sidebar.markdown("")
+
 st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
 # Sidebar: Title and description
