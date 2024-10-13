@@ -95,12 +95,15 @@ st.markdown("### **Future Plans**")
         
 expander = st.expander("**Application Tools**")
 expander.write('''
-    - Integrate intuitive tools to assess user sentiment and emotional tones within texts.
+    - **Text2Sentiment:** NLP tool to conduct both sentiment and emotion analyses on text from PDFs and CSVs, and display them in tables and visuals breaking them down.
+    - **Data2Viz:** Exploratory data tool that will allow users to display relationships with customizable plots (e.g., line, bar, kernal, box, etc.).
+    - **Stats2Viz:** Statistical data tool that will allow users to conduct regressions, inference, clustering/classification, time-series, and causal inference while producing output tables and plots.
 ''')    
 
-expander = st.expander("**Networks**")
+expander = st.expander("**Current Applications**")
 expander.write('''
-    Develop features to visualize and analyze relationships and networks in your data.
+    - Text2Topics: 
+        - s
 ''')    
 
 expander = st.expander("**Data Visualization**")
