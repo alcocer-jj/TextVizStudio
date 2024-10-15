@@ -6,6 +6,7 @@ from transformers import pipeline
 import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import matplotlib.pyplot as plt
 
 st.set_page_config(
     page_title="Text2Sentiment",
@@ -71,12 +72,12 @@ if uploaded_file:
 if data is not None:
     st.dataframe(data)
 
-# Sentiment Analysis Method Selection
-st.subheader("Set Model Parameters", divider=True)
+# Initialize Sentiment Analysis Tools
 vader = SentimentIntensityAnalyzer()
 zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 # Sentiment Method Selection
+st.subheader("Set Model Parameters", divider=True)
 sentiment_method = st.selectbox(
     "Choose Sentiment Analysis Method",
     ["VADER", "Zero-shot Classifier", "NRCLex"]
@@ -86,18 +87,12 @@ enable_emotion = st.checkbox("Enable Emotion Analysis")
 # Sentiment Analysis Functions
 def analyze_vader(text):
     scores = vader.polarity_scores(text)
-    compound = scores["compound"]
-    label = (
-        "positive" if compound >= 0.05
-        else "negative" if compound <= -0.05
-        else "neutral"
-    )
-    return label, compound
+    return scores['compound'], scores['neg'], scores['neu'], scores['pos']
 
 def analyze_zero_shot(text):
     labels = ["positive", "negative", "neutral"]
     result = zero_shot_classifier(text, labels)
-    return result["labels"][0], result["scores"][0]
+    return result["scores"]
 
 def analyze_nrc_sentiment(text):
     emotions = NRCLex(text)
@@ -105,35 +100,49 @@ def analyze_nrc_sentiment(text):
     neg_score = emotions.affect_frequencies.get("negative", 0.0)
     return pos_score, neg_score
 
-# Emotion Analysis Function
 def analyze_emotion(text):
     emotions = NRCLex(text)
-    emotion_scores = emotions.raw_emotion_scores
-    return pd.DataFrame(emotion_scores.items(), columns=["Emotion", "Score"])
+    return emotions.raw_emotion_scores
 
-# Perform Sentiment Analysis
+# Perform Sentiment and Emotion Analysis on All Rows
 if st.button("Analyze Sentiment"):
     if data is not None:
-        text_to_analyze = data["text"].iloc[0]
         if sentiment_method == "VADER":
-            label, score = analyze_vader(text_to_analyze)
-            st.write(f"Sentiment: **{label}** (Score: {score})")
+            data[['compound', 'neg', 'neu', 'pos']] = data['text'].apply(lambda x: pd.Series(analyze_vader(x)))
         elif sentiment_method == "Zero-shot Classifier":
-            label, confidence = analyze_zero_shot(text_to_analyze)
-            st.write(f"Sentiment: **{label}** (Confidence: {confidence:.2f})")
+            data[['positive', 'negative', 'neutral']] = data['text'].apply(lambda x: pd.Series(analyze_zero_shot(x)))
         elif sentiment_method == "NRCLex":
-            pos, neg = analyze_nrc_sentiment(text_to_analyze)
-            st.write(f"Positive Score: {pos:.2f}, Negative Score: {neg:.2f}")
+            data[['positive', 'negative']] = data['text'].apply(lambda x: pd.Series(analyze_nrc_sentiment(x)))
+
+        st.write("Sentiment Analysis Results:")
+        st.dataframe(data)
+
+        # Plot Sentiment Proportions
+        sentiment_counts = data[['positive', 'negative', 'neutral']].count()
+        fig, ax = plt.subplots()
+        sentiment_counts.plot(kind='bar', ax=ax)
+        ax.set_title('Sentiment Proportion')
+        ax.set_ylabel('Count')
+        st.pyplot(fig)
+
     else:
         st.warning("Please upload a CSV file for analysis.")
 
 # Perform Emotion Analysis (if enabled)
 if enable_emotion:
     if data is not None:
-        text_to_analyze = data["text"].iloc[0]
-        emotion_df = analyze_emotion(text_to_analyze)
-        st.write("Emotion Scores:")
-        st.dataframe(emotion_df)
-        st.bar_chart(emotion_df.set_index("Emotion"))
+        emotion_data = data['text'].apply(analyze_emotion).apply(pd.Series)
+        data = pd.concat([data, emotion_data], axis=1)
+
+        st.write("Emotion Analysis Results:")
+        st.dataframe(data)
+
+        # Plot Emotion Proportions
+        emotion_counts = emotion_data.sum().sort_values(ascending=False)
+        fig, ax = plt.subplots()
+        emotion_counts.plot(kind='bar', ax=ax)
+        ax.set_title('Emotion Proportion')
+        ax.set_ylabel('Count')
+        st.pyplot(fig)
     else:
         st.warning("Please upload a CSV file for emotion analysis.")
