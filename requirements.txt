@@ -13,3 +13,4 @@ transformers==4.45.2
 gspread
 oauth2client
 vaderSentiment
+nrclex
