@@ -93,9 +93,6 @@ st.subheader("Set Model Parameters", divider=True)
 vader = SentimentIntensityAnalyzer()
 zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
-st.write("Enter text below or use the uploaded file for sentiment and emotion analysis:")
-user_input = st.text_area("Your Text", "")
-
 # Choose sentiment analysis method
 st.title("Options")
 sentiment_method = st.selectbox(
