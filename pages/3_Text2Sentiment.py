@@ -6,7 +6,6 @@ from transformers import pipeline
 import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from PyPDF2 import PdfReader
 
 st.set_page_config(
     page_title="Text2Sentiment",
@@ -24,7 +23,7 @@ sheet = client.open("TextViz Studio Feedback").sheet1
 # Sidebar Feedback Form
 st.sidebar.markdown("### **Feedback**")
 feedback = st.sidebar.text_area(
-    "Experiencing bugs/issues? Have ideas to improve the tool?", 
+    "Experiencing bugs/issues? Have ideas to improve the tool?",
     placeholder="Leave feedback or error code here"
 )
 
@@ -49,36 +48,25 @@ def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
 
 # File Upload Section
-st.subheader("Upload Data", divider=True)
-uploaded_file = st.file_uploader("Upload a PDF or CSV file", type=["csv", "pdf"])
-st.warning("**Instructions:** For CSV, ensure the text data is in a column named 'text'. PDFs will be converted to text.")
+st.subheader("Upload CSV Data", divider=True)
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+st.warning("**Instructions:** Ensure the text data is in a column named 'text'.")
 
 # Function to Extract Text from CSV
 def extract_text_from_csv(file):
     df = pd.read_csv(file)
     if 'text' in df.columns:
         df = df.dropna(subset=['text'])
-        df['doc_id'] = df['text'].apply(create_unique_id)
-        return df[['doc_id', 'text']].reset_index(drop=True), df
+        df['doc_id'] = df['text'].apply(create_unique_id)  # Unique ID for each text
+        return df[['doc_id', 'text']].reset_index(drop=True)
     else:
         st.error("The CSV file must contain a 'text' column.")
-        return None, None
-
-# Function to Extract Text from PDF
-def extract_text_from_pdf(file):
-    reader = PdfReader(file)
-    text_data = [page.extract_text() for page in reader.pages]
-    full_text = "\n".join(text_data)
-    doc_id = create_unique_id(full_text)
-    return pd.DataFrame([{"doc_id": doc_id, "text": full_text}])
+        return None
 
 # Load Data from Uploaded File
 data = None
 if uploaded_file:
-    if uploaded_file.name.endswith(".csv"):
-        data, _ = extract_text_from_csv(uploaded_file)
-    elif uploaded_file.name.endswith(".pdf"):
-        data = extract_text_from_pdf(uploaded_file)
+    data = extract_text_from_csv(uploaded_file)
 
 if data is not None:
     st.dataframe(data)
@@ -90,7 +78,7 @@ zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart
 
 # Sentiment Method Selection
 sentiment_method = st.selectbox(
-    "Choose Sentiment Analysis Method", 
+    "Choose Sentiment Analysis Method",
     ["VADER", "Zero-shot Classifier", "NRCLex"]
 )
 enable_emotion = st.checkbox("Enable Emotion Analysis")
@@ -137,7 +125,7 @@ if st.button("Analyze Sentiment"):
             pos, neg = analyze_nrc_sentiment(text_to_analyze)
             st.write(f"Positive Score: {pos:.2f}, Negative Score: {neg:.2f}")
     else:
-        st.warning("Please upload a file for analysis.")
+        st.warning("Please upload a CSV file for analysis.")
 
 # Perform Emotion Analysis (if enabled)
 if enable_emotion:
@@ -148,4 +136,4 @@ if enable_emotion:
         st.dataframe(emotion_df)
         st.bar_chart(emotion_df.set_index("Emotion"))
     else:
-        st.warning("Please upload a file for emotion analysis.")
+        st.warning("Please upload a CSV file for emotion analysis.")
