@@ -6,7 +6,7 @@ from transformers import pipeline
 import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import matplotlib.pyplot as plt
+import plotly.express as px  # New: Import Plotly Express
 
 st.set_page_config(
     page_title="Text2Sentiment",
@@ -131,13 +131,12 @@ if st.button("Analyze Sentiment"):
         st.write("Sentiment Analysis Results:")
         st.dataframe(data)
 
-        # Plot Sentiment Proportions
-        sentiment_counts = data['sentiment'].value_counts()
-        fig, ax = plt.subplots()
-        sentiment_counts.plot(kind='bar', ax=ax)
-        ax.set_title('Sentiment Proportion')
-        ax.set_ylabel('Count')
-        st.pyplot(fig)
+        # Plot Sentiment Proportions using Plotly
+        sentiment_counts = data['sentiment'].value_counts().reset_index()
+        sentiment_counts.columns = ['Sentiment', 'Count']
+        fig = px.bar(sentiment_counts, x='Sentiment', y='Count', title='Sentiment Proportion',
+                     text='Count', color='Sentiment', barmode='group')
+        st.plotly_chart(fig)
 
     else:
         st.warning("Please upload a CSV file for analysis.")
@@ -151,12 +150,11 @@ if enable_emotion:
         st.write("Emotion Analysis Results:")
         st.dataframe(data)
 
-        # Plot Emotion Proportions
-        emotion_counts = emotion_data.sum().sort_values(ascending=False)
-        fig, ax = plt.subplots()
-        emotion_counts.plot(kind='bar', ax=ax)
-        ax.set_title('Emotion Proportion')
-        ax.set_ylabel('Count')
-        st.pyplot(fig)
+        # Plot Emotion Proportions using Plotly
+        emotion_counts = emotion_data.sum().sort_values(ascending=False).reset_index()
+        emotion_counts.columns = ['Emotion', 'Count']
+        fig = px.bar(emotion_counts, x='Emotion', y='Count', title='Emotion Proportion',
+                     text='Count', color='Emotion')
+        st.plotly_chart(fig)
     else:
         st.warning("Please upload a CSV file for emotion analysis.")
