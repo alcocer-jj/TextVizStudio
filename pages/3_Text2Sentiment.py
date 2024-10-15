@@ -69,9 +69,6 @@ data = None
 if uploaded_file:
     data = extract_text_from_csv(uploaded_file)
 
-if data is not None:
-    st.dataframe(data)
-
 # Initialize Sentiment Analysis Tools
 vader = SentimentIntensityAnalyzer()
 zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
@@ -87,18 +84,29 @@ enable_emotion = st.checkbox("Enable Emotion Analysis")
 # Sentiment Analysis Functions
 def analyze_vader(text):
     scores = vader.polarity_scores(text)
-    return scores['compound'], scores['neg'], scores['neu'], scores['pos']
+    compound = scores['compound']
+    label = (
+        "positive" if compound >= 0.05
+        else "negative" if compound <= -0.05
+        else "neutral"
+    )
+    return compound, label, scores['neg'], scores['neu'], scores['pos']
 
 def analyze_zero_shot(text):
     labels = ["positive", "negative", "neutral"]
     result = zero_shot_classifier(text, labels)
-    return result["scores"]
+    return result["labels"][0], result["scores"]
 
 def analyze_nrc_sentiment(text):
     emotions = NRCLex(text)
     pos_score = emotions.affect_frequencies.get("positive", 0.0)
     neg_score = emotions.affect_frequencies.get("negative", 0.0)
-    return pos_score, neg_score
+    label = (
+        "positive" if pos_score > neg_score
+        else "negative" if neg_score > pos_score
+        else "neutral"
+    )
+    return label, pos_score, neg_score
 
 def analyze_emotion(text):
     emotions = NRCLex(text)
@@ -108,17 +116,23 @@ def analyze_emotion(text):
 if st.button("Analyze Sentiment"):
     if data is not None:
         if sentiment_method == "VADER":
-            data[['compound', 'neg', 'neu', 'pos']] = data['text'].apply(lambda x: pd.Series(analyze_vader(x)))
+            data[['compound', 'sentiment', 'neg', 'neu', 'pos']] = data['text'].apply(
+                lambda x: pd.Series(analyze_vader(x))
+            )
         elif sentiment_method == "Zero-shot Classifier":
-            data[['positive', 'negative', 'neutral']] = data['text'].apply(lambda x: pd.Series(analyze_zero_shot(x)))
+            data[['sentiment', 'confidence']] = data['text'].apply(
+                lambda x: pd.Series(analyze_zero_shot(x))
+            )
         elif sentiment_method == "NRCLex":
-            data[['positive', 'negative']] = data['text'].apply(lambda x: pd.Series(analyze_nrc_sentiment(x)))
+            data[['sentiment', 'positive', 'negative']] = data['text'].apply(
+                lambda x: pd.Series(analyze_nrc_sentiment(x))
+            )
 
         st.write("Sentiment Analysis Results:")
         st.dataframe(data)
 
         # Plot Sentiment Proportions
-        sentiment_counts = data[['positive', 'negative', 'neutral']].count()
+        sentiment_counts = data['sentiment'].value_counts()
         fig, ax = plt.subplots()
         sentiment_counts.plot(kind='bar', ax=ax)
         ax.set_title('Sentiment Proportion')
