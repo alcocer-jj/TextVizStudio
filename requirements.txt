@@ -15,3 +15,4 @@ oauth2client
 vaderSentiment
 nrclex
 plotly
+nltk
