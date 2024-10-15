@@ -215,7 +215,7 @@ if uploaded_file is not None:
                     st.write(f"Using user-provided seed: {umap_random_state}")
                 
                 # Initialize SentenceTransformer, UMAP, and CountVectorizer models
-                model = SentenceTransformer("Salesforce/SFR-Embedding-2_R")
+                model = SentenceTransformer("all-MiniLM-L6-v2")
                 umap_model = UMAP(n_neighbors=10,
                                   n_components=5,
                                   min_dist=0.0,
