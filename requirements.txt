@@ -12,3 +12,4 @@ scikit-learn==1.5.2
 transformers==4.45.2
 gspread
 oauth2client
+vaderSentiment
