@@ -71,7 +71,7 @@ if uploaded_file:
 
 # Initialize Sentiment Analysis Tools
 vader = SentimentIntensityAnalyzer()
-zero_shot_classifier = pipeline("zero-shot-classification", model="tasksource/deberta-small-long-nli")
+zero_shot_classifier = pipeline("zero-shot-classification", model="valhalla/distilbart-mnli-12-3")
 
 # Sentiment Method Selection
 st.subheader("Set Model Parameters", divider=True)
