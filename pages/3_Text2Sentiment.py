@@ -122,7 +122,7 @@ if uploaded_file is not None:
             index=0  # Default to NRC Lexicon
         )
 
-        with st.expander("Learn more about each model"):
+        with st.expander("Which model is best for me?"):
             st.markdown("""
             ### NRC Lexicon (Default)
             - **Description:** A predefined word-association-based model that assigns sentiment (positive or negative) to words.
@@ -137,7 +137,7 @@ if uploaded_file is not None:
             ### Zero-shot Classifier
             - **Description:** A transformer-based model from Hugging Face that can classify text into any category without specific pre-training on those categories.
             - **Best Use Case:** Useful for emerging topics, dynamic content, or when the sentiment categories are not predefined.
-            - **Limitations:** Requires more computational resources and an active internet connection to load the model.
+            - **Limitations:** Requires more computational resources and takes slightly longer to analyze.
             """)
             
             st.warning("⚠️ Note: VADER and Zero-shot Classifier perform best with **English** text.")
