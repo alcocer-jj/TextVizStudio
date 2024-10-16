@@ -183,7 +183,7 @@ if uploaded_file is not None:
                             title='Emotion Counts Distribution', text='Count', color='Emotion'
                         )
 
-                        col1, col2 st.columns([0.2,0.8])
+                        col1, col2 = st.columns([0.2,0.8])
                         with col1:
                             st.plotly_chart(fig_emotions, use_container_width=True)
 
