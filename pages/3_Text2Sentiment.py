@@ -82,8 +82,8 @@ def analyze_zero_shot(text):
 
 # NRC Sentiment Analysis Function
 def load_nrc_emotion_lexicon():
-    # Load the NRC emotion lexicon data (replace this with the actual path to your NRC data)
-    nrc_data = pd.read_csv("path_to_nrc_emotion_lexicon.csv")
+    # Load the NRC emotion lexicon data
+    nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / "NRC-emo-sent-EN.csv")
 
     emotion_dict = defaultdict(lambda: defaultdict(int))
     for _, row in nrc_data.iterrows():
