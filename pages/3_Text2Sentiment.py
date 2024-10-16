@@ -111,7 +111,7 @@ if uploaded_file is not None:
             [
                 "NRC Lexicon (Default): Best for structured text with predefined words",
                 "VADER: Optimized for informal social media content",
-                "Zero-shot Classifier: Flexible for nuanced context-dependent language"
+                "Zero-shot Classifier: Flexible for dynamic topics"
             ],
             index=0  # Default to NRC Lexicon
         )
@@ -129,9 +129,9 @@ if uploaded_file is not None:
             - **Limitation:** Less effective for long texts.
 
             ### Zero-shot Classifier
-            - **Description:** Classifies text without pre-training for specific categories. 
-            - **Use Case:** Emerging topics, nuanced and context-dependent data.
-            - **Limitation:** Takes longer to run.
+            - **Description:** Classifies text without pre-training for specific categories.
+            - **Use Case:** Emerging topics, dynamic content.
+            - **Limitation:** Requires more resources.
             """)
 
         if st.button("Analyze Sentiment"):
@@ -147,6 +147,11 @@ if uploaded_file is not None:
                         )
                     elif sentiment_method == "NRC Lexicon (Default)":
                         df['sentiment'] = df['text'].apply(analyze_nrc_sentiment)
+
+                    # Check if 'sentiment' column exists
+                    if 'sentiment' not in df.columns:
+                        st.error("Error: Sentiment analysis failed to generate the 'sentiment' column.")
+                        st.stop()
 
                     # Calculate sentiment proportions
                     sentiment_counts = df['sentiment'].value_counts(normalize=True).reset_index()
