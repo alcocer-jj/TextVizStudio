@@ -13,12 +13,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Display a warning about language limitations
-st.warning(
-    "⚠️ Note: The VADER and Zero-shot classification models currently perform best with **English** text. "
-    "For non-English text, results may be less reliable."
-)
-
 # Authenticate with Google Sheets API using Streamlit Secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
