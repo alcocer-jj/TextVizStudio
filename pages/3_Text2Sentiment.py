@@ -131,8 +131,7 @@ if uploaded_file is not None:
                         sentiment_counts = df['sentiment'].value_counts().reset_index()
                         sentiment_counts.columns = ['Sentiment', 'Count']
                         fig = px.bar(sentiment_counts, x='Sentiment', 'Count',
-                                     title='Sentiment Proportions', text='Count', color='Sentiment'
-                                    )
+                                     title='Sentiment Proportions', text='Count', color='Sentiment')
                         st.plotly_chart(fig)
                     
                     st.write("Sentiment Analysis Results:")
