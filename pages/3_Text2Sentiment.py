@@ -82,20 +82,6 @@ def analyze_zero_shot(text):
     confidence = result["scores"][0]
     return sentiment, confidence
 
-# NRC Sentiment Analysis Function
-def load_nrc_emotion_lexicon():
-    # Load the NRC emotion lexicon data
-    nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / "NRC-emo-sent-EN.csv")
-
-    emotion_dict = defaultdict(lambda: defaultdict(int))
-    for _, row in nrc_data.iterrows():
-        word = row['word']
-        if pd.notna(word):  # Skip NaN values
-            word = word.lower()
-            emotion = row['emotion']
-            emotion_dict[word][emotion] = row['condition']
-    return emotion_dict
-
 def analyze_nrc(text, emotion_dict):
     emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation', 
                 'disgust', 'surprise', 'sadness']
@@ -149,7 +135,11 @@ if uploaded_file is not None:
 
         # Model selection for sentiment analysis
         st.subheader("Set Model Parameters")
-
+        
+        sentiment_method = st.selectbox(
+            "Choose Sentiment Analysis Method",
+            ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"]
+        )
             # Information about model selection
         with st.expander("Which model is right for me?"):
             st.markdown("""
@@ -170,12 +160,32 @@ if uploaded_file is not None:
             - Limitations: Slower due to it being a transformer-based model
             """)
             st.warning('Currently, only NRC Lexicon model handles multiple languages. The latter two only handle English text.', icon="⚠️")
-
-        
-        sentiment_method = st.selectbox(
-            "Choose Sentiment Analysis Method",
-            ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"]
-        )
+            
+        # Only allow language selection if NRC Lexicon is chosen
+        if sentiment_method == "NRC Lexicon (Default)":
+            language = st.selectbox(
+                "Select Language for NRC Lexicon Analysis",
+                ["English", "French", "Spanish", "Italian", "Portuguese", "Chinese (Traditional)",
+                 "Chinese (Simplified)", "Arabic"]
+            )
+            language_codes = {
+                "English": "english.csv",
+                "French": "french.csv",
+                "Spanish": "spanish.csv",
+                "Italian": "italian.csv",
+                "Portuguese": "portuguese.csv",
+                "Chinese (Traditional)": "chinese_traditional.csv",
+                "Chinese (Simplified)": "chinese_simplified.csv",
+                "Arabic": "arabic.csv"
+            }
+            selected_language_code = language_codes[language]
+            nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / selected_language_code)
+            emotion_dict = defaultdict(lambda: defaultdict(int))
+            for _, row in nrc_data.iterrows():
+                word = row['word']
+                if pd.notna(word):  # Skip NaN values
+                    emotion = row['emotion']
+                    emotion_dict[word][emotion] = row['condition']
 
         # Analyze sentiment on button click
         if st.button("Analyze Sentiment"):
