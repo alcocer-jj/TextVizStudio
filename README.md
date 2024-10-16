@@ -38,3 +38,9 @@ This web-based Python application will continue to be updated and host additiona
   - **Text2Sentiment:** NLP tool to conduct both sentiment and emotion analyses on text from PDFs and CSVs, and display them in tables and visuals breaking them down.
   - **Data2Viz:** Exploratory data tool that will allow users to display relationships with customizable plots (e.g., line, bar, kernal, box, etc.).
   - **Stats2Viz:** Statistical data tool that will allow users to conduct regressions, inference, clustering/classification, time-series, and causal inference while producing output tables and plots.
+
+## References
+
+This section will be continuously changing as newer and more efficient resources continue to be released. As of October 16,2024, the following resources are used to perform the variety of analyses wrapped in the application overall:
+- **Text2Topics:** [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) for the sentence-embedding model in BERTopic, and [FLAN-T5 base](https://huggingface.co/google/flan-t5-base) for one of the representation models to produce topic labels.
+- **Text2Sentiment:** The [NRC Word-Emotion Association Lexicon](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm) as the default dictionary for sentiment and emotion classification of text ([Mohammad 2021](https://arxiv.org/abs/2005.11882)), the [VADER](https://github.com/cjhutto/vaderSentiment) lexicon ([Hutto & Gilbert 2014](https://ojs.aaai.org/index.php/ICWSM/article/view/14550)) and the [nli-distilroberta-base](https://huggingface.co/cross-encoder/nli-distilroberta-base) natural language inference (NLI) model as additional options to classify sentiment from text.
