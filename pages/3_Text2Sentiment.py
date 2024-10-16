@@ -185,12 +185,12 @@ if uploaded_file is not None:
 
                         col1, col2 = st.columns([0.2,0.8])
                         with col1:
-                            st.plotly_chart(fig_emotions, use_container_width=True)
-
-                        with col2:
-                            # Display the DataFrame of emotion counts
                             st.write("Emotion Counts Dataframe:")
                             st.dataframe(emotion_counts)
+
+                        with col2:
+                            st.plotly_chart(fig_emotions, use_container_width=True)
+                            
 
                     col1, col2 = st.columns([0.2, 0.8])
                     with col1:
