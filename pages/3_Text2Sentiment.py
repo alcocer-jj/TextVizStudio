@@ -12,13 +12,15 @@ from nltk.corpus import stopwords
 # Streamlit page configuration
 st.set_page_config(page_title="Text2Sentiment", layout="wide")
 
+nrc_path = Path(__file__).resolve().parent.parent / "data" / "NRC-emo-sent-EN.csv"
+
 # Ensure NLTK resources are available
 nltk.download('stopwords')
 
 # Load NRC CSV into a DataFrame at the top for reuse
 @st.cache_data
 def load_nrc_csv():
-    df = pd.read_csv("/data/NRC-emo-sent-EN.csv").dropna(subset=["word"])
+    df = pd.read_csv(nrc_path).dropna(subset=["word"])
     df = df[df["condition"] == 1]  # Use only words associated with emotion
     return df
 
