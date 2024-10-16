@@ -98,7 +98,6 @@ if uploaded_file is not None:
                 "zero-shot-classification",
                 model="cross-encoder/nli-distilroberta-base"
             )
-            st.success("Zero-shot model loaded successfully!")
         except Exception as e:
             st.error(f"Error loading Zero-shot classifier: {e}")
 
