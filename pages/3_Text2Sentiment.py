@@ -1,77 +1,152 @@
 import streamlit as st
 import pandas as pd
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from nrclex import NRCLex
 from transformers import pipeline
+import hashlib
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import plotly.express as px
+import nltk
+from nltk.corpus import stopwords
 
-# Initialize Sentiment Analyzers
-vader = SentimentIntensityAnalyzer()
-zero_shot_classifier = pipeline("zero-shot-classification", model="tasksource/deberta-small-long-nli")
+# Streamlit page configuration
+st.set_page_config(page_title="Text2Sentiment", layout="wide")
 
-# Page Layout
-st.title("Sentiment & Emotion Analysis")
+# Ensure NLTK resources are available
+nltk.download('stopwords')
 
-# User Input Section
-st.write("Enter text below to analyze its sentiment and emotions:")
-user_input = st.text_area("Your Text", "")
+# Load NRC CSV into a DataFrame at the top for reuse
+@st.cache_data
+def load_nrc_csv():
+    df = pd.read_csv("../data/NRC-emo-sent-EN.csv").dropna(subset=["word"])
+    df = df[df["condition"] == 1]  # Use only words associated with emotion
+    return df
 
-# Sidebar Options
-st.sidebar.title("Options")
-sentiment_method = st.sidebar.selectbox(
-    "Choose Sentiment Analysis Method", ["VADER", "Zero-shot Classifier", "NRCLex"]
-)
-enable_emotion = st.sidebar.checkbox("Enable Emotion Analysis")
+nrc_df = load_nrc_csv()
 
-# Sentiment Analysis Functions
-def analyze_vader(text):
-    scores = vader.polarity_scores(text)
-    compound = scores["compound"]
-    label = (
-        "positive" if compound >= 0.05
-        else "negative" if compound <= -0.05
-        else "neutral"
-    )
-    return label, compound
+# Initialize stopwords list
+STOPWORDS = set(stopwords.words('english'))
 
-def analyze_zero_shot(text):
-    labels = ["positive", "negative", "neutral"]
-    result = zero_shot_classifier(text, labels)
-    return result["labels"][0], result["scores"][0]
+# Authenticate with Google Sheets API using Streamlit secrets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+client = gspread.authorize(creds)
 
+# Open the Google Sheet for feedback
+sheet = client.open("TextViz Studio Feedback").sheet1
+
+# Sidebar Feedback Form
+st.sidebar.markdown("### **Feedback**")
+feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to improve the tool?", placeholder="Leave feedback or error code here")
+
+if st.sidebar.button("Submit"):
+    if feedback:
+        sheet.append_row(["Text2Sentiment: ", feedback])
+        st.sidebar.success("Thank you for your feedback!")
+    else:
+        st.sidebar.error("Feedback cannot be empty!")
+
+st.sidebar.markdown("For full documentation, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
+
+st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment Analysis</h1>", unsafe_allow_html=True)
+
+# Create unique IDs for each text entry
+def create_unique_id(text):
+    return hashlib.md5(text.encode()).hexdigest()
+
+# Extract text from uploaded CSV files
+def extract_text_from_csv(file):
+    try:
+        df = pd.read_csv(file, low_memory=False)
+        if 'text' not in df.columns:
+            st.error("The CSV file must contain a 'text' column.")
+            return None, None
+        df = df.dropna(subset=['text'])
+        df['doc_id'] = df['text'].apply(create_unique_id)
+        return df[['doc_id', 'text']].reset_index(drop=True), df
+    except Exception as e:
+        st.error(f"Error reading the CSV file: {e}")
+        return None, None
+
+# VADER Sentiment Analysis
+@st.cache_resource
+def load_vader():
+    return SentimentIntensityAnalyzer()
+
+# Zero-shot classifier caching
+@st.cache_resource
+def load_zero_shot_classifier():
+    return pipeline("zero-shot-classification", model="cross-encoder/nli-distilroberta-base")
+
+# NRC-based Sentiment Analysis
 def analyze_nrc_sentiment(text):
-    emotions = NRCLex(text)
-    pos_score = emotions.affect_frequencies.get("positive", 0.0)
-    neg_score = emotions.affect_frequencies.get("negative", 0.0)
-    return pos_score, neg_score
+    # Preprocess the text: lowercase and remove stopwords
+    words = [word for word in text.lower().split() if word not in STOPWORDS]
+    positive_count = nrc_df[(nrc_df["word"].isin(words)) & (nrc_df["emotion"] == "positive")].shape[0]
+    negative_count = nrc_df[(nrc_df["word"].isin(words)) & (nrc_df["emotion"] == "negative")].shape[0]
 
-# Emotion Analysis Function
-def analyze_emotion(text):
-    emotions = NRCLex(text)
-    emotion_scores = emotions.raw_emotion_scores
-    return pd.DataFrame(emotion_scores.items(), columns=["Emotion", "Score"])
-
-# Sentiment Analysis
-if st.button("Analyze Sentiment"):
-    if user_input:
-        if sentiment_method == "VADER":
-            label, score = analyze_vader(user_input)
-            st.write(f"Sentiment: **{label}** (Score: {score})")
-        elif sentiment_method == "Zero-shot Classifier":
-            label, confidence = analyze_zero_shot(user_input)
-            st.write(f"Sentiment: **{label}** (Confidence: {confidence:.2f})")
-        elif sentiment_method == "NRCLex":
-            pos, neg = analyze_nrc_sentiment(user_input)
-            st.write(f"Positive Score: {pos:.2f}, Negative Score: {neg:.2f}")
+    # Determine sentiment
+    if positive_count > negative_count:
+        return "positive"
+    elif negative_count > positive_count:
+        return "negative"
     else:
-        st.warning("Please enter text for analysis.")
+        return "neutral"
 
-# Optional Emotion Analysis
-if enable_emotion:
-    if user_input:
-        emotion_df = analyze_emotion(user_input)
-        st.write("Emotion Scores:")
-        st.dataframe(emotion_df)
-        st.bar_chart(emotion_df.set_index("Emotion"))
+# Sidebar file uploader
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+df, original_csv = None, None
+
+# Process the uploaded CSV file
+if uploaded_file is not None:
+    df, original_csv = extract_text_from_csv(uploaded_file)
+
+    if df is not None:
+        st.write("CSV file successfully processed.")
+
+        # Load sentiment models
+        vader = load_vader()
+        zero_shot_classifier = load_zero_shot_classifier()
+
+        # Model selection for sentiment analysis
+        st.subheader("Set Model Parameters")
+        sentiment_method = st.selectbox(
+            "Choose Sentiment Analysis Method",
+            ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"],
+            index=0  # Default to NRC Lexicon
+        )
+
+        st.warning("⚠️ Note: These models perform best with **English** text.")
+
+        # Analyze sentiment on button click
+        if st.button("Analyze Sentiment"):
+            try:
+                with st.spinner("Running sentiment analysis..."):
+                    if sentiment_method == "VADER":
+                        df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
+                            lambda x: pd.Series(vader.polarity_scores(x))
+                        )
+                    elif sentiment_method == "Zero-shot Classifier":
+                        df[['sentiment', 'confidence']] = df['text'].apply(
+                            lambda x: pd.Series(analyze_zero_shot(x))
+                        )
+                    elif sentiment_method == "NRC Lexicon (Default)":
+                        df['sentiment'] = df['text'].apply(analyze_nrc_sentiment)
+
+                    st.write("Sentiment Analysis Results:")
+                    st.dataframe(df)
+
+                    # Plot sentiment distribution
+                    sentiment_counts = df['sentiment'].value_counts().reset_index()
+                    sentiment_counts.columns = ['Sentiment', 'Count']
+                    fig = px.bar(
+                        sentiment_counts, x='Sentiment', y='Count',
+                        title='Sentiment Proportion', text='Count', color='Sentiment'
+                    )
+                    st.plotly_chart(fig)
+            except Exception as e:
+                st.error(f"Error during analysis: {e}")
     else:
-        st.warning("Please enter text for emotion analysis.")
-
+        st.error("Failed to process the uploaded CSV file.")
+else:
+    st.warning("Please upload a CSV file for analysis.")
