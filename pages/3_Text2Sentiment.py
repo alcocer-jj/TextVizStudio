@@ -137,6 +137,7 @@ if uploaded_file is not None:
         if st.button("Analyze Sentiment"):
             try:
                 with st.spinner("Running sentiment analysis..."):
+                    # Ensure sentiment column is initialized
                     if sentiment_method == "VADER":
                         df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
                             lambda x: pd.Series(vader.polarity_scores(x))
@@ -148,7 +149,7 @@ if uploaded_file is not None:
                     elif sentiment_method == "NRC Lexicon (Default)":
                         df['sentiment'] = df['text'].apply(analyze_nrc_sentiment)
 
-                    # Check if 'sentiment' column exists
+                    # Check for sentiment column
                     if 'sentiment' not in df.columns:
                         st.error("Error: Sentiment analysis failed to generate the 'sentiment' column.")
                         st.stop()
