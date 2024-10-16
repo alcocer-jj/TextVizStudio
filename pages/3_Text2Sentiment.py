@@ -11,6 +11,11 @@ import nltk
 from textblob import TextBlob  # Ensure TextBlob is imported
 import time
 
+st.set_page_config(
+    page_title="Text2Sentiment",
+    layout="wide"
+)
+
 # Ensure NLTK's 'punkt' tokenizer is available
 try:
     nltk.data.find('tokenizers/punkt')
@@ -24,11 +29,6 @@ try:
 except LookupError:
     st.warning("Downloading TextBlob corpora...")
     nltk.download('averaged_perceptron_tagger')
-
-st.set_page_config(
-    page_title="Text2Sentiment",
-    layout="wide"
-)
 
 # Authenticate with Google Sheets API using Streamlit Secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
