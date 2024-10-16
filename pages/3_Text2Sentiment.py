@@ -52,7 +52,7 @@ st.markdown("")
 st.markdown("")
 
 st.markdown("""
-**Text2Sentiment Analysis** is an interactive tool for performing sentiment and emotion analysis on text data.
+**Text2Sentiment** is an interactive tool for performing sentiment and emotion analysis on text data.
 Upload a CSV file containing your text, and select your preferred sentiment analysis model. Choose from options like 
 the **VADER** model for short, informal text, **Zero-shot Classifier** for broader domain adaptability, or the 
 **NRC Emotion Lexicon** to conduct detailed emotion analysis across multiple languages, including French, Spanish, 
