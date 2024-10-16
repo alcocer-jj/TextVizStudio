@@ -8,13 +8,19 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
 import nltk
+from textblob import download_corpora  # Import downloader for TextBlob corpora
 import time
 
-# Ensure NLTK resources are available
+# Ensure NLTK and TextBlob corpora are available
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
     nltk.download('punkt')
+
+try:
+    download_corpora.download_corpora()  # Download TextBlob corpora if missing
+except Exception as e:
+    st.error(f"Error downloading TextBlob corpora: {e}")
 
 st.set_page_config(
     page_title="Text2Sentiment",
@@ -29,6 +35,7 @@ client = gspread.authorize(creds)
 # Open the Google Sheet for feedback
 sheet = client.open("TextViz Studio Feedback").sheet1
 
+# Sidebar Feedback Form
 st.sidebar.markdown("### **Feedback**")
 feedback = st.sidebar.text_area(
     "Experiencing bugs/issues? Have ideas to improve the tool?",
@@ -48,14 +55,12 @@ st.sidebar.markdown(
 
 st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment and Emotion Analysis</h1>", unsafe_allow_html=True)
 
-# Function to Create Unique IDs for Documents
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
 
-# Improved CSV Extraction Function with Error Handling
 def extract_text_from_csv(file):
     try:
-        df = pd.read_csv(file, low_memory=False)  # Ensure the full file loads
+        df = pd.read_csv(file, low_memory=False)
         if 'text' not in df.columns:
             st.error("The CSV file must contain a 'text' column.")
             return None, None
@@ -67,13 +72,12 @@ def extract_text_from_csv(file):
         st.error(f"Error reading the CSV file: {e}")
         return None, None
 
-# Handle File Upload
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-df, original_csv = None, None  # Initialize variables to avoid 'NoneType' issues
+df, original_csv = None, None
 
 if uploaded_file is not None:
     df, original_csv = extract_text_from_csv(uploaded_file)
-    
+
     if df is not None:
         text_data = df.get('text', []).tolist()
         if text_data:
