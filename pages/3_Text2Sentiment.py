@@ -149,6 +149,29 @@ if uploaded_file is not None:
 
         # Model selection for sentiment analysis
         st.subheader("Set Model Parameters")
+
+            # Information about model selection
+        with st.expander("Which model is right for me?"):
+            st.markdown("""
+            [**NRC Emotion Lexicon**](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm):
+            - Default choice
+            - Includes ability to analyze both sentiment and emotion analysis
+            - Strengths: Provides granular emotional insights since it uses pre-defined dictionary of ~10,000 words
+            - Limitations: Not best for understanding nuanced context-dependent text
+            
+            [**VADER** (Valence Aware Dictionary and sEntiment Reasoner)](https://github.com/cjhutto/vaderSentiment):
+            - Best for short, informal texts (e.g., social media, product reviews).
+            - Strengths: Speed and ability to handle negation (e.g., "not happy").
+            - Limitations: Less accurate for longer, more complex text.
+
+            [**Zero-shot Classifier**](https://huggingface.co/cross-encoder/nli-distilroberta-base):
+            - Best for general sentiment analysis across any domain.
+            - Strengths: No need for pre-defined categories; adapts to various tasks, and has better understanding of semantic context 
+            - Limitations: Slower due to it being a transformer-based model
+            """)
+            st.warning('Currently, only NRC Lexicon model handles multiple languages. The latter two only handle English text.', icon="⚠️")
+
+        
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
             ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"]
@@ -194,7 +217,7 @@ if uploaded_file is not None:
 
                     col1, col2 = st.columns([0.2, 0.8])
                     with col1:
-                        st.write("Sentiment Analysis Proportions")
+                        st.write("Sentiment Counts Dataframe:")
                         st.dataframe(df['sentiment'].value_counts().reset_index())
 
                     with col2:
@@ -202,7 +225,7 @@ if uploaded_file is not None:
                         sentiment_counts.columns = ['Sentiment', 'Count']
                         fig_sentiment = px.bar(
                             sentiment_counts, x='Sentiment', y='Count',
-                            title='Sentiment Proportion', text='Count', color='Sentiment'
+                            title='Sentiment Count Distribution', text='Count', color='Sentiment'
                         )
                         st.plotly_chart(fig_sentiment, use_container_width=True)
                     
