@@ -48,26 +48,40 @@ st.sidebar.markdown(
 
 st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment and Emotion Analysis</h1>", unsafe_allow_html=True)
 
+# Function to Create Unique IDs for Documents
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
 
-st.subheader("Upload CSV Data", divider=True)
-uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-st.warning("**Instructions:** Ensure the text data is in a column named 'text'.")
-
+# Improved CSV Extraction Function with Error Handling
 def extract_text_from_csv(file):
-    df = pd.read_csv(file)
-    if 'text' in df.columns:
+    try:
+        df = pd.read_csv(file, low_memory=False)  # Ensure the full file loads
+        if 'text' not in df.columns:
+            st.error("The CSV file must contain a 'text' column.")
+            return None, None
+
         df = df.dropna(subset=['text'])
         df['doc_id'] = df['text'].apply(create_unique_id)
-        return df[['doc_id', 'text']].reset_index(drop=True)
-    else:
-        st.error("The CSV file must contain a 'text' column.")
-        return None
+        return df[['doc_id', 'text']].reset_index(drop=True), df
+    except Exception as e:
+        st.error(f"Error reading the CSV file: {e}")
+        return None, None
 
-data = None
-if uploaded_file:
-    data = extract_text_from_csv(uploaded_file)
+# Handle File Upload
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+df, original_csv = None, None  # Initialize variables to avoid 'NoneType' issues
+
+if uploaded_file is not None:
+    df, original_csv = extract_text_from_csv(uploaded_file)
+    
+    if df is not None:
+        text_data = df.get('text', []).tolist()
+        if text_data:
+            st.write("CSV file successfully processed.")
+        else:
+            st.error("No valid text data found in the 'text' column.")
+    else:
+        st.error("Failed to process the uploaded CSV file.")
 
 vader = SentimentIntensityAnalyzer()
 
@@ -120,26 +134,26 @@ def analyze_emotion(text):
     return emotions.raw_emotion_scores
 
 if st.button("Analyze Sentiment"):
-    if data is not None:
+    if df is not None:
         try:
             with st.spinner("Running sentiment analysis..."):
                 if sentiment_method == "VADER":
-                    data[['compound', 'sentiment', 'neg', 'neu', 'pos']] = data['text'].apply(
+                    df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
                         lambda x: pd.Series(analyze_vader(x))
                     )
                 elif sentiment_method == "Zero-shot Classifier":
-                    data[['sentiment', 'confidence']] = data['text'].apply(
+                    df[['sentiment', 'confidence']] = df['text'].apply(
                         lambda x: pd.Series(analyze_zero_shot(x))
                     )
                 elif sentiment_method == "NRCLex":
-                    data[['sentiment', 'positive', 'negative']] = data['text'].apply(
+                    df[['sentiment', 'positive', 'negative']] = df['text'].apply(
                         lambda x: pd.Series(analyze_nrc_sentiment(x))
                     )
 
                 st.write("Sentiment Analysis Results:")
-                st.dataframe(data)
+                st.dataframe(df)
 
-                sentiment_counts = data['sentiment'].value_counts().reset_index()
+                sentiment_counts = df['sentiment'].value_counts().reset_index()
                 sentiment_counts.columns = ['Sentiment', 'Count']
                 fig = px.bar(sentiment_counts, x='Sentiment', y='Count', title='Sentiment Proportion',
                              text='Count', color='Sentiment', barmode='group')
@@ -152,13 +166,13 @@ if st.button("Analyze Sentiment"):
         st.warning("Please upload a CSV file for analysis.")
 
 if enable_emotion:
-    if data is not None:
+    if df is not None:
         with st.spinner("Running emotion analysis..."):
-            emotion_data = data['text'].apply(analyze_emotion).apply(pd.Series)
-            data = pd.concat([data, emotion_data], axis=1)
+            emotion_data = df['text'].apply(analyze_emotion).apply(pd.Series)
+            df = pd.concat([df, emotion_data], axis=1)
 
             st.write("Emotion Analysis Results:")
-            st.dataframe(data)
+            st.dataframe(df)
 
             emotion_counts = emotion_data.sum().sort_values(ascending=False).reset_index()
             emotion_counts.columns = ['Emotion', 'Count']
