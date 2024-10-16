@@ -267,5 +267,5 @@ if uploaded_file is not None:
                 st.error(f"Error during analysis: {e}")
     else:
         st.error("Failed to process the uploaded CSV file.")
-else:
-    st.warning("Please upload a CSV file for analysis.")
+
+    
