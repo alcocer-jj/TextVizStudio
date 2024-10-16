@@ -8,7 +8,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
 from collections import defaultdict
 import re
-from pathlib import Path
 
 # Set the Streamlit page configuration
 st.set_page_config(
@@ -84,7 +83,7 @@ def analyze_zero_shot(text):
 # NRC Sentiment Analysis Function
 def load_nrc_emotion_lexicon():
     # Load the NRC emotion lexicon data (replace this with the actual path to your NRC data)
-    nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / "NRC-emo-sent-EN.csv")
+    nrc_data = pd.read_csv("path_to_nrc_emotion_lexicon.csv")
 
     emotion_dict = defaultdict(lambda: defaultdict(int))
     for _, row in nrc_data.iterrows():
@@ -171,6 +170,22 @@ if uploaded_file is not None:
                                 lambda x: analyze_nrc(x, emotion_dict)
                             )
 
+                        # Generate a bar chart for emotion counts
+                        emotion_cols = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
+                        emotion_counts = df[emotion_cols].sum().reset_index()
+                        emotion_counts.columns = ['Emotion', 'Count']
+
+                        st.subheader("Emotion Counts (NRC Lexicon)")
+                        fig_emotions = px.bar(
+                            emotion_counts, x='Emotion', y='Count',
+                            title='Emotion Counts Distribution', text='Count', color='Emotion'
+                        )
+                        st.plotly_chart(fig_emotions, use_container_width=True)
+
+                        # Display the DataFrame of emotion counts
+                        st.write("Emotion Counts Dataframe:")
+                        st.dataframe(emotion_counts)
+
                     col1, col2 = st.columns([0.2, 0.8])
                     with col1:
                         st.write("Sentiment Analysis Proportions")
@@ -179,11 +194,11 @@ if uploaded_file is not None:
                     with col2:
                         sentiment_counts = df['sentiment'].value_counts().reset_index()
                         sentiment_counts.columns = ['Sentiment', 'Count']
-                        fig = px.bar(
+                        fig_sentiment = px.bar(
                             sentiment_counts, x='Sentiment', y='Count',
                             title='Sentiment Proportion', text='Count', color='Sentiment'
                         )
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig_sentiment, use_container_width=True)
                     
                     st.write("Sentiment Analysis Dataframe Results:")
                     st.dataframe(df)
