@@ -18,7 +18,7 @@ nltk.download('stopwords')
 # Load NRC CSV into a DataFrame at the top for reuse
 @st.cache_data
 def load_nrc_csv():
-    df = pd.read_csv("../data/NRC-emo-sent-EN.csv").dropna(subset=["word"])
+    df = pd.read_csv("/data/NRC-emo-sent-EN.csv").dropna(subset=["word"])
     df = df[df["condition"] == 1]  # Use only words associated with emotion
     return df
 
