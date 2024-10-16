@@ -121,7 +121,7 @@ if uploaded_file is not None:
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
 
-                    col1, col2 = st.columns([1,1])
+                    col1, col2 = st.columns([0.2, 0.8])
                     with col1:
                         st.write("Sentiment Analysis Proportions")
                         st.dataframe(df['sentiment'].value_counts().reset_index())
