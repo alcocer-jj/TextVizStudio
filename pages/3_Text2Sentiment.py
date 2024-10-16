@@ -122,17 +122,38 @@ if uploaded_file is not None:
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
 
+
+# Create two columns for layout
+                    col1, col2 = st.columns([1, 1])
+
+                    with col1:
+                        st.write("Sentiment Proportions:")
+                        st.dataframe(sentiment_counts)
+
+                    with col2:
+                        fig = px.bar(
+                            sentiment_counts, x='Sentiment', y='Proportion',
+                            title='Sentiment Proportion', text='Proportion', color='Sentiment'
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+
+                    col1, col2 = st.columns([1,1)
+                    with col1:
+                        st.write("Sentiment Analysis Results")
+                        st.dataframe(df)
+
+                    with col2:
+                        sentiment_counts = df['sentiment'].value_counts().reset_index()
+                        sentiment_counts.columns = ['Sentiment', 'Count']
+                        fig = px.bar(sentiment_counts, x='Sentiment', 'Count',
+                                     title='Sentiment Proportions', text='Count', color='Sentiment'
+                                    )
+                        st.plotly_chart(fig)
+                    
                     st.write("Sentiment Analysis Results:")
                     st.dataframe(df)
 
-                    # Plot sentiment distribution
-                    sentiment_counts = df['sentiment'].value_counts().reset_index()
-                    sentiment_counts.columns = ['Sentiment', 'Count']
-                    fig = px.bar(
-                        sentiment_counts, x='Sentiment', y='Count',
-                        title='Sentiment Proportion', text='Count', color='Sentiment'
-                    )
-                    st.plotly_chart(fig)
             except Exception as e:
                 st.error(f"Error during analysis: {e}")
     else:
