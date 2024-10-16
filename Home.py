@@ -80,12 +80,28 @@ expander.write('''
     - OpenAI Integration: Leverage OpenAI's GPT-4o model for enhanced text representation and generation.
     - Customizable Parameters: Tailor model settings such as the number of topics to generate and modify.
     - Multiple Representations: Experiment with different topic representations for clarity.
-    - Text Summarization: Generate concise summaries of topics and key insights.
     - Exportable Results: Download topics and summaries for reporting or further analysis.
 ''')
 
+st.text("")
 
+st.markdown(" #### Text2Sentiment: Sentiment & Emotion Analysis")
 
+st.markdown("""
+    Uncover the emotional and sentiment-driven insights hidden within your text. Text2Sentiment analyzes text data for sentiment polarity and emotional content across multiple languages. 
+    Whether you're analyzing survey responses, social media posts, or research data, this tool provides a clear breakdown of both sentiment (positive, negative, neutral) and emotions (joy, anger, sadness, etc.), 
+    making it ideal for understanding user opinions or emotional trends in textual data.
+""")
+
+expander = st.expander("**Key Features**")
+expander.write('''
+    - Multilingual Support: Analyze text in multiple languages including English, French, Spanish, Italian, Portuguese, Chinese, and Arabic.
+    - Sentiment Analysis: Detect positive, negative, and neutral sentiments in your text data.
+    - Emotion Analysis: Identify emotions such as joy, anger, fear, and more with detailed emotion breakdowns.
+    - Visualization Tools: Generate visualizations like bar charts for sentiment and emotion distributions.
+    - Customizable Models: Choose between different analysis models such as VADER, Zero-shot classification, and the NRC Emotion Lexicon for granular insights.
+    - Export Results: Download your sentiment and emotion analysis for further exploration.
+''')
     
 st.text("")
 st.text("")
