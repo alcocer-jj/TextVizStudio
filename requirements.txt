@@ -16,5 +16,4 @@ vaderSentiment
 nrclex
 plotly
 nltk
-textblob
 pathlib
