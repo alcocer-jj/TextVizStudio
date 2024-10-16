@@ -6,6 +6,8 @@ import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
+from collections import defaultdict
+import re
 
 # Set the Streamlit page configuration
 st.set_page_config(
@@ -78,6 +80,45 @@ def analyze_zero_shot(text):
     confidence = result["scores"][0]
     return sentiment, confidence
 
+# NRC Sentiment Analysis Function
+def load_nrc_emotion_lexicon():
+    # Load the NRC emotion lexicon data (replace this with the actual path to your NRC data)
+    nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / "NRC-emo-sent-EN.csv"
+
+    emotion_dict = defaultdict(lambda: defaultdict(int))
+    for _, row in nrc_data.iterrows():
+        word = row['word']
+        if pd.notna(word):  # Skip NaN values
+            word = word.lower()
+            emotion = row['emotion']
+            emotion_dict[word][emotion] = row['condition']
+    return emotion_dict
+
+def analyze_nrc(text, emotion_dict):
+    emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation', 
+                'disgust', 'surprise', 'sadness']
+    emotion_counts = defaultdict(int)
+
+    # Preprocess the input text
+    words = re.findall(r'\b\w+\b', text.lower())
+
+    # Match words with NRC data and accumulate counts
+    for word in words:
+        if word in emotion_dict:
+            for emotion in emotions:
+                emotion_counts[emotion] += emotion_dict[word][emotion]
+
+    # Calculate positive and negative scores
+    positive_score = emotion_counts['joy'] + emotion_counts['trust'] + emotion_counts['anticipation']
+    negative_score = emotion_counts['anger'] + emotion_counts['fear'] + emotion_counts['disgust'] + emotion_counts['sadness']
+
+    # Determine sentiment label
+    sentiment = 'positive' if positive_score > negative_score else 'negative' if negative_score > positive_score else 'neutral'
+
+    return pd.Series([emotion_counts['anger'], emotion_counts['fear'], emotion_counts['trust'], 
+                      emotion_counts['joy'], emotion_counts['anticipation'], emotion_counts['disgust'], 
+                      emotion_counts['surprise'], emotion_counts['sadness'], negative_score, positive_score, sentiment])
+
 # Sidebar file uploader
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 df, original_csv = None, None
@@ -101,11 +142,14 @@ if uploaded_file is not None:
         except Exception as e:
             st.error(f"Error loading Zero-shot classifier: {e}")
 
+        # Load the NRC Emotion Lexicon
+        emotion_dict = load_nrc_emotion_lexicon()
+
         # Model selection for sentiment analysis
         st.subheader("Set Model Parameters")
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
-            ["VADER", "Zero-shot Classifier"]
+            ["VADER", "Zero-shot Classifier", "NRC Lexicon"]
         )
 
         # Analyze sentiment on button click
@@ -120,6 +164,11 @@ if uploaded_file is not None:
                         df[['sentiment', 'confidence']] = df['text'].apply(
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
+                    elif sentiment_method == "NRC Lexicon":
+                        df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 
+                            'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(
+                                lambda x: analyze_nrc(x, emotion_dict)
+                            )
 
                     col1, col2 = st.columns([0.2, 0.8])
                     with col1:
