@@ -53,9 +53,13 @@ st.markdown("")
 st.markdown("")
 
 st.markdown("""
-Analyze keyword frequency and discover n-grams from your text data. You can upload multiple CSV or PDF files
-for analysis. Input custom keywords, or let the app automatically discover the most frequent unigrams, bigrams, 
-and trigrams. Download your analysis results in a convenient ZIP format with all outputs.
+**Text2Keywords** is an interactive tool designed for keyword frequency and n-gram discovery from text data. 
+Upload your CSV or PDF files for analysis and choose between custom keyword input or automatic discovery of the 
+most frequent unigrams, bigrams, and trigrams. The tool supports text cleaning in multiple languages, including 
+English, French, Spanish, Italian, Portuguese, Chinese, and Arabic. Visualize your results with keyword frequency 
+data, generate word clouds, and download all outputs, including the analysis data and visualizations, in a convenient 
+ZIP format. Tailor your analysis to suit your needs, whether for custom keyword extraction or automatic n-gram 
+analysis.
 """)
 
 st.markdown("")
