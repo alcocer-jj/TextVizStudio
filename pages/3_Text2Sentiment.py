@@ -132,7 +132,7 @@ if uploaded_file is not None:
                         sentiment_counts.columns = ['Sentiment', 'Count']
                         fig = px.bar(
                             sentiment_counts, x='Sentiment', y='Count',
-                            title='Sentiment Proportion', text='Proportion', color='Sentiment'
+                            title='Sentiment Proportion', text='Count', color='Sentiment'
                         )
                         st.plotly_chart(fig, use_container_width=True)
                     
