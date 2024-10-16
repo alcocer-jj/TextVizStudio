@@ -151,7 +151,7 @@ if uploaded_file is not None:
         st.subheader("Set Model Parameters")
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
-            ["VADER", "Zero-shot Classifier", "NRC Lexicon"]
+            ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"]
         )
 
         # Analyze sentiment on button click
@@ -166,7 +166,7 @@ if uploaded_file is not None:
                         df[['sentiment', 'confidence']] = df['text'].apply(
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
-                    elif sentiment_method == "NRC Lexicon":
+                    elif sentiment_method == "NRC Lexicon (Default)":
                         df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 
                             'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(
                                 lambda x: analyze_nrc(x, emotion_dict)
