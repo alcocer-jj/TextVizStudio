@@ -130,9 +130,6 @@ if uploaded_file is not None:
         except Exception as e:
             st.error(f"Error loading Zero-shot classifier: {e}")
 
-        # Load the NRC Emotion Lexicon
-        emotion_dict = load_nrc_emotion_lexicon()
-
         # Model selection for sentiment analysis
         st.subheader("Set Model Parameters")
         
