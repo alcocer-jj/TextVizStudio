@@ -122,8 +122,25 @@ if uploaded_file is not None:
             index=0  # Default to NRC Lexicon
         )
 
+        with st.expander("Learn more about each model"):
+            st.markdown("""
+            ### NRC Lexicon (Default)
+            - **Description:** A predefined word-association-based model that assigns sentiment (positive or negative) to words.
+            - **Best Use Case:** Effective for structured text, such as survey responses, interviews, or reports, where keywords are indicative of sentiment.
+            - **Limitations:** May miss context and nuances, as it only matches predefined words.
 
-        st.warning("⚠️ Note: These models perform best with **English** text.")
+            ### VADER (Valence Aware Dictionary and sEntiment Reasoner)
+            - **Description:** A model optimized for analyzing sentiment in informal text, such as social media posts, with support for emojis, slang, and negation handling.
+            - **Best Use Case:** Ideal for tweets, reviews, and other short-form content where informal language is prevalent.
+            - **Limitations:** Less effective for longer texts and complex narratives.
+
+            ### Zero-shot Classifier
+            - **Description:** A transformer-based model from Hugging Face that can classify text into any category without specific pre-training on those categories.
+            - **Best Use Case:** Useful for emerging topics, dynamic content, or when the sentiment categories are not predefined.
+            - **Limitations:** Requires more computational resources and an active internet connection to load the model.
+            """)
+            
+            st.warning("⚠️ Note: VADER and Zero-shot Classifier perform best with **English** text.")
 
         # Analyze sentiment on button click
         if st.button("Analyze Sentiment"):
