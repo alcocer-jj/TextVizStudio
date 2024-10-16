@@ -6,14 +6,28 @@ import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
+import nltk
+from nltk.corpus import stopwords
 
-# Set the Streamlit page configuration at the top
-st.set_page_config(
-    page_title="Text2Sentiment",
-    layout="wide"
-)
+# Streamlit page configuration
+st.set_page_config(page_title="Text2Sentiment", layout="wide")
 
-# Authenticate with Google Sheets API using Streamlit Secrets
+# Ensure NLTK resources are available
+nltk.download('stopwords')
+
+# Load NRC CSV into a DataFrame at the top for reuse
+@st.cache_data
+def load_nrc_csv():
+    df = pd.read_csv("../data/NRC-emo-sent-EN.csv").dropna(subset=["word"])
+    df = df[df["condition"] == 1]  # Use only words associated with emotion
+    return df
+
+nrc_df = load_nrc_csv()
+
+# Initialize stopwords list
+STOPWORDS = set(stopwords.words('english'))
+
+# Authenticate with Google Sheets API using Streamlit secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
@@ -21,12 +35,9 @@ client = gspread.authorize(creds)
 # Open the Google Sheet for feedback
 sheet = client.open("TextViz Studio Feedback").sheet1
 
-# Sidebar: Feedback form
+# Sidebar Feedback Form
 st.sidebar.markdown("### **Feedback**")
-feedback = st.sidebar.text_area(
-    "Experiencing bugs/issues? Have ideas to improve the tool?",
-    placeholder="Leave feedback or error code here"
-)
+feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to improve the tool?", placeholder="Leave feedback or error code here")
 
 if st.sidebar.button("Submit"):
     if feedback:
@@ -35,9 +46,7 @@ if st.sidebar.button("Submit"):
     else:
         st.sidebar.error("Feedback cannot be empty!")
 
-st.sidebar.markdown(
-    "For full documentation and updates, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)"
-)
+st.sidebar.markdown("For full documentation, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
 st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment Analysis</h1>", unsafe_allow_html=True)
 
@@ -59,24 +68,30 @@ def extract_text_from_csv(file):
         st.error(f"Error reading the CSV file: {e}")
         return None, None
 
-# VADER Sentiment Analysis Function
-def analyze_vader(text):
-    scores = vader.polarity_scores(text)
-    compound = scores['compound']
-    label = (
-        "positive" if compound >= 0.05
-        else "negative" if compound <= -0.05
-        else "neutral"
-    )
-    return compound, label, scores['neg'], scores['neu'], scores['pos']
+# VADER Sentiment Analysis
+@st.cache_resource
+def load_vader():
+    return SentimentIntensityAnalyzer()
 
-# Zero-shot Sentiment Analysis Function
-def analyze_zero_shot(text):
-    labels = ["positive", "negative", "neutral"]
-    result = zero_shot_classifier(text, labels)
-    sentiment = result["labels"][0]
-    confidence = result["scores"][0]
-    return sentiment, confidence
+# Zero-shot classifier caching
+@st.cache_resource
+def load_zero_shot_classifier():
+    return pipeline("zero-shot-classification", model="cross-encoder/nli-distilroberta-base")
+
+# NRC-based Sentiment Analysis
+def analyze_nrc_sentiment(text):
+    # Preprocess the text: lowercase and remove stopwords
+    words = [word for word in text.lower().split() if word not in STOPWORDS]
+    positive_count = nrc_df[(nrc_df["word"].isin(words)) & (nrc_df["emotion"] == "positive")].shape[0]
+    negative_count = nrc_df[(nrc_df["word"].isin(words)) & (nrc_df["emotion"] == "negative")].shape[0]
+
+    # Determine sentiment
+    if positive_count > negative_count:
+        return "positive"
+    elif negative_count > positive_count:
+        return "negative"
+    else:
+        return "neutral"
 
 # Sidebar file uploader
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
@@ -89,44 +104,34 @@ if uploaded_file is not None:
     if df is not None:
         st.write("CSV file successfully processed.")
 
-        # Initialize VADER sentiment analyzer
-        vader = SentimentIntensityAnalyzer()
-
-        # Load the Zero-shot classification model
-        try:
-            zero_shot_classifier = pipeline(
-                "zero-shot-classification",
-                model="cross-encoder/nli-distilroberta-base"
-            )
-            st.success("Zero-shot model loaded successfully!")
-        except Exception as e:
-            st.error(f"Error loading Zero-shot classifier: {e}")
+        # Load sentiment models
+        vader = load_vader()
+        zero_shot_classifier = load_zero_shot_classifier()
 
         # Model selection for sentiment analysis
         st.subheader("Set Model Parameters")
-        
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
-            ["VADER", "Zero-shot Classifier"]
+            ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"],
+            index=0  # Default to NRC Lexicon
         )
 
-        st.warning(
-    "⚠️ Note: The VADER and Zero-shot classification models currently perform best with **English** text. "
-    "For non-English text, results may be less reliable."
-)
-        
+        st.warning("⚠️ Note: These models perform best with **English** text.")
+
         # Analyze sentiment on button click
         if st.button("Analyze Sentiment"):
             try:
                 with st.spinner("Running sentiment analysis..."):
                     if sentiment_method == "VADER":
                         df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
-                            lambda x: pd.Series(analyze_vader(x))
+                            lambda x: pd.Series(vader.polarity_scores(x))
                         )
                     elif sentiment_method == "Zero-shot Classifier":
                         df[['sentiment', 'confidence']] = df['text'].apply(
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
+                    elif sentiment_method == "NRC Lexicon (Default)":
+                        df['sentiment'] = df['text'].apply(analyze_nrc_sentiment)
 
                     st.write("Sentiment Analysis Results:")
                     st.dataframe(df)
