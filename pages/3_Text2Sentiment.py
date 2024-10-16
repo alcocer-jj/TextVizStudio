@@ -116,9 +116,12 @@ if uploaded_file is not None:
         st.subheader("Set Model Parameters")
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
-            ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"],
+            ["NRC Lexicon (Default): Best for predefined word-based sentiment in structured text",
+                "VADER: Optimized for informal social media content",
+                "Zero-shot Classifier: Flexible for dynamic topics without specific pre-training"],
             index=0  # Default to NRC Lexicon
         )
+
 
         st.warning("⚠️ Note: These models perform best with **English** text.")
 
