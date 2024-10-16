@@ -18,6 +18,7 @@ nrc_path = Path(__file__).resolve().parent.parent / "data" / "NRC-emo-sent-EN.cs
 # Ensure NLTK resources are available
 nltk.download('stopwords')
 
+# Load NRC data
 @st.cache_data
 def load_nrc_csv():
     df = pd.read_csv(nrc_path).dropna(subset=["word"])
@@ -27,6 +28,7 @@ def load_nrc_csv():
 nrc_df = load_nrc_csv()
 STOPWORDS = set(stopwords.words('english'))
 
+# Authenticate with Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
@@ -75,7 +77,7 @@ def analyze_nrc_sentiment(text):
     positive_count = nrc_df[(nrc_df["word"].isin(words)) & (nrc_df["emotion"] == "positive")].shape[0]
     negative_count = nrc_df[(nrc_df["word"].isin(words)) & (nrc_df["emotion"] == "negative")].shape[0]
 
-    st.write(f"Words: {words}, Positive: {positive_count}, Negative: {negative_count}")  # Debugging output
+    st.write(f"Words: {words}, Positive: {positive_count}, Negative: {negative_count}")  # Debugging
 
     if positive_count > negative_count:
         return "positive"
