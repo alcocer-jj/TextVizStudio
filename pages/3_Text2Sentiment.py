@@ -124,8 +124,8 @@ if uploaded_file is not None:
 
                     col1, col2 = st.columns([1,1])
                     with col1:
-                        st.write("Sentiment Analysis Results")
-                        st.dataframe(df)
+                        st.write("Sentiment Analysis Proportions")
+                        st.dataframe(df['sentiment'].value_counts().reset_index())
 
                     with col2:
                         sentiment_counts = df['sentiment'].value_counts().reset_index()
@@ -136,7 +136,7 @@ if uploaded_file is not None:
                         )
                         st.plotly_chart(fig, use_container_width=True)
                     
-                    st.write("Sentiment Analysis Results:")
+                    st.write("Sentiment Analysis Dataframe Results:")
                     st.dataframe(df)
 
             except Exception as e:
