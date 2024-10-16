@@ -45,6 +45,25 @@ st.sidebar.markdown(
 
 st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment Analysis</h1>", unsafe_allow_html=True)
 
+st.markdown("")
+st.markdown("")
+st.markdown("")
+st.markdown("")
+st.markdown("")
+
+st.markdown("""
+**Text2Sentiment Analysis** is an interactive tool for performing sentiment and emotion analysis on text data.
+Upload a CSV file containing your text, and select your preferred sentiment analysis model. Choose from options like 
+the **VADER** model for short, informal text, **Zero-shot Classifier** for broader domain adaptability, or the 
+**NRC Emotion Lexicon** to conduct detailed emotion analysis across multiple languages, including French, Spanish, 
+Italian, Portuguese, Chinese, and Arabic. Visualize the results with sentiment proportions and emotion breakdowns 
+through bar charts and data tables. Configure language and model settings to tailor the analysis to your needs, and 
+download the results for further analysis.
+""")
+
+st.markdown("")
+st.markdown("")
+
 # Create unique IDs for each text entry
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
@@ -107,8 +126,11 @@ def analyze_nrc(text, emotion_dict):
                       emotion_counts['joy'], emotion_counts['anticipation'], emotion_counts['disgust'], 
                       emotion_counts['surprise'], emotion_counts['sadness'], negative_score, positive_score, sentiment])
 
-# Sidebar file uploader
+st.subheader("Import Data", divider=True)
+
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+st.warning("**Instructions:** For CSV files, ensure that the text data is in a column named 'text'.")
+
 df, original_csv = None, None
 
 # Process the uploaded CSV file
@@ -184,6 +206,8 @@ if uploaded_file is not None:
                     emotion = row['emotion']
                     emotion_dict[word][emotion] = row['condition']
 
+        st.subheader("Analyze", divider=True)
+        
         # Analyze sentiment on button click
         if st.button("Analyze Sentiment"):
             try:
