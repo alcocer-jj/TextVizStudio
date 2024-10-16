@@ -122,23 +122,7 @@ if uploaded_file is not None:
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
 
-
-# Create two columns for layout
-                    col1, col2 = st.columns([1, 1])
-
-                    with col1:
-                        st.write("Sentiment Proportions:")
-                        st.dataframe(sentiment_counts)
-
-                    with col2:
-                        fig = px.bar(
-                            sentiment_counts, x='Sentiment', y='Proportion',
-                            title='Sentiment Proportion', text='Proportion', color='Sentiment'
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-
-
-                    col1, col2 = st.columns([1,1)
+                    col1, col2 = st.columns([1,1])
                     with col1:
                         st.write("Sentiment Analysis Results")
                         st.dataframe(df)
