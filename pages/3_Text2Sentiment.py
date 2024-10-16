@@ -8,19 +8,22 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
 import nltk
-from textblob import download_corpora  # Import downloader for TextBlob corpora
+from textblob import TextBlob  # Ensure TextBlob is imported
 import time
 
-# Ensure NLTK and TextBlob corpora are available
+# Ensure NLTK's 'punkt' tokenizer is available
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
+    st.warning("Downloading 'punkt' tokenizer...")
     nltk.download('punkt')
 
+# Ensure necessary TextBlob corpora are available
 try:
-    download_corpora.download_corpora()  # Download TextBlob corpora if missing
-except Exception as e:
-    st.error(f"Error downloading TextBlob corpora: {e}")
+    TextBlob("test").sentiment  # Trigger TextBlob to load its corpora
+except LookupError:
+    st.warning("Downloading TextBlob corpora...")
+    nltk.download('averaged_perceptron_tagger')
 
 st.set_page_config(
     page_title="Text2Sentiment",
