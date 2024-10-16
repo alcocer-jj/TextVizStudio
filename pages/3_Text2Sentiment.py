@@ -111,7 +111,7 @@ if uploaded_file is not None:
             [
                 "NRC Lexicon (Default): Best for structured text with predefined words",
                 "VADER: Optimized for informal social media content",
-                "Zero-shot Classifier: Flexible for dynamic topics"
+                "Zero-shot Classifier: Flexible for nuanced context-dependent language"
             ],
             index=0  # Default to NRC Lexicon
         )
@@ -129,9 +129,9 @@ if uploaded_file is not None:
             - **Limitation:** Less effective for long texts.
 
             ### Zero-shot Classifier
-            - **Description:** Classifies text without pre-training for specific categories.
-            - **Use Case:** Emerging topics, dynamic content.
-            - **Limitation:** Requires more resources.
+            - **Description:** Classifies text without pre-training for specific categories. 
+            - **Use Case:** Emerging topics, nuanced and context-dependent data.
+            - **Limitation:** Takes longer to run.
             """)
 
         if st.button("Analyze Sentiment"):
