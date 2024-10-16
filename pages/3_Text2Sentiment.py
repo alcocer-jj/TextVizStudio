@@ -8,6 +8,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
 import nltk
 from nltk.corpus import stopwords
+from pathlib import Path
+
 
 # Streamlit page configuration
 st.set_page_config(page_title="Text2Sentiment", layout="wide")
