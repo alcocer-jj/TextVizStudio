@@ -232,7 +232,8 @@ if uploaded_file is not None:
                                   metric='cosine',
                                   random_state=umap_random_state)  # Use either the user-defined or random seed
                 vectorizer_model = CountVectorizer(stop_words='english',
-                                                   min_df=5,
+                                                   min_df=2,
+                                                   max_df=0.9,
                                                    ngram_range=(1, 3))
 
                 # Use KeyBERTInspired for keywords representation
