@@ -87,21 +87,19 @@ st.warning("**Instructions:** For CSV files, ensure that the text data is in a c
 # Function to extract text from CSV file and add unique identifiers (doc_id)
 def extract_text_from_csv(file):
     df = pd.read_csv(file)
-    # Make the check case-insensitive by converting column names to lowercase
-    columns_lower = [col.lower() for col in df.columns]
     
-    if 'text' in columns_lower:
-        # Get the actual column name from the original dataframe (preserve case)
-        actual_column_name = df.columns[columns_lower.index('text')]
-        
+    # Convert all column names to lowercase
+    df.columns = df.columns.str.lower()
+
+    if 'text' in df.columns:
         # Drop rows where the 'text' column is NaN
-        df = df.dropna(subset=[actual_column_name])
+        df = df.dropna(subset=['text'])
         
         # Create unique doc_id for each text
-        df['doc_id'] = df[actual_column_name].apply(create_unique_id)
+        df['doc_id'] = df['text'].apply(create_unique_id)
         
         # Return the doc_id and text columns
-        return df[['doc_id', actual_column_name]].reset_index(drop=True), df
+        return df[['doc_id', 'text']].reset_index(drop=True), df
     else:
         st.error("The CSV file must contain a 'text' column.")
         return None, None
