@@ -90,12 +90,17 @@ def extract_text_from_csvs(files):
     all_texts = []
     for file in files:
         df = pd.read_csv(file)
-        if 'text' in df.columns:
-            text = " ".join(df['text'].dropna().tolist())
+        # Make the check case-insensitive by converting column names to lowercase
+        columns_lower = [col.lower() for col in df.columns]
+        if 'text' in columns_lower:
+            # Get the actual column name from the original dataframe (preserve case)
+            actual_column_name = df.columns[columns_lower.index('text')]
+            text = " ".join(df[actual_column_name].dropna().tolist())
             all_texts.append((file.name, text))  # Store file name and text as a tuple
         else:
             st.error(f"CSV file {file.name} must contain a 'text' column.")
     return all_texts
+
 
 # Preprocessing functions for different languages
 def clean_text(text, selected_language="English"):
