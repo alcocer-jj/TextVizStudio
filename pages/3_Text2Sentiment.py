@@ -68,18 +68,24 @@ st.markdown("")
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
 
-# Extract text from uploaded CSV files
+# Function to extract text from CSV file and add unique identifiers (doc_id)
 def extract_text_from_csv(file):
-    try:
-        df = pd.read_csv(file, low_memory=False)
-        if 'text' not in df.columns:
-            st.error("The CSV file must contain a 'text' column.")
-            return None, None
+    df = pd.read_csv(file)
+    
+    # Convert all column names to lowercase
+    df.columns = df.columns.str.lower()
+
+    if 'text' in df.columns:
+        # Drop rows where the 'text' column is NaN
         df = df.dropna(subset=['text'])
+        
+        # Create unique doc_id for each text
         df['doc_id'] = df['text'].apply(create_unique_id)
+        
+        # Return the doc_id and text columns
         return df[['doc_id', 'text']].reset_index(drop=True), df
-    except Exception as e:
-        st.error(f"Error reading the CSV file: {e}")
+    else:
+        st.error("The CSV file must contain a 'text' column.")
         return None, None
 
 # VADER Sentiment Analysis Function
