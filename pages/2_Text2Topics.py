@@ -290,26 +290,32 @@ if uploaded_file is not None:
                 st.session_state.BERTmodel = BERTmodel  # Store the model in session state
                 st.session_state.topics = topics  # Store topics in session state
                 
-                # Apply outlier reduction if the option was selected
-                if reduce_outliers_option:
-                    # First, reduce outliers using the "c-tf-idf" strategy with the chosen threshold
-                    new_topics = BERTmodel.reduce_outliers(text_data, topics, strategy="c-tf-idf", threshold=c_tf_idf_threshold)
-                    # Then, reduce remaining outliers with the "distributions" strategy
-                    new_topics = BERTmodel.reduce_outliers(text_data, new_topics, strategy="distributions")
-                    st.write(f"Outliers reduced using c-TF-IDF threshold {c_tf_idf_threshold} and distributions strategy.")
+                unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
+                
+                if len(unique_topics) < 3:
+                    st.warning("The model generated fewer than 3 topics. This can happen if the data lacks diversity or is too homogeneous. "
+                                "Please try using a dataset with more variability in the text content.")
+                else:
+                    # Apply outlier reduction if the option was selected
+                    if reduce_outliers_option:
+                        # First, reduce outliers using the "c-tf-idf" strategy with the chosen threshold
+                        new_topics = BERTmodel.reduce_outliers(text_data, topics, strategy="c-tf-idf", threshold=c_tf_idf_threshold)
+                        # Then, reduce remaining outliers with the "distributions" strategy
+                        new_topics = BERTmodel.reduce_outliers(text_data, new_topics, strategy="distributions")
+                        st.write(f"Outliers reduced using c-TF-IDF threshold {c_tf_idf_threshold} and distributions strategy.")
                     
-                    # Update topic representations based on the new topics
-                    BERTmodel.update_topics(text_data, topics=new_topics)
-                    st.session_state.topics = new_topics
-                    st.write("Topics and their representations have been updated based on the new outlier-free documents.")
+                        # Update topic representations based on the new topics
+                        BERTmodel.update_topics(text_data, topics=new_topics)
+                        st.session_state.topics = new_topics
+                        st.write("Topics and their representations have been updated based on the new outlier-free documents.")
 
-                # Display the outputs (topics table, intertopic map, probabilities)
-                display_outputs(BERTmodel, text_data, st.session_state.doc_ids)
+                    # Display the outputs (topics table, intertopic map, probabilities)
+                    display_outputs(BERTmodel, text_data, st.session_state.doc_ids)
 
-                # Provide download link for original CSV with unique IDs
-                st.write("Download your original CSV with unique document IDs:")
-                create_download_link(st.session_state.original_csv_with_ids, "original_csv_with_ids.csv", "Download CSV with IDs")
-                st.info("**Tip:** Download the CSV file to keep a record of the unique document IDs assigned to each text document. This will help you merge topics with the original documents later for further analysis.")
+                    # Provide download link for original CSV with unique IDs
+                    st.write("Download your original CSV with unique document IDs:")
+                    create_download_link(st.session_state.original_csv_with_ids, "original_csv_with_ids.csv", "Download CSV with IDs")
+                    st.info("**Tip:** Download the CSV file to keep a record of the unique document IDs assigned to each text document. This will help you merge topics with the original documents later for further analysis.")
 
 # Manual topic merge functionality
 if merge_topics_btn and st.session_state.BERTmodel is not None and st.session_state.topics is not None:
