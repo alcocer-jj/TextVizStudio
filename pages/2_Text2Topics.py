@@ -42,6 +42,10 @@ if st.sidebar.button("Submit"):
 
 st.sidebar.markdown("")
 
+st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.0) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
+
+st.sidebar.markdown("")
+
 st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
 # Sidebar: Title and description (sticky)

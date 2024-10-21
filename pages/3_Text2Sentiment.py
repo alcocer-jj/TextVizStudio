@@ -38,6 +38,12 @@ if st.sidebar.button("Submit"):
         st.sidebar.success("Thank you for your feedback!")
     else:
         st.sidebar.error("Feedback cannot be empty!")
+        
+st.sidebar.markdown("")
+        
+st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.0) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
+
+st.sidebar.markdown("")
 
 st.sidebar.markdown(
     "For full documentation and updates, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)"
