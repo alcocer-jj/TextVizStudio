@@ -41,13 +41,14 @@ if st.sidebar.button("Submit"):
         
 st.sidebar.markdown("")
         
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.0) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
-
-st.sidebar.markdown("")
-
 st.sidebar.markdown(
     "For full documentation and updates, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)"
 )
+
+st.sidebar.markdown("")
+
+st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.0) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
+
 
 st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment Discovery</h1>", unsafe_allow_html=True)
 
