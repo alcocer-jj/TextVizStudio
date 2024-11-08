@@ -122,7 +122,7 @@ def analyze_nrc(text, emotion_dict):
 def get_plotly_download(fig, file_format="png", scale=3):
     if file_format == "png":
         buffer = BytesIO()
-        fig.write_image(buffer, format="png", scale=scale)
+        fig.write_image(buffer, format="png", scale=scale, engine="kaleido")  # Specify kaleido as the engine
         buffer.seek(0)
         return buffer
     elif file_format == "html":
@@ -210,8 +210,8 @@ if uploaded_file is not None:
                         emotion_counts.columns = ['Emotion', 'Count']
 
                         st.subheader("Emotion Counts (NRC Lexicon)")
-                        theme = st.selectbox("Select Plotly Theme", ["ggplot2", "seaborn", "simple_theme", "none"], index=0)
                         
+                        # Apply ggplot2 theme directly
                         if toggle_proportion:
                             emotion_counts['Count'] = emotion_counts['Count'] / emotion_counts['Count'].sum()
                             y_axis_label = "Proportion"
@@ -219,7 +219,7 @@ if uploaded_file is not None:
                             y_axis_label = "Count"
 
                         fig_emotions = px.bar(emotion_counts, x='Emotion', y='Count', title='Emotion Distribution', text='Count', color='Emotion', labels={'Count': y_axis_label})
-                        fig_emotions.update_layout(template=theme)
+                        fig_emotions.update_layout(template="ggplot2")
                         st.plotly_chart(fig_emotions, use_container_width=True)
 
                         png_buffer = get_plotly_download(fig_emotions, file_format="png", scale=3)
@@ -231,7 +231,6 @@ if uploaded_file is not None:
                 sentiment_counts.columns = ['Sentiment', 'Count']
 
                 st.subheader("Sentiment Count Distribution")
-                theme = st.selectbox("Select Plotly Theme", ["ggplot2", "seaborn", "simple_theme", "none"], index=0)
                 
                 if toggle_proportion:
                     sentiment_counts['Count'] = sentiment_counts['Count'] / sentiment_counts['Count'].sum()
@@ -240,7 +239,7 @@ if uploaded_file is not None:
                     y_axis_label = "Count"
 
                 fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count', title='Sentiment Distribution', text='Count', color='Sentiment', labels={'Count': y_axis_label})
-                fig_sentiment.update_layout(template=theme)
+                fig_sentiment.update_layout(template="ggplot2")
                 st.plotly_chart(fig_sentiment, use_container_width=True)
 
                 png_buffer = get_plotly_download(fig_sentiment, file_format="png", scale=3)
