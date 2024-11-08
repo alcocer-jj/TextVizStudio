@@ -71,6 +71,16 @@ download the results for further analysis.
 st.markdown("")
 st.markdown("")
 
+import streamlit as st
+import pandas as pd
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from transformers import pipeline
+import plotly.express as px
+from collections import defaultdict
+import hashlib
+import re
+from pathlib import Path
+
 # Create unique IDs for each text entry
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
@@ -106,22 +116,36 @@ def analyze_zero_shot(text):
     confidence = result["scores"][0]
     return sentiment, confidence
 
-def analyze_nrc(text, emotion_dict):
+# Updated NRC analysis function
+def analyze_nrc(text, emotion_dict, pos_neg_dict):
     emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
     emotion_counts = defaultdict(int)
-    
-    # Convert text to lowercase before analysis to match the lowercase dictionary
+    positive_count = 0
+    negative_count = 0
+
+    # Process each word in the text
     words = re.findall(r'\b\w+\b', text.lower())
     for word in words:
+        # Count each associated emotion for the word
         if word in emotion_dict:
             for emotion in emotions:
                 emotion_counts[emotion] += emotion_dict[word][emotion]
+                
+        # Check if word has a 'positive' or 'negative' label
+        if word in pos_neg_dict:
+            positive_count += pos_neg_dict[word]['positive']
+            negative_count += pos_neg_dict[word]['negative']
+
+    # Determine overall sentiment based on positive and negative counts
+    if positive_count > negative_count:
+        sentiment = 'positive'
+    elif negative_count > positive_count:
+        sentiment = 'negative'
+    else:
+        sentiment = 'neutral'
     
-    positive_score = emotion_counts['joy'] + emotion_counts['trust'] + emotion_counts['anticipation']
-    negative_score = emotion_counts['anger'] + emotion_counts['fear'] + emotion_counts['disgust'] + emotion_counts['sadness']
-    sentiment = 'positive' if positive_score > negative_score else 'negative' if negative_score > positive_score else 'neutral'
-    
-    return pd.Series([emotion_counts[e] for e in emotions] + [negative_score, positive_score, sentiment])
+    # Return both emotion counts and overall sentiment
+    return pd.Series([emotion_counts[e] for e in emotions] + [positive_count, negative_count, sentiment])
 
 # Set Plotly configuration for high-resolution and theme
 config = {
@@ -179,12 +203,25 @@ if uploaded_file is not None:
             }
             selected_language_code = language_codes[language]
             nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / selected_language_code)
+
+            # Build dictionaries for emotions and sentiment based on the CSV structure
             emotion_dict = defaultdict(lambda: defaultdict(int))
+            pos_neg_dict = defaultdict(lambda: {'positive': 0, 'negative': 0})
+
             for _, row in nrc_data.iterrows():
                 word = row['word']
-                if pd.notna(word):
-                    emotion = row['emotion']
-                    emotion_dict[word][emotion] = row['condition']
+                emotion = row['emotion']
+                condition = row['condition']
+
+                # For main emotions, populate emotion_dict
+                if emotion in ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']:
+                    emotion_dict[word][emotion] = condition
+
+                # For sentiment analysis, populate pos_neg_dict
+                if emotion == 'positive':
+                    pos_neg_dict[word]['positive'] = condition
+                elif emotion == 'negative':
+                    pos_neg_dict[word]['negative'] = condition
 
         st.subheader("Analyze", divider=True)
         
@@ -203,15 +240,16 @@ if uploaded_file is not None:
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
                     elif sentiment_method == "NRC Lexicon (Default)":
-                        df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(
-                            lambda x: analyze_nrc(x, emotion_dict)
+                        # Perform NRC analysis with emotion and sentiment classification
+                        df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness', 'positive', 'negative', 'sentiment']] = df['text'].apply(
+                            lambda x: analyze_nrc(x, emotion_dict, pos_neg_dict)
                         )
 
-                        # Sentiment Data
+                        # Count sentiment labels
                         sentiment_counts = df['sentiment'].value_counts().reset_index()
                         sentiment_counts.columns = ['Sentiment', 'Count']
                         
-                        # Emotion Data
+                        # Count emotion occurrences
                         emotion_cols = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
                         emotion_counts = df[emotion_cols].sum().reset_index()
                         emotion_counts.columns = ['Emotion', 'Count']
@@ -236,6 +274,7 @@ if uploaded_file is not None:
                             st.dataframe(sentiment_counts, use_container_width=True)
                         
                         with col2:
+                            fig_sentiment = px.bar
                             fig_sentiment = px.bar(
                                 sentiment_counts, 
                                 x='Sentiment', y='Count', 
@@ -262,6 +301,7 @@ if uploaded_file is not None:
                             fig_emotions.update_layout(template="ggplot2")
                             st.plotly_chart(fig_emotions, use_container_width=True, config=config)
 
+                # Display full sentiment analysis results
                 st.write("Sentiment Analysis Dataframe Results:")
                 st.dataframe(df[['doc_id', 'text', 'sentiment']], use_container_width=True)
 
