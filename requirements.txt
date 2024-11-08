@@ -17,4 +17,3 @@ nrclex
 plotly
 nltk
 pathlib
-kaleido
