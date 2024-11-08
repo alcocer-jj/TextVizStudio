@@ -9,7 +9,7 @@ import plotly.express as px
 from collections import defaultdict
 import re
 from pathlib import Path
-
+from io import BytesIO, StringIO
 
 # Set the Streamlit page configuration
 st.set_page_config(
@@ -186,6 +186,9 @@ if uploaded_file is not None:
 
         st.subheader("Analyze", divider=True)
         
+        # Checkbox and Analyze button
+        toggle_proportion = st.checkbox("Display Proportions Instead of Counts")
+        
         if st.button("Analyze Sentiment"):
             try:
                 with st.spinner("Running sentiment analysis..."):
@@ -208,7 +211,6 @@ if uploaded_file is not None:
 
                         st.subheader("Emotion Counts (NRC Lexicon)")
                         theme = st.selectbox("Select Plotly Theme", ["ggplot2", "seaborn", "simple_theme", "none"], index=0)
-                        toggle_proportion = st.checkbox("Display Proportions Instead of Counts")
                         
                         if toggle_proportion:
                             emotion_counts['Count'] = emotion_counts['Count'] / emotion_counts['Count'].sum()
@@ -230,7 +232,6 @@ if uploaded_file is not None:
 
                 st.subheader("Sentiment Count Distribution")
                 theme = st.selectbox("Select Plotly Theme", ["ggplot2", "seaborn", "simple_theme", "none"], index=0)
-                toggle_proportion = st.checkbox("Display Proportions Instead of Counts")
                 
                 if toggle_proportion:
                     sentiment_counts['Count'] = sentiment_counts['Count'] / sentiment_counts['Count'].sum()
