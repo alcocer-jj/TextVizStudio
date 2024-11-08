@@ -268,7 +268,7 @@ if uploaded_file is not None:
                             st.dataframe(emotion_counts)
 
                         with col2:
-                            st.plotly_chart(fig_emotions, use_container_width=True)
+                            st.plotly_chart(fig_emotions, use_container_width=True, config=config)
                             
 
                     col1, col2 = st.columns([0.2, 0.8])
@@ -283,7 +283,7 @@ if uploaded_file is not None:
                             sentiment_counts, x='Sentiment', y='Count',
                             title='Sentiment Count Distribution', text='Count', color='Sentiment'
                         )
-                        st.plotly_chart(fig_sentiment, use_container_width=True)
+                        st.plotly_chart(fig_sentiment, use_container_width=True, config=config)
                     
                     st.write("Sentiment Analysis Dataframe Results:")
                     st.dataframe(df)
