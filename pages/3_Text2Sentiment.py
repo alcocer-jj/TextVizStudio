@@ -145,7 +145,7 @@ config = {
         'filename': 'custom_image',
         'height': 1000,
         'width': 1400,
-        'scale': 2
+        'scale': 1
     }
 }
 
