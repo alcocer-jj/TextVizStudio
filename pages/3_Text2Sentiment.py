@@ -119,18 +119,16 @@ def analyze_nrc(text, emotion_dict):
     sentiment = 'positive' if positive_score > negative_score else 'negative' if negative_score > positive_score else 'neutral'
     return pd.Series([emotion_counts[e] for e in emotions] + [negative_score, positive_score, sentiment])
 
-def get_plotly_download(fig, file_format="png", scale=3):
-    if file_format == "png":
-        buffer = BytesIO()
-        fig.write_image(buffer, format="png", scale=scale, engine="kaleido")  # Specify kaleido as the engine
-        buffer.seek(0)
-        return buffer
-    elif file_format == "html":
-        html_str = StringIO()
-        fig.write_html(html_str)
-        buffer = BytesIO(html_str.getvalue().encode("utf-8"))
-        buffer.seek(0)
-        return buffer
+# Set Plotly configuration with higher resolution
+config = {
+  'toImageButtonOptions': {
+    'format': 'svg',  # Users can change to png, jpeg, or webp if needed
+    'filename': 'custom_image',
+    'height': 500,
+    'width': 700,
+    'scale': 3  # Triple the default resolution
+  }
+}
 
 # Streamlit UI
 st.subheader("Import Data", divider=True)
@@ -218,9 +216,7 @@ if uploaded_file is not None:
                             y_axis_label = "Count"
 
                         fig_emotions = px.bar(emotion_counts, x='Emotion', y='Count', title='Emotion Distribution', text='Count', color='Emotion', labels={'Count': y_axis_label})
-                        st.plotly_chart(fig_emotions, use_container_width=True)
-
-                        st.session_state["fig_emotions"] = fig_emotions  # Store in session state for persistent access
+                        st.plotly_chart(fig_emotions, use_container_width=True, config=config)  # Apply config
 
                 sentiment_counts = df['sentiment'].value_counts().reset_index()
                 sentiment_counts.columns = ['Sentiment', 'Count']
@@ -234,9 +230,7 @@ if uploaded_file is not None:
                     y_axis_label = "Count"
 
                 fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count', title='Sentiment Distribution', text='Count', color='Sentiment', labels={'Count': y_axis_label})
-                st.plotly_chart(fig_sentiment, use_container_width=True)
-
-                st.session_state["fig_sentiment"] = fig_sentiment  # Store in session state for persistent access
+                st.plotly_chart(fig_sentiment, use_container_width=True, config=config)  # Apply config
 
                 st.write("Sentiment Analysis Dataframe Results:")
                 st.dataframe(df)
@@ -245,16 +239,3 @@ if uploaded_file is not None:
                 st.error(f"Error during analysis: {e}")
     else:
         st.error("Failed to process the uploaded CSV file.")
-
-# Download buttons using stored figures from session state to avoid reset
-if "fig_emotions" in st.session_state:
-    png_buffer = get_plotly_download(st.session_state["fig_emotions"], file_format="png", scale=3)
-    html_buffer = get_plotly_download(st.session_state["fig_emotions"], file_format="html")
-    st.download_button("Download Emotion Plot as PNG (High Quality)", data=png_buffer, file_name="emotion_plot.png", mime="image/png")
-    st.download_button("Download Emotion Plot as HTML", data=html_buffer, file_name="emotion_plot.html", mime="text/html")
-
-if "fig_sentiment" in st.session_state:
-    png_buffer = get_plotly_download(st.session_state["fig_sentiment"], file_format="png", scale=3)
-    html_buffer = get_plotly_download(st.session_state["fig_sentiment"], file_format="html")
-    st.download_button("Download Sentiment Plot as PNG (High Quality)", data=png_buffer, file_name="sentiment_plot.png", mime="image/png")
-    st.download_button("Download Sentiment Plot as HTML", data=html_buffer, file_name="sentiment_plot.html", mime="text/html")
