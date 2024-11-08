@@ -109,25 +109,29 @@ def analyze_zero_shot(text):
 def analyze_nrc(text, emotion_dict):
     emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
     emotion_counts = defaultdict(int)
+    
+    # Convert text to lowercase before analysis to match the lowercase dictionary
     words = re.findall(r'\b\w+\b', text.lower())
     for word in words:
         if word in emotion_dict:
             for emotion in emotions:
                 emotion_counts[emotion] += emotion_dict[word][emotion]
+    
     positive_score = emotion_counts['joy'] + emotion_counts['trust'] + emotion_counts['anticipation']
     negative_score = emotion_counts['anger'] + emotion_counts['fear'] + emotion_counts['disgust'] + emotion_counts['sadness']
     sentiment = 'positive' if positive_score > negative_score else 'negative' if negative_score > positive_score else 'neutral'
+    
     return pd.Series([emotion_counts[e] for e in emotions] + [negative_score, positive_score, sentiment])
 
-# Set Plotly configuration with higher resolution
+# Set Plotly configuration for high-resolution and theme
 config = {
-  'toImageButtonOptions': {
-    'format': 'svg',  # Users can change to png, jpeg, or webp if needed
-    'filename': 'custom_image',
-    'height': 500,
-    'width': 700,
-    'scale': 3  # Triple the default resolution
-  }
+    'toImageButtonOptions': {
+        'format': 'svg',
+        'filename': 'custom_image',
+        'height': 500,
+        'width': 700,
+        'scale': 3
+    }
 }
 
 # Streamlit UI
@@ -203,37 +207,63 @@ if uploaded_file is not None:
                             lambda x: analyze_nrc(x, emotion_dict)
                         )
 
+                        # Sentiment Data
+                        sentiment_counts = df['sentiment'].value_counts().reset_index()
+                        sentiment_counts.columns = ['Sentiment', 'Count']
+                        
+                        # Emotion Data
                         emotion_cols = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
                         emotion_counts = df[emotion_cols].sum().reset_index()
                         emotion_counts.columns = ['Emotion', 'Count']
 
-                        st.subheader("Emotion Counts (NRC Lexicon)")
-                        
+                        # Apply proportion settings
                         if toggle_proportion:
+                            sentiment_counts['Count'] = (sentiment_counts['Count'] / sentiment_counts['Count'].sum() * 100).round(2)
+                            y_axis_label_sentiment = "Proportion (%)"
+                            
                             emotion_counts['Count'] = (emotion_counts['Count'] / emotion_counts['Count'].sum() * 100).round(2)
-                            y_axis_label = "Proportion (%)"
+                            y_axis_label_emotion = "Proportion (%)"
                         else:
-                            y_axis_label = "Count"
+                            y_axis_label_sentiment = "Count"
+                            y_axis_label_emotion = "Count"
 
-                        fig_emotions = px.bar(emotion_counts, x='Emotion', y='Count', title='Emotion Distribution', text='Count', color='Emotion', labels={'Count': y_axis_label})
-                        st.plotly_chart(fig_emotions, use_container_width=True, config=config)  # Apply config
+                        # Layout Columns (1:3)
+                        col1, col2 = st.columns([1, 3])
+                        
+                        # Display Sentiment Analysis DataFrame and Plot
+                        with col1:
+                            st.markdown("### Sentiment Distribution")
+                            st.dataframe(sentiment_counts, use_container_width=True)
+                        
+                        with col2:
+                            fig_sentiment = px.bar(
+                                sentiment_counts, 
+                                x='Sentiment', y='Count', 
+                                title='Sentiment Distribution', 
+                                text='Count', color='Sentiment', 
+                                labels={'Count': y_axis_label_sentiment}
+                            )
+                            fig_sentiment.update_layout(template="ggplot2")
+                            st.plotly_chart(fig_sentiment, use_container_width=True, config=config)
+                        
+                        # Display Emotion Analysis DataFrame and Plot
+                        with col1:
+                            st.markdown("### Emotion Distribution")
+                            st.dataframe(emotion_counts, use_container_width=True)
 
-                sentiment_counts = df['sentiment'].value_counts().reset_index()
-                sentiment_counts.columns = ['Sentiment', 'Count']
-
-                st.subheader("Sentiment Count Distribution")
-                
-                if toggle_proportion:
-                    sentiment_counts['Count'] = (sentiment_counts['Count'] / sentiment_counts['Count'].sum() * 100).round(2)
-                    y_axis_label = "Proportion (%)"
-                else:
-                    y_axis_label = "Count"
-
-                fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count', title='Sentiment Distribution', text='Count', color='Sentiment', labels={'Count': y_axis_label})
-                st.plotly_chart(fig_sentiment, use_container_width=True, config=config)  # Apply config
+                        with col2:
+                            fig_emotions = px.bar(
+                                emotion_counts, 
+                                x='Emotion', y='Count', 
+                                title='Emotion Distribution', 
+                                text='Count', color='Emotion', 
+                                labels={'Count': y_axis_label_emotion}
+                            )
+                            fig_emotions.update_layout(template="ggplot2")
+                            st.plotly_chart(fig_emotions, use_container_width=True, config=config)
 
                 st.write("Sentiment Analysis Dataframe Results:")
-                st.dataframe(df)
+                st.dataframe(df[['doc_id', 'text', 'sentiment']], use_container_width=True)
 
             except Exception as e:
                 st.error(f"Error during analysis: {e}")
