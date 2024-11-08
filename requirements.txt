@@ -17,5 +17,4 @@ nrclex
 plotly
 nltk
 pathlib
-io
 kaleido
