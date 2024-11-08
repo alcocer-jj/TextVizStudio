@@ -259,4 +259,41 @@ if uploaded_file is not None:
                         # Display Sentiment Analysis DataFrame and Plot
                         with col1:
                             st.markdown("### Sentiment Distribution")
-                           
+                            st.dataframe(sentiment_counts, use_container_width=True)
+                        
+                        with col2:
+                            fig_sentiment = px.bar(
+                                sentiment_counts, 
+                                x='Sentiment', y='Count', 
+                                title='Sentiment Distribution', 
+                                text='Count', color='Sentiment', 
+                                labels={'Count': y_axis_label_sentiment}
+                            )
+                            fig_sentiment.update_layout(template="ggplot2")
+                            st.plotly_chart(fig_sentiment, use_container_width=True, config=config)
+                        
+                        # Display Emotion Analysis DataFrame and Plot
+                        with col1:
+                            st.markdown("### Emotion Distribution")
+                            st.dataframe(emotion_counts, use_container_width=True)
+
+                        with col2:
+                            fig_emotions = px.bar(
+                                emotion_counts, 
+                                x='Emotion', y='Count', 
+                                title='Emotion Distribution', 
+                                text='Count', color='Emotion', 
+                                labels={'Count': y_axis_label_emotion}
+                            )
+                            fig_emotions.update_layout(template="ggplot2")
+                            st.plotly_chart(fig_emotions, use_container_width=True, config=config)
+
+                # Display the full results, including emotion and sentiment counts for each text entry
+                st.write("Sentiment Analysis Dataframe Results:")
+                result_columns = ['doc_id', 'text'] + emotion_cols + ['positive_count', 'negative_count', 'sentiment']
+                st.dataframe(df[result_columns], use_container_width=True)
+
+            except Exception as e:
+                st.error(f"Error during analysis: {e}")
+    else:
+        st.error("Failed to process the uploaded CSV file.")
