@@ -187,7 +187,7 @@ if uploaded_file is not None:
         st.subheader("Analyze", divider=True)
         
         # Checkbox and Analyze button
-        toggle_proportion = st.checkbox("Display Proportions Instead of Counts")
+        toggle_proportion = st.checkbox("Display Proportions as Percentages")
         
         if st.button("Analyze Sentiment"):
             try:
@@ -211,21 +211,16 @@ if uploaded_file is not None:
 
                         st.subheader("Emotion Counts (NRC Lexicon)")
                         
-                        # Apply ggplot2 theme directly
                         if toggle_proportion:
-                            emotion_counts['Count'] = emotion_counts['Count'] / emotion_counts['Count'].sum()
-                            y_axis_label = "Proportion"
+                            emotion_counts['Count'] = (emotion_counts['Count'] / emotion_counts['Count'].sum() * 100).round(2)
+                            y_axis_label = "Proportion (%)"
                         else:
                             y_axis_label = "Count"
 
                         fig_emotions = px.bar(emotion_counts, x='Emotion', y='Count', title='Emotion Distribution', text='Count', color='Emotion', labels={'Count': y_axis_label})
-                        fig_emotions.update_layout(template="ggplot2")
                         st.plotly_chart(fig_emotions, use_container_width=True)
 
-                        png_buffer = get_plotly_download(fig_emotions, file_format="png", scale=3)
-                        html_buffer = get_plotly_download(fig_emotions, file_format="html")
-                        st.download_button("Download as PNG (High Quality)", data=png_buffer, file_name="emotion_plot.png", mime="image/png")
-                        st.download_button("Download as HTML", data=html_buffer, file_name="emotion_plot.html", mime="text/html")
+                        st.session_state["fig_emotions"] = fig_emotions  # Store in session state for persistent access
 
                 sentiment_counts = df['sentiment'].value_counts().reset_index()
                 sentiment_counts.columns = ['Sentiment', 'Count']
@@ -233,19 +228,15 @@ if uploaded_file is not None:
                 st.subheader("Sentiment Count Distribution")
                 
                 if toggle_proportion:
-                    sentiment_counts['Count'] = sentiment_counts['Count'] / sentiment_counts['Count'].sum()
-                    y_axis_label = "Proportion"
+                    sentiment_counts['Count'] = (sentiment_counts['Count'] / sentiment_counts['Count'].sum() * 100).round(2)
+                    y_axis_label = "Proportion (%)"
                 else:
                     y_axis_label = "Count"
 
                 fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count', title='Sentiment Distribution', text='Count', color='Sentiment', labels={'Count': y_axis_label})
-                fig_sentiment.update_layout(template="ggplot2")
                 st.plotly_chart(fig_sentiment, use_container_width=True)
 
-                png_buffer = get_plotly_download(fig_sentiment, file_format="png", scale=3)
-                html_buffer = get_plotly_download(fig_sentiment, file_format="html")
-                st.download_button("Download as PNG (High Quality)", data=png_buffer, file_name="sentiment_plot.png", mime="image/png")
-                st.download_button("Download as HTML", data=html_buffer, file_name="sentiment_plot.html", mime="text/html")
+                st.session_state["fig_sentiment"] = fig_sentiment  # Store in session state for persistent access
 
                 st.write("Sentiment Analysis Dataframe Results:")
                 st.dataframe(df)
@@ -254,3 +245,16 @@ if uploaded_file is not None:
                 st.error(f"Error during analysis: {e}")
     else:
         st.error("Failed to process the uploaded CSV file.")
+
+# Download buttons using stored figures from session state to avoid reset
+if "fig_emotions" in st.session_state:
+    png_buffer = get_plotly_download(st.session_state["fig_emotions"], file_format="png", scale=3)
+    html_buffer = get_plotly_download(st.session_state["fig_emotions"], file_format="html")
+    st.download_button("Download Emotion Plot as PNG (High Quality)", data=png_buffer, file_name="emotion_plot.png", mime="image/png")
+    st.download_button("Download Emotion Plot as HTML", data=html_buffer, file_name="emotion_plot.html", mime="text/html")
+
+if "fig_sentiment" in st.session_state:
+    png_buffer = get_plotly_download(st.session_state["fig_sentiment"], file_format="png", scale=3)
+    html_buffer = get_plotly_download(st.session_state["fig_sentiment"], file_format="html")
+    st.download_button("Download Sentiment Plot as PNG (High Quality)", data=png_buffer, file_name="sentiment_plot.png", mime="image/png")
+    st.download_button("Download Sentiment Plot as HTML", data=html_buffer, file_name="sentiment_plot.html", mime="text/html")
