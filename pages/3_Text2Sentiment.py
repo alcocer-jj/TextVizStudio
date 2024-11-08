@@ -71,16 +71,6 @@ download the results for further analysis.
 st.markdown("")
 st.markdown("")
 
-import streamlit as st
-import pandas as pd
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from transformers import pipeline
-import plotly.express as px
-from collections import defaultdict
-import hashlib
-import re
-from pathlib import Path
-
 # Create unique IDs for each text entry
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
@@ -144,7 +134,7 @@ def analyze_nrc(text, emotion_dict, pos_neg_dict):
     else:
         sentiment = 'neutral'
     
-    # Return both emotion counts and overall sentiment
+    # Return both emotion counts, sentiment counts, and overall sentiment
     return pd.Series([emotion_counts[e] for e in emotions] + [positive_count, negative_count, sentiment])
 
 # Set Plotly configuration for high-resolution and theme
@@ -241,15 +231,14 @@ if uploaded_file is not None:
                         )
                     elif sentiment_method == "NRC Lexicon (Default)":
                         # Perform NRC analysis with emotion and sentiment classification
-                        df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness', 'positive', 'negative', 'sentiment']] = df['text'].apply(
-                            lambda x: analyze_nrc(x, emotion_dict, pos_neg_dict)
-                        )
+                        columns = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness', 'positive_count', 'negative_count', 'sentiment']
+                        df[columns] = df['text'].apply(lambda x: analyze_nrc(x, emotion_dict, pos_neg_dict))
 
-                        # Count sentiment labels
+                        # Sentiment Counts for Visualization
                         sentiment_counts = df['sentiment'].value_counts().reset_index()
                         sentiment_counts.columns = ['Sentiment', 'Count']
-                        
-                        # Count emotion occurrences
+
+                        # Emotion Counts for Visualization
                         emotion_cols = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
                         emotion_counts = df[emotion_cols].sum().reset_index()
                         emotion_counts.columns = ['Emotion', 'Count']
@@ -258,7 +247,6 @@ if uploaded_file is not None:
                         if toggle_proportion:
                             sentiment_counts['Count'] = (sentiment_counts['Count'] / sentiment_counts['Count'].sum() * 100).round(2)
                             y_axis_label_sentiment = "Proportion (%)"
-                            
                             emotion_counts['Count'] = (emotion_counts['Count'] / emotion_counts['Count'].sum() * 100).round(2)
                             y_axis_label_emotion = "Proportion (%)"
                         else:
@@ -267,45 +255,8 @@ if uploaded_file is not None:
 
                         # Layout Columns (1:3)
                         col1, col2 = st.columns([1, 3])
-                        
+
                         # Display Sentiment Analysis DataFrame and Plot
                         with col1:
                             st.markdown("### Sentiment Distribution")
-                            st.dataframe(sentiment_counts, use_container_width=True)
-                        
-                        with col2:
-                            fig_sentiment = px.bar
-                            fig_sentiment = px.bar(
-                                sentiment_counts, 
-                                x='Sentiment', y='Count', 
-                                title='Sentiment Distribution', 
-                                text='Count', color='Sentiment', 
-                                labels={'Count': y_axis_label_sentiment}
-                            )
-                            fig_sentiment.update_layout(template="ggplot2")
-                            st.plotly_chart(fig_sentiment, use_container_width=True, config=config)
-                        
-                        # Display Emotion Analysis DataFrame and Plot
-                        with col1:
-                            st.markdown("### Emotion Distribution")
-                            st.dataframe(emotion_counts, use_container_width=True)
-
-                        with col2:
-                            fig_emotions = px.bar(
-                                emotion_counts, 
-                                x='Emotion', y='Count', 
-                                title='Emotion Distribution', 
-                                text='Count', color='Emotion', 
-                                labels={'Count': y_axis_label_emotion}
-                            )
-                            fig_emotions.update_layout(template="ggplot2")
-                            st.plotly_chart(fig_emotions, use_container_width=True, config=config)
-
-                # Display full sentiment analysis results
-                st.write("Sentiment Analysis Dataframe Results:")
-                st.dataframe(df[['doc_id', 'text', 'sentiment']], use_container_width=True)
-
-            except Exception as e:
-                st.error(f"Error during analysis: {e}")
-    else:
-        st.error("Failed to process the uploaded CSV file.")
+                           
