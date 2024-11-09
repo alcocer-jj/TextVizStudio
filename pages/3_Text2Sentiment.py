@@ -187,7 +187,7 @@ def analyze_nrc(text, emotion_dict):
                       emotion_counts['surprise'], emotion_counts['sadness'], negative_score, positive_score, sentiment])
 
 # Set Plotly configuration for high-resolution and theme
-config = {
+configuration = {
     'toImageButtonOptions': {
         'format': 'png',
         'filename': 'custom_image',
@@ -307,7 +307,7 @@ if uploaded_file is not None:
                             st.dataframe(emotion_counts)
 
                         with col2:
-                            st.plotly_chart(fig_emotions, use_container_width=True, config=config
+                            st.plotly_chart(fig_emotions, use_container_width=True, config=configuration
                                            )
                     elif sentiment_method == "LLM - XLM-RoBERTa Sentiment":
                         # Initialize the model
@@ -337,7 +337,7 @@ if uploaded_file is not None:
                             sentiment_counts, x='Sentiment', y='Count',
                             title='Sentiment Count Distribution', text='Count', color='Sentiment'
                         )
-                        st.plotly_chart(fig_sentiment, use_container_width=True, config=config)
+                        st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
                     
                     st.write("Sentiment Analysis Dataframe Results:")
                     st.dataframe(df)
