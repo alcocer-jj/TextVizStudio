@@ -153,13 +153,14 @@ def analyze_xlm(text):
     
     return negative, neutral, positive, sentiment
 
-# Zero-shot Sentiment Analysis Function
-def analyze_zero_shot(text):
-    labels = ["positive", "negative", "neutral"]
-    result = zero_shot_classifier(text, labels)
-    sentiment = result["labels"][0]
-    confidence = result["scores"][0]
-    return sentiment, confidence
+# Function to analyze class labels with mDeBERTa
+def analyze_mdeberta(text):
+    output = classifier(text, candidate_labels, multi_label=multi_label)
+    # Keep scores as decimals to three decimal places
+    scores = {label: round(score, 3) for label, score in zip(output["labels"], output["scores"])}
+    # Determine the top label(s) based on the highest probability
+    top_label = output["labels"][0] if not multi_label else ", ".join([label for label in scores if scores[label] >= 0.5])
+    return scores, top_label
 
 def analyze_nrc(text, emotion_dict):
     emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation', 
@@ -216,7 +217,7 @@ if uploaded_file is not None:
         
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
-            ["Dictionary - NRC Lexicon (Default)", "Dictionary - VADER", "LLM - XLM-RoBERTa Sentiment", "Zero-shot Classifier"]
+            ["Dictionary - NRC Lexicon (Default)", "Dictionary - VADER", "LLM - XLM-RoBERTa-Twitter-Sentiment", "LLM - mDeBERTa-v3-xnli-multilingual"]
         )
             # Information about model selection
         with st.expander("Which model is right for me?"):
@@ -267,6 +268,15 @@ if uploaded_file is not None:
                     emotion = row['emotion']
                     emotion_dict[word][emotion] = row['condition']
 
+        # Only allow label input and multi-label checkbox if mDeBERTa-v3 Zero-Shot Classification is chosen
+        if sentiment_method == "LLM - mDeBERTa-v3-xnli-multilingual":
+            st.write("Enter candidate labels for zero-shot classification:")
+            label_input = st.text_input("Labels (comma-separated)", "negative, neutral, positive")
+            candidate_labels = [label.strip() for label in label_input.split(",")]
+
+            # Checkbox for multi-label option
+            multi_label = st.checkbox("Allow multiple labels?", value=False)
+        
         st.subheader("Analyze", divider=True)
         
         # Analyze sentiment on button click
@@ -280,11 +290,57 @@ if uploaded_file is not None:
                         df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
                             lambda x: pd.Series(analyze_vader(x))
                         )
-                    elif sentiment_method == "Zero-shot Classifier":
-                        zero_shot_classifier = pipeline("zero-shot-classification", model="cross-encoder/nli-distilroberta-base")    
-                        df[['sentiment', 'confidence']] = df['text'].apply(
-                            lambda x: pd.Series(analyze_zero_shot(x))
-                        )
+                        
+                        col1, col2 = st.columns([0.2, 0.8])
+                        with col1:
+                            st.write("Sentiment Counts Dataframe:")
+                            st.dataframe(df['sentiment'].value_counts().reset_index())
+
+                        with col2:
+                            sentiment_counts = df['sentiment'].value_counts().reset_index()
+                            sentiment_counts.columns = ['Sentiment', 'Count']
+                            fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count',
+                                                   title='Sentiment Count Distribution', text='Count', color='Sentiment')
+                            st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
+                    
+                    elif sentiment_method == "LLM - mDeBERTa-v3-xnli-multilingual":
+                        # Initialize the zero-shot classification pipeline
+                        classifier = pipeline("zero-shot-classification", model="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7")
+
+                        # Apply zero-shot classification to each row in 'text' column
+                        results = df['text'].apply(lambda x: analyze_mdeberta(x))
+                        df[["scores", "label"]] = pd.DataFrame(results.tolist(), index=df.index)
+
+                        # Expand each label’s score into its own column
+                        for label in candidate_labels:
+                            df[label] = df["scores"].apply(lambda x: x.get(label, 0))
+
+                        # Remove the 'scores' column as it is redundant
+                        df = df.drop(columns=["scores"])
+                
+                        # Calculate label proportions
+                        if multi_label:
+                            # Split multi-label entries and count each occurrence
+                            label_counts = pd.Series(sum(df['label'].str.split(", "), [])).value_counts()
+                        else:
+                            # Count single-label entries
+                            label_counts = df['label'].value_counts()
+
+                        # Create a bar plot for label proportions
+                        st.subheader("Label Proportions")
+                        fig_labels = px.bar(label_counts.reset_index(), x='index', y='label',
+                                            title='Proportion of Each Label in the Dataset',
+                                            labels={'index': 'Label', 'label': 'Count'},
+                                            text='label', color='index')
+
+                        col1, col2 = st.columns([0.2, 0.8])
+                        with col1:
+                            st.write("Label Counts Dataframe:")
+                            st.dataframe(label_counts.reset_index().rename(columns={'index': 'Label', 'label': 'Count'}))
+
+                        with col2:
+                            st.plotly_chart(fig_labels, use_container_width=True)
+                    
                     elif sentiment_method == "NRC Lexicon (Default)":
                         df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 
                             'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(
@@ -307,9 +363,21 @@ if uploaded_file is not None:
                             st.dataframe(emotion_counts)
 
                         with col2:
-                            st.plotly_chart(fig_emotions, use_container_width=True, config=configuration
-                                           )
-                    elif sentiment_method == "LLM - XLM-RoBERTa Sentiment":
+                            st.plotly_chart(fig_emotions, use_container_width=True, config=configuration)
+
+                        col1, col2 = st.columns([0.2, 0.8])
+                        with col1:
+                            st.write("Sentiment Counts Dataframe:")
+                            st.dataframe(df['sentiment'].value_counts().reset_index())
+
+                        with col2:
+                            sentiment_counts = df['sentiment'].value_counts().reset_index()
+                            sentiment_counts.columns = ['Sentiment', 'Count']
+                            fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count',
+                                                   title='Sentiment Count Distribution', text='Count', color='Sentiment')
+                            st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)                
+                
+                    elif sentiment_method == "LLM - XLM-RoBERTa-Twitter-Sentiment":
                         # Initialize the model
                         MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
                         tokenizer = XLMRobertaTokenizer.from_pretrained(MODEL)
@@ -323,23 +391,21 @@ if uploaded_file is not None:
                         # Apply the XLM-R sentiment analysis function to each row in 'text' column
                         df[['negative', 'neutral', 'positive', 'sentiment']] = df['text'].apply(
                                 lambda x: pd.Series(analyze_xlm(x))
-                            )       
+                            )
 
-                    col1, col2 = st.columns([0.2, 0.8])
-                    with col1:
-                        st.write("Sentiment Counts Dataframe:")
-                        st.dataframe(df['sentiment'].value_counts().reset_index())
+                        col1, col2 = st.columns([0.2, 0.8])
+                        with col1:
+                            st.write("Sentiment Counts Dataframe:")
+                            st.dataframe(df['sentiment'].value_counts().reset_index())
 
-                    with col2:
-                        sentiment_counts = df['sentiment'].value_counts().reset_index()
-                        sentiment_counts.columns = ['Sentiment', 'Count']
-                        fig_sentiment = px.bar(
-                            sentiment_counts, x='Sentiment', y='Count',
-                            title='Sentiment Count Distribution', text='Count', color='Sentiment'
-                        )
-                        st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
+                        with col2:
+                            sentiment_counts = df['sentiment'].value_counts().reset_index()
+                            sentiment_counts.columns = ['Sentiment', 'Count']
+                            fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count',
+                                                   title='Sentiment Count Distribution', text='Count', color='Sentiment')
+                            st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
                     
-                    st.write("Sentiment Analysis Dataframe Results:")
+                    st.write("Dataframe Results:")
                     st.dataframe(df)
 
             except Exception as e:
