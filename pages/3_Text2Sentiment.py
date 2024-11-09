@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 from io import BytesIO, StringIO
 from scipy.special import softmax
+import sentencepiece
 
 # Set the Streamlit page configuration
 st.set_page_config(
