@@ -106,7 +106,7 @@ def analyze_vader(text):
     return compound, label, scores['neg'], scores['neu'], scores['pos']
 
 # Function to preprocess text for VADER
-def preprocess_text_VADER(text, lowercase=True, remove_urls=True):
+def preprocess_text_VADER(text, lowercase=False, remove_urls=True):
     # Lowercase the text if needed
     if lowercase:
         text = text.lower()
