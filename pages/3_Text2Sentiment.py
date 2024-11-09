@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from transformers import pipeline
+from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -10,6 +10,7 @@ from collections import defaultdict
 import re
 from pathlib import Path
 from io import BytesIO, StringIO
+from scipy.special import softmax
 
 # Set the Streamlit page configuration
 st.set_page_config(
