@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
+from transformers import pipeline, AutoModelForSequenceClassification, XLMRobertaTokenizer, AutoConfig
 import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -310,9 +310,10 @@ if uploaded_file is not None:
                     elif sentiment_method == "LLM - XLM-RoBERTa Sentiment":
                         # Initialize the model
                         MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
-                        tokenizer = AutoTokenizer.from_pretrained(MODEL)
+                        tokenizer = XLMRobertaTokenizer.from_pretrained(MODEL)
                         config = AutoConfig.from_pretrained(MODEL)
                         model = AutoModelForSequenceClassification.from_pretrained(MODEL)
+
                         
                         # Apply the XLM-R sentiment analysis function to each row in 'text' column
                         df[['negative', 'neutral', 'positive', 'sentiment']] = df['text'].apply(
