@@ -241,7 +241,7 @@ if uploaded_file is not None:
             st.warning('Currently, only NRC Lexicon model handles multiple languages. The latter two only handle English text.', icon="⚠️")
             
         # Only allow language selection if NRC Lexicon is chosen
-        if sentiment_method == "NRC Lexicon (Default)":
+        if sentiment_method == "Dictionary - NRC Lexicon (Default)":
             language = st.selectbox(
                 "Select Language for NRC Lexicon Analysis",
                 ["English", "French", "Spanish", "Italian", "Portuguese", "Chinese (Traditional)",
@@ -283,7 +283,7 @@ if uploaded_file is not None:
         if st.button("Analyze Sentiment"):
             try:
                 with st.spinner("Running sentiment analysis..."):
-                    if sentiment_method == "VADER":
+                    if sentiment_method == "Dictionary - VADER":
                         # Initialize VADER sentiment analyzer
                         vader = SentimentIntensityAnalyzer()
                         df['text'] = df['text'].apply(preprocess_text_VADER)
