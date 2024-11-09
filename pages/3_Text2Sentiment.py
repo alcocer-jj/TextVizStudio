@@ -340,42 +340,52 @@ if uploaded_file is not None:
 
                         with col2:
                             st.plotly_chart(fig_labels, use_container_width=True)
-                    
+
+
+
+
+
+
+
+
+
                     elif sentiment_method == "NRC Lexicon (Default)":
+                        # Apply NRC Lexicon analysis to each row in 'text' column
                         df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 
-                            'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(
-                                lambda x: analyze_nrc(x, emotion_dict)
-                            )
-                        # Generate a bar chart for emotion counts
+                            'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(lambda x: analyze_nrc(x, emotion_dict))
+
+                        # Calculate emotion counts
                         emotion_cols = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
                         emotion_counts = df[emotion_cols].sum().reset_index()
                         emotion_counts.columns = ['Emotion', 'Count']
 
+                        # Display emotion counts DataFrame and plot
                         st.subheader("Emotion Counts (NRC Lexicon)")
-                        fig_emotions = px.bar(
-                            emotion_counts, x='Emotion', y='Count',
-                            title='Emotion Counts Distribution', text='Count', color='Emotion'
-                        )
-
-                        col1, col2 = st.columns([0.2,0.8])
+    
+                        col1, col2 = st.columns([0.2, 0.8])
                         with col1:
                             st.write("Emotion Counts Dataframe:")
                             st.dataframe(emotion_counts)
 
                         with col2:
+                            fig_emotions = px.bar(emotion_counts, x='Emotion', y='Count',title='Emotion Counts Distribution', text='Count', color='Emotion')
                             st.plotly_chart(fig_emotions, use_container_width=True, config=configuration)
 
+                        # Calculate sentiment counts
+                        sentiment_counts = df['sentiment'].value_counts().reset_index()
+                        sentiment_counts.columns = ['Sentiment', 'Count']
+
+                        # Display sentiment counts DataFrame and plot
+                        st.subheader("Sentiment Counts (NRC Lexicon)")
+    
                         col1, col2 = st.columns([0.2, 0.8])
                         with col1:
                             st.write("Sentiment Counts Dataframe:")
-                            st.dataframe(df['sentiment'].value_counts().reset_index())
+                            st.dataframe(sentiment_counts)
 
                         with col2:
-                            sentiment_counts = df['sentiment'].value_counts().reset_index()
-                            sentiment_counts.columns = ['Sentiment', 'Count']
-                            fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count',
-                                                   title='Sentiment Count Distribution', text='Count', color='Sentiment')
-                            st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)                
+                            fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count',title='Sentiment Count Distribution', text='Count', color='Sentiment')
+                            st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
                 
                     elif sentiment_method == "LLM - XLM-RoBERTa-Twitter-Sentiment":
                         # Initialize the model
