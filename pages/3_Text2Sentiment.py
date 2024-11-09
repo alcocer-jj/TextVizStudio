@@ -105,6 +105,20 @@ def analyze_vader(text):
     )
     return compound, label, scores['neg'], scores['neu'], scores['pos']
 
+# Function to preprocess text for VADER
+def preprocess_text_VADER(text, lowercase=True, remove_urls=True):
+    # Lowercase the text if needed
+    if lowercase:
+        text = text.lower()
+    
+    # Remove URLs and special characters
+    if remove_urls:
+        text = re.sub(r"http\S+|www\S+|https\S+", '', text, flags=re.MULTILINE)
+        text = re.sub(r'[^A-Za-z0-9\s]+', '', text)  # Remove special characters, keeping only alphanumerics and spaces
+    
+    return text
+
+
 # Zero-shot Sentiment Analysis Function
 def analyze_zero_shot(text):
     labels = ["positive", "negative", "neutral"]
@@ -238,6 +252,7 @@ if uploaded_file is not None:
             try:
                 with st.spinner("Running sentiment analysis..."):
                     if sentiment_method == "VADER":
+                        df['text'] = df['text'].apply(preprocess_text_VADER)
                         df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
                             lambda x: pd.Series(analyze_vader(x))
                         )
