@@ -17,3 +17,4 @@ nrclex
 plotly
 nltk
 pathlib
+scipy
