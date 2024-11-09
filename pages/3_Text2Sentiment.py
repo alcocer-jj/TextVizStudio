@@ -316,7 +316,10 @@ if uploaded_file is not None:
                         config = AutoConfig.from_pretrained(MODEL)
                         model = AutoModelForSequenceClassification.from_pretrained(MODEL)
 
-                        
+                        # Set up id2label if not defined in the config
+                        if not hasattr(config, 'id2label'):
+                            config.id2label = {0: 'negative', 1: 'neutral', 2: 'positive'}
+
                         # Apply the XLM-R sentiment analysis function to each row in 'text' column
                         df[['negative', 'neutral', 'positive', 'sentiment']] = df['text'].apply(
                                 lambda x: pd.Series(analyze_xlm(x))
