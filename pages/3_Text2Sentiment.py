@@ -94,17 +94,6 @@ def extract_text_from_csv(file):
         st.error("The CSV file must contain a 'text' column.")
         return None, None
 
-# VADER Sentiment Analysis Function
-def analyze_vader(text):
-    scores = vader.polarity_scores(text)
-    compound = scores['compound']
-    label = (
-        "positive" if compound >= 0.05
-        else "negative" if compound <= -0.05
-        else "neutral"
-    )
-    return compound, label, scores['neg'], scores['neu'], scores['pos']
-
 # Function to preprocess text for VADER
 def preprocess_text_VADER(text, lowercase=False, remove_urls=True):
     # Lowercase the text if needed
@@ -118,6 +107,48 @@ def preprocess_text_VADER(text, lowercase=False, remove_urls=True):
     
     return text
 
+# VADER Sentiment Analysis Function
+def analyze_vader(text):
+    scores = vader.polarity_scores(text)
+    compound = scores['compound']
+    label = (
+        "positive" if compound >= 0.05
+        else "negative" if compound <= -0.05
+        else "neutral"
+    )
+    return compound, label, scores['neg'], scores['neu'], scores['pos']
+
+# Preprocess function to clean text for XLM
+def preprocess_text_xlm(text):
+    new_text = []
+    for t in text.split(" "):
+        t = '@user' if t.startswith('@') and len(t) > 1 else t
+        t = 'http' if t.startswith('http') else t
+        new_text.append(t)
+    return " ".join(new_text)
+
+# Function to analyze sentiment with XLM-RoBERTa
+def analyze_xlm(text):
+    # Preprocess and encode text
+    text = preprocess_text_xlm(text)
+    encoded_input = tokenizer(text, return_tensors='pt')
+    output = model(**encoded_input)
+    
+    # Get scores and apply softmax
+    scores = output[0][0].detach().numpy()
+    scores = softmax(scores)
+    
+    # Assign scores to specific columns
+    negative, neutral, positive = scores[0], scores[1], scores[2]
+    
+    # Determine label based on highest probability
+    score_diff = abs(max(scores) - sorted(scores)[-2])
+    if score_diff < 0.05:
+        sentiment = "neutral"
+    else:
+        sentiment = config.id2label[np.argmax(scores)]
+    
+    return negative, neutral, positive, sentiment
 
 # Zero-shot Sentiment Analysis Function
 def analyze_zero_shot(text):
@@ -177,24 +208,12 @@ if uploaded_file is not None:
     if df is not None:
         st.write("CSV file successfully processed.")
 
-        # Initialize VADER sentiment analyzer
-        vader = SentimentIntensityAnalyzer()
-
-        # Load the Zero-shot classification model
-        try:
-            zero_shot_classifier = pipeline(
-                "zero-shot-classification",
-                model="cross-encoder/nli-distilroberta-base"
-            )
-        except Exception as e:
-            st.error(f"Error loading Zero-shot classifier: {e}")
-
         # Model selection for sentiment analysis
         st.subheader("Set Model Parameters")
         
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
-            ["NRC Lexicon (Default)", "VADER", "Zero-shot Classifier"]
+            ["Dictionary - NRC Lexicon (Default)", "Dictionary - VADER", "LLM - XLM-RoBERTa Sentiment", "Zero-shot Classifier"]
         )
             # Information about model selection
         with st.expander("Which model is right for me?"):
@@ -252,11 +271,14 @@ if uploaded_file is not None:
             try:
                 with st.spinner("Running sentiment analysis..."):
                     if sentiment_method == "VADER":
+                        # Initialize VADER sentiment analyzer
+                        vader = SentimentIntensityAnalyzer()
                         df['text'] = df['text'].apply(preprocess_text_VADER)
                         df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
                             lambda x: pd.Series(analyze_vader(x))
                         )
                     elif sentiment_method == "Zero-shot Classifier":
+                        zero_shot_classifier = pipeline("zero-shot-classification", model="cross-encoder/nli-distilroberta-base")    
                         df[['sentiment', 'confidence']] = df['text'].apply(
                             lambda x: pd.Series(analyze_zero_shot(x))
                         )
@@ -265,7 +287,6 @@ if uploaded_file is not None:
                             'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(
                                 lambda x: analyze_nrc(x, emotion_dict)
                             )
-
                         # Generate a bar chart for emotion counts
                         emotion_cols = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
                         emotion_counts = df[emotion_cols].sum().reset_index()
@@ -283,8 +304,19 @@ if uploaded_file is not None:
                             st.dataframe(emotion_counts)
 
                         with col2:
-                            st.plotly_chart(fig_emotions, use_container_width=True, config=config)
-                            
+                            st.plotly_chart(fig_emotions, use_container_width=True, config=config
+                                           )
+                    elif sentiment_method == "LLM - XLM-RoBERTa Sentiment":
+                        # Initialize the model
+                        MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+                        tokenizer = AutoTokenizer.from_pretrained(MODEL)
+                        config = AutoConfig.from_pretrained(MODEL)
+                        model = AutoModelForSequenceClassification.from_pretrained(MODEL)
+                        
+                        # Apply the XLM-R sentiment analysis function to each row in 'text' column
+                        df[['negative', 'neutral', 'positive', 'sentiment']] = df['text'].apply(
+                                lambda x: pd.Series(analyze_xlm(x))
+                            )       
 
                     col1, col2 = st.columns([0.2, 0.8])
                     with col1:
