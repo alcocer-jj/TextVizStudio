@@ -169,6 +169,7 @@ if uploaded_file is not None:
     doc_ids = df[['doc_id']]  # Store doc_id for reference
     st.session_state.doc_ids = doc_ids  # Store doc_ids in session_state
     st.session_state.original_csv_with_ids = original_csv  # Store the original CSV with doc_ids
+    run_model_btn = st.button("Run Model")
 
     # Proceed if text data was successfully extracted
     if text_data:
