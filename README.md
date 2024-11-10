@@ -31,15 +31,29 @@ This advanced tool uses transformer-based models to perform topic modeling, reve
 - Text Summarization: Summarize topics and generate concise reports.
 - Exportable Results: Download topics, summaries, and visualizations for reporting.
 
-## Future Updates
+### Text2Sentiment: Sentiment Discovery
 
-This web-based Python application will continue to be updated and host additional tools for text analysis and eventually beyond this area. The following are big application tools that will be added in the following months:
+Key Features
 
-  - **Text2Sentiment:** NLP tool to conduct both sentiment and emotion analyses on text from PDFs and CSVs, and display them in tables and visuals breaking them down.
-  - **Data2Viz:** Exploratory data tool that will allow users to display relationships with customizable plots (e.g., line, bar, kernal, box, etc.).
-  - **Stats2Viz:** Statistical data tool that will allow users to conduct regressions, inference, clustering/classification, time-series, and causal inference while producing output tables and plots.
+- Multilingual Support: Analyze text in over 50 languages
+- Sentiment Analysis: Detect positive, negative, and neutral sentiments in your text data.
+- Emotion Analysis: Identify emotions such as joy, anger, fear, and more with detailed emotion breakdowns.
+- Visualization Tools: Generate visualizations like bar charts for sentiment and emotion distributions.
+- Customizable Models: Choose between dictionary methods or a large language model trained for sentiment.
+- Export Results: Download your analysis results for further exploration.
 
-## References
+
+## Updates and References
+
+#### Update 1.1 (11/05/2024)
+
+- **Text2Sentiment:**
+  - Added Korean and Turkish to [NRC Word-Emotion Association Lexicon](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm) as additional languages for sentiment and emotion.
+  - Replaced [nli-distilroberta-base](https://huggingface.co/cross-encoder/nli-distilroberta-base) with [XLM-RoBERTa-Twitter-Sentiment](https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment) for multi-language support.
+-  **Text2Topics:**
+  -  Added Topic hierarchical plot for further exploration.
+
+#### 1.0 (10/16/2024)
 
 This section will be continuously changing as newer and more efficient resources continue to be released. As of October 16,2024, the following resources are used to perform the variety of analyses wrapped in the application overall:
 - **Text2Topics:** [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) for the sentence-embedding model in BERTopic, and [FLAN-T5 base](https://huggingface.co/google/flan-t5-base) for one of the representation models to produce topic labels.
