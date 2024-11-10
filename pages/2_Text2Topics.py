@@ -104,7 +104,7 @@ def extract_text_from_csv(file):
         df['doc_id'] = df['text'].apply(create_unique_id)
         
         # Return the doc_id and text columns
-        return df[['doc_id', 'text']].reset_index(drop=True), df
+        return df.reset_index(drop=True), df
     else:
         st.error("The CSV file must contain a 'text' column.")
         return None, None
