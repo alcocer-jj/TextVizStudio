@@ -185,7 +185,7 @@ if uploaded_file is not None:
                     st.write(f"Using user-provided seed: {umap_random_state}")
                 
                 # Initialize SentenceTransformer, UMAP, and CountVectorizer models
-                model = SentenceTransformer("all-MiniLM-L6-v2")
+                model = SentenceTransformer("all-MiniLM-L12-v2") 
                 umap_model = UMAP(n_neighbors=10,
                                   n_components=5,
                                   min_dist=0.0,
@@ -255,8 +255,8 @@ if uploaded_file is not None:
                 
                 unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
                 
-                if len(unique_topics) < 3:
-                    st.warning("The model generated fewer than 3 topics. This can happen if the data lacks diversity or is too homogeneous. "
+                if len(unique_topics) < 2:
+                    st.warning("The model generated fewer than 2 topics. This can happen if the data lacks diversity or is too homogeneous. "
                                 "Please try using a dataset with more variability in the text content.")
                 else:
                     # Apply outlier reduction if the option was selected
