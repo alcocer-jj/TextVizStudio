@@ -19,3 +19,4 @@ nltk
 pathlib
 scipy
 sentencepiece
+stanza
