@@ -248,7 +248,7 @@ if uploaded_file is not None:
 
             [**XLM-RoBERTa-Twitter-Sentiment**](https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment):
             - Large Language Model fine-tuned on 198M Tweets across different eight languages (Arabic, English, French, German, Hindi, Italian, Portuguese, and Spanish)
-            - Strengths: Can handle lexical diversity, nuances, and semantic context from tweets and short text across 65 languages (see paper for more info)
+            - Strengths: Can handle lexical diversity, nuances, and semantic context from tweets and short text across 65 languages (see [paper](https://arxiv.org/pdf/2104.12250) for more info)
             - Limitations: Slower processing time than dictionary methods; not good for long text entries unless broken down into chunks. 
             """)
         
@@ -346,7 +346,7 @@ if uploaded_file is not None:
                         # Display emotion counts DataFrame and plot
                         st.subheader("Emotion Counts (NRC Lexicon)")
     
-                        col1, col2 = st.columns([0.2, 0.8])
+                        col1, col2 = st.columns([0.3, 0.7])
                         with col1:
                             st.write("Emotion Counts Dataframe:")
                             st.dataframe(emotion_counts)
@@ -369,7 +369,7 @@ if uploaded_file is not None:
 
                         # Display sentiment counts DataFrame and plot
                         st.subheader("Sentiment Counts (NRC Lexicon)")
-                        col1, col2 = st.columns([0.2, 0.8])
+                        col1, col2 = st.columns([0.3, 0.7])
                         with col1:
                             st.write("Sentiment Counts Dataframe:")
                             st.dataframe(sentiment_counts)
@@ -383,7 +383,7 @@ if uploaded_file is not None:
                             title='Sentiment Count Distribution',
                             text='Count',
                             color='Sentiment')
-                        st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
+                            st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
 
                     elif sentiment_method == "LLM - XLM-RoBERTa-Twitter-Sentiment":
                         # Initialize the model
