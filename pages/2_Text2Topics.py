@@ -173,13 +173,16 @@ def display_outputs(BERTmodel, text_data, doc_ids):
     topic_info_df = BERTmodel.get_topic_info()
     columns_to_remove = ['Name', 'Representation']
     topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
+
+    # Generate hierarchical topics from the model
+    hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
     
     # Visualize hierarchy and intertopic distance in a two-column layout
     hierarchy_col, map_col = st.columns([1, 1])
     
     with hierarchy_col:
         st.write("Topic Hierarchy:")
-        hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=text_data)
+        hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
         st.plotly_chart(hierarchy_fig)
         
     with map_col:
