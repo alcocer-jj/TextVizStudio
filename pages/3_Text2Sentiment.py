@@ -13,6 +13,8 @@ from pathlib import Path
 from io import BytesIO, StringIO
 from scipy.special import softmax
 import sentencepiece
+import stanza
+
 
 # Set the Streamlit page configuration
 st.set_page_config(
@@ -162,6 +164,17 @@ def analyze_mdeberta(text):
     top_label = output["labels"][0] if not multi_label else ", ".join([label for label in scores if scores[label] >= 0.5])
     return scores, top_label
 
+def initialize_stanza_pipeline(language_code):
+    stanza.download(language_code, processors='tokenize,lemma', verbose=False)
+    return stanza.Pipeline(lang=language_code, processors='tokenize,lemma')
+
+# Preprocess text with Stanza for tokenization and lemmatization
+def preprocess_text_stanza(text, nlp_pipeline):
+    doc = nlp_pipeline(text)
+    # Lemmatize each word token in the text
+    lemmatized_text = " ".join([word.lemma for sentence in doc.sentences for word in sentence.words])
+    return lemmatized_text
+
 def analyze_nrc(text, emotion_dict):
     emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation', 
                 'disgust', 'surprise', 'sadness', 'negative', 'positive']
@@ -217,29 +230,28 @@ if uploaded_file is not None:
         
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
-            ["Dictionary - NRC Lexicon (Default)", "Dictionary - VADER", "LLM - XLM-RoBERTa-Twitter-Sentiment", "LLM - mDeBERTa-v3-xnli-multilingual"]
+            ["Dictionary - NRC Lexicon (Default)", "Dictionary - VADER", "LLM - XLM-RoBERTa-Twitter-Sentiment"]
         )
             # Information about model selection
         with st.expander("Which model is right for me?"):
             st.markdown("""
             [**NRC Emotion Lexicon**](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm):
-            - Default choice
+            - Default choice. Currently can handle 10 languages. If you want a specific language added, send an inquiry
             - Includes ability to analyze both sentiment and emotion analysis
-            - Strengths: Provides granular emotional insights since it uses pre-defined dictionary of ~10,000 words
-            - Limitations: Not best for understanding nuanced context-dependent text
-            
-            [**VADER** (Valence Aware Dictionary and sEntiment Reasoner)](https://github.com/cjhutto/vaderSentiment):
-            - Best for short, informal texts (e.g., social media, product reviews).
-            - Strengths: Speed and ability to handle negation (e.g., "not happy").
-            - Limitations: Less accurate for longer, more complex text.
+            - Strengths: Provides granular emotional insights since it uses a pre-defined dictionary of ~10,000 words
+            - Limitations: Less suited for nuanced, context-dependent entries
 
-            [**Zero-shot Classifier**](https://huggingface.co/cross-encoder/nli-distilroberta-base):
-            - Best for general sentiment analysis across any domain.
-            - Strengths: No need for pre-defined categories; adapts to various tasks, and has better understanding of semantic context 
-            - Limitations: Slower due to it being a transformer-based model
+            [**VADER** (Valence Aware Dictionary and sEntiment Reasoner)](https://github.com/cjhutto/vaderSentiment):
+            - Best for short, informal texts (e.g., social media, product reviews)
+            - Strengths: Fast processing, effective at handling negation (e.g., "not happy")
+            - Limitations: Less accurate for longer, more complex text
+
+            [**XLM-RoBERTa-Twitter-Sentiment**](https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment):
+            - Large Language Model fine-tuned on 198M Tweets across different eight languages (Arabic, English, French, German, Hindi, Italian, Portuguese, and Spanish)
+            - Strengths: Can handle lexical diversity, nuances, and semantic context from tweets and short text across 65 languages (see paper for more info)
+            - Limitations: Slower processing time than dictionary methods; not good for long text entries unless broken down into chunks. 
             """)
-            st.warning('Currently, only NRC Lexicon model handles multiple languages. The latter two only handle English text.', icon="⚠️")
-            
+        
         # Only allow language selection if NRC Lexicon is chosen
         if sentiment_method == "Dictionary - NRC Lexicon (Default)":
             language = st.selectbox(
@@ -267,15 +279,6 @@ if uploaded_file is not None:
                 if pd.notna(word):  # Skip NaN values
                     emotion = row['emotion']
                     emotion_dict[word][emotion] = row['condition']
-
-        # Only allow label input and multi-label checkbox if mDeBERTa-v3 Zero-Shot Classification is chosen
-        if sentiment_method == "LLM - mDeBERTa-v3-xnli-multilingual":
-            st.write("Enter candidate labels for zero-shot classification:")
-            label_input = st.text_input("Labels (comma-separated)", "negative, neutral, positive")
-            candidate_labels = [label.strip() for label in label_input.split(",")]
-
-            # Checkbox for multi-label option
-            multi_label = st.checkbox("Allow multiple labels?", value=False)
         
         st.subheader("Analyze", divider=True)
         
@@ -303,46 +306,35 @@ if uploaded_file is not None:
                                                    title='Sentiment Count Distribution', text='Count', color='Sentiment')
                             st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
 
-                    elif sentiment_method == "LLM - mDeBERTa-v3-xnli-multilingual":
-                        # Initialize the zero-shot classification pipeline
-                        classifier = pipeline("zero-shot-classification", model="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7")
+                    elif sentiment_method == "Dictionary - NRC Lexicon (Default)":
+                        stanza_language_codes = {
+                                "English": "en",
+                                "French": "fr",
+                                "Spanish": "es",
+                                "Italian": "it",
+                                "Portuguese": "pt",
+                                "Chinese (Traditional)": "zh",
+                                "Chinese (Simplified)": "zh",
+                                "Arabic": "ar",
+                                "Turkish": "tr",
+                                "Korean": "ko"
+                            }
 
-                        # Apply zero-shot classification to each row in 'text' column
-                        results = df['text'].apply(lambda x: analyze_mdeberta(x))
-                        df[["scores", "label"]] = pd.DataFrame(results.tolist(), index=df.index)
+                        # Load NRC data
+                        selected_language_code = language_codes[language]
+                        nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / selected_language_code)
+                        emotion_dict = defaultdict(lambda: defaultdict(int))
+                        for _, row in nrc_data.iterrows():
+                            word = row['word']
+                            if pd.notna(word):
+                                emotion = row['emotion']
+                                emotion_dict[word][emotion] = row['condition']
 
-                        # Expand each label’s score into its own column
-                        for label in candidate_labels:
-                            df[label] = df["scores"].apply(lambda x: x.get(label, 0))
+                        # Initialize Stanza pipeline for the selected language
+                        stanza_lang_code = stanza_language_codes.get(language)
+                        nlp_pipeline = initialize_stanza_pipeline(stanza_lang_code)
 
-                        # Remove the 'scores' column as it is redundant
-                        df = df.drop(columns=["scores"])
-                
-                        # Calculate label proportions
-                        if multi_label:
-                            # Split multi-label entries and count each occurrence
-                            label_counts = pd.Series(sum(df['label'].str.split(", "), [])).value_counts()
-                        else:
-                            # Count single-label entries
-                            label_counts = df['label'].value_counts()
-
-                        # Create a bar plot for label proportions
-                        st.subheader("Label Proportions")
-                        fig_labels = px.bar(label_counts.reset_index(), x='index', y='label',
-                                            title='Proportion of Each Label in the Dataset',
-                                            labels={'index': 'Label', 'label': 'Count'},
-                                            text='label', color='index')
-
-                        col1, col2 = st.columns([0.2, 0.8])
-                        with col1:
-                            st.write("Label Counts Dataframe:")
-                            st.dataframe(label_counts.reset_index().rename(columns={'index': 'Label', 'label': 'Count'}))
-
-                        with col2:
-                            st.plotly_chart(fig_labels, use_container_width=True)
-
-                    elif sentiment_method == "NRC Lexicon (Default)":
-                        # Apply NRC Lexicon analysis to each row in 'text' column
+                        df['text'] = df['text'].apply(lambda x: preprocess_text_stanza(x, nlp_pipeline))
                         df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 
                             'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(lambda x: analyze_nrc(x, emotion_dict))
 
@@ -359,9 +351,6 @@ if uploaded_file is not None:
                             st.write("Emotion Counts Dataframe:")
                             st.dataframe(emotion_counts)
 
-
-
-                    
                     elif sentiment_method == "LLM - XLM-RoBERTa-Twitter-Sentiment":
                         # Initialize the model
                         MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
