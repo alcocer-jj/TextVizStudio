@@ -260,7 +260,14 @@ if uploaded_file is not None:
                         """
 
                         # Create OpenAI representation model
-                        openai_model = OpenAI(client=client, prompt=label_prompt)
+                        openai_model = OpenAI(client=client, 
+                                              model="gpt-4o",
+                                              prompt=label_prompt
+                                              chat=False,
+                                              nr_docs=10,
+                                              delay_in_seconds=3
+                                              )
+                        
                         # Add OpenAI to the representation model
                         representation_model["GPT Topic Label"] = openai_model
                     except Exception as e:
