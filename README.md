@@ -50,8 +50,9 @@ Key Features
 - **Text2Sentiment:**
   - Added Korean and Turkish to [NRC Word-Emotion Association Lexicon](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm) as additional languages for sentiment and emotion.
   - Replaced [nli-distilroberta-base](https://huggingface.co/cross-encoder/nli-distilroberta-base) with [XLM-RoBERTa-Twitter-Sentiment](https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment) for multi-language support.
+
 -  **Text2Topics:**
-  -  Added Topic hierarchical plot for further exploration.
+  -  Added Topic hierarchical plot capabilities for further exploration.
 
 #### 1.0 (10/16/2024)
 
