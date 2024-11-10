@@ -262,7 +262,7 @@ if uploaded_file is not None:
                         # Create OpenAI representation model
                         openai_model = OpenAI(client=client, 
                                               model="gpt-4o",
-                                              prompt=label_prompt
+                                              prompt=label_prompt,
                                               chat=False,
                                               nr_docs=10,
                                               delay_in_seconds=3
