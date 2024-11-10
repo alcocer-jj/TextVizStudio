@@ -160,51 +160,6 @@ topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", 
 
 st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
 
-# Run the topic model button and merge button side by side
-run_col, merge_col = st.columns([2, 1])
-with run_col:
-    run_model_btn = st.button("Run Topic Model")
-with merge_col:
-    merge_topics_btn = st.button("Merge Topics")
-
-# Define function to display outputs (reused after both model fitting and topic merging)
-def display_outputs(BERTmodel, text_data, doc_ids):
-    # Use the built-in method to fetch topic info
-    topic_info_df = BERTmodel.get_topic_info()  # This will include topic numbers, counts, and possibly labels
-    
-    # Remove "Name" column if it exists
-    columns_to_remove = ['Name', 'Representation']
-    topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
-    
-    # Show the identified topics and intertopic distance map
-    topic_col, map_col = st.columns([1, 1])
-    with topic_col:
-        st.write("Identified Topics:")
-        st.dataframe(topic_info_df)
-
-    with map_col:
-        st.write("Intertopic Distance Map:")
-        intertopic_map = BERTmodel.visualize_topics()
-        st.plotly_chart(intertopic_map)
-
-    # Show document-topic probabilities with doc_id
-    st.write("Document-Topic Probabilities:")
-    doc_info_df = BERTmodel.get_document_info(text_data)
-
-    # Add the doc_id to document-topic probabilities for easy merging later
-    doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
-
-    # Remove unnecessary columns
-    columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
-    doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns])
-
-    st.dataframe(doc_info_df)
-
-# Function to create download link for DataFrame as CSV
-def create_download_link(df, filename, link_text):
-    csv = df.to_csv(index=False)
-    st.download_button(label=link_text, data=csv, file_name=filename)
-
 # Run the topic model functionality
 if uploaded_file is not None:
     # Ensure the uploaded file is CSV only
@@ -258,23 +213,26 @@ if uploaded_file is not None:
                         Based on the information above, extract a short topic label in the following format:
                         topic: <topic label>
                         """
-                
-                        # Create OpenAI representation model
-                        openai_model = OpenAI(client=client, prompt=label_prompt)
+                        # Add summarization prompt
+                        summarization_prompt = """
+                        I have a topic that is described by the following keywords: [KEYWORDS]
+                        In this topic, the following documents are a small but representative subset of all documents in the topic:
+                        [DOCUMENTS]
+
+                        Based on the information above, please give a description of this topic in the following format:
+                        topic: <description>
+                        """
+
+                        # Create OpenAI representation models
+                        openai_label_model = OpenAI(client=client, prompt=label_prompt)
+                        openai_summarization_model = OpenAI(client=client, prompt=summarization_prompt)
+                        
                         # Add OpenAI to the representation model
-                        representation_model["GPT Topic Label"] = openai_model
+                        representation_model["GPT Topic Label"] = openai_label_model
+                        representation_model["GPT Summarization"] = openai_summarization_model  # Summarization model added
+
                     except Exception as e:
                         st.error(f"Failed to initialize OpenAI API: {e}")
-                        representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
-                else:
-                    # Fallback to Hugging Face text2text generation (TextGeneration model)
-                    try:
-                        prompt = "I have a topic described by the following keywords: [KEYWORDS]. Based on the previous keywords, tell me in few words what is this topic about?"
-                        generator = pipeline('text2text-generation', model='google/flan-t5-base')
-                        text2text_model = TextGeneration(generator)
-                        representation_model["T2T Topic Label"] = text2text_model
-                    except Exception as e:
-                        st.error(f"Failed to initialize Text2Text generation model: {e}")
                         representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
                 
                 # Initialize BERTopic model with the selected representation models
