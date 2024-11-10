@@ -13,6 +13,8 @@ import hashlib  # To create unique identifiers
 from transformers import pipeline
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import plotly.io as pio
+
 
 st.set_page_config(
     page_title="Text2Topics",
@@ -109,6 +111,15 @@ def extract_text_from_csv(file):
         st.error("The CSV file must contain a 'text' column.")
         return None, None
 
+configuration = {
+    'toImageButtonOptions': {
+        'format': 'png',
+        'filename': 'custom_image',
+        'height': 1000,
+        'width': 1400,
+        'scale': 1
+    }
+}
 
 st.subheader("Set Model Parameters", divider=True)
 
@@ -183,12 +194,12 @@ def display_outputs(BERTmodel, text_data, doc_ids):
     with hierarchy_col:
         st.write("Topic Hierarchy:")
         hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
-        st.plotly_chart(hierarchy_fig)
+        st.plotly_chart(hierarchy_fig, config = configuration)
         
     with map_col:
         st.write("Intertopic Distance Map:")
         intertopic_map = BERTmodel.visualize_topics()
-        st.plotly_chart(intertopic_map)
+        st.plotly_chart(intertopic_map, config = configuration)
 
     # Display topic info and document-topic probabilities in another two-column layout below
     topic_info_col, doc_prob_col = st.columns([1, 1])
