@@ -154,11 +154,13 @@ if use_openai_option:
     api_key = st.text_input("Enter your OpenAI API Key", type="password")
 
 st.subheader("Analyze", divider=True)
-
 # Get the topic pairs to merge
 topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
 
 st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+
+run_model_btn = st.button("Run Model")
+
 
 # Run the topic model functionality
 if uploaded_file is not None:
@@ -169,7 +171,6 @@ if uploaded_file is not None:
     doc_ids = df[['doc_id']]  # Store doc_id for reference
     st.session_state.doc_ids = doc_ids  # Store doc_ids in session_state
     st.session_state.original_csv_with_ids = original_csv  # Store the original CSV with doc_ids
-    run_model_btn = st.button("Run Model")
 
     # Proceed if text data was successfully extracted
     if text_data:
