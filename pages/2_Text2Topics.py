@@ -263,7 +263,7 @@ if uploaded_file is not None:
                         openai_model = OpenAI(client=client, 
                                               model="gpt-4o",
                                               prompt=label_prompt,
-                                              chat=False,
+                                              chat=True,
                                               nr_docs=10,
                                               delay_in_seconds=3
                                               )
