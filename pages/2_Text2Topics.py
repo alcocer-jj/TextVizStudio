@@ -179,9 +179,9 @@ def display_outputs(BERTmodel, text_data, doc_ids):
     
     with hierarchy_col:
         st.write("Topic Hierarchy:")
-        hierarchy_fig = BERTmodel.visualize_hierarchy()
+        hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=text_data)
         st.plotly_chart(hierarchy_fig)
-    
+        
     with map_col:
         st.write("Intertopic Distance Map:")
         intertopic_map = BERTmodel.visualize_topics()
