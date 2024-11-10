@@ -185,7 +185,7 @@ if uploaded_file is not None:
                     st.write(f"Using user-provided seed: {umap_random_state}")
                 
                 # Initialize SentenceTransformer, UMAP, and CountVectorizer models
-                model = SentenceTransformer("all-MiniLM-L12-v2") 
+                model = SentenceTransformer("all-MiniLM-L6-v2")
                 umap_model = UMAP(n_neighbors=10,
                                   n_components=5,
                                   min_dist=0.0,
@@ -206,33 +206,30 @@ if uploaded_file is not None:
                         client = openai.OpenAI(api_key=api_key)
                         
                         label_prompt = """
-                        I have a topic that contains the following documents: 
-                        [DOCUMENTS]
-                        The topic is described by the following keywords: [KEYWORDS]
-
-                        Based on the information above, extract a short topic label in the following format:
-                        topic: <topic label>
-                        """
-                        # Add summarization prompt
-                        summarization_prompt = """
                         I have a topic that is described by the following keywords: [KEYWORDS]
                         In this topic, the following documents are a small but representative subset of all documents in the topic:
                         [DOCUMENTS]
 
-                        Based on the information above, please give a description of this topic in the following format:
-                        topic: <description>
+                        Based on the information above, please give a topic label AND a topic description of this topic in the following format:
+                        topic: <label>; <description>
                         """
-
-                        # Create OpenAI representation models
-                        openai_label_model = OpenAI(client=client, prompt=label_prompt)
-                        openai_summarization_model = OpenAI(client=client, prompt=summarization_prompt)
-                        
+                
+                        # Create OpenAI representation model
+                        openai_model = OpenAI(client=client, prompt=label_prompt)
                         # Add OpenAI to the representation model
-                        representation_model["GPT Topic Label"] = openai_label_model
-                        representation_model["GPT Summarization"] = openai_summarization_model  # Summarization model added
-
+                        representation_model["GPT Topic Label"] = openai_model
                     except Exception as e:
                         st.error(f"Failed to initialize OpenAI API: {e}")
+                        representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
+                else:
+                    # Fallback to Hugging Face text2text generation (TextGeneration model)
+                    try:
+                        prompt = "I have a topic described by the following keywords: [KEYWORDS]. Based on the previous keywords, tell me in few words what is this topic about?"
+                        generator = pipeline('text2text-generation', model='google/flan-t5-base')
+                        text2text_model = TextGeneration(generator)
+                        representation_model["T2T Topic Label"] = text2text_model
+                    except Exception as e:
+                        st.error(f"Failed to initialize Text2Text generation model: {e}")
                         representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
                 
                 # Initialize BERTopic model with the selected representation models
@@ -255,8 +252,8 @@ if uploaded_file is not None:
                 
                 unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
                 
-                if len(unique_topics) < 2:
-                    st.warning("The model generated fewer than 2 topics. This can happen if the data lacks diversity or is too homogeneous. "
+                if len(unique_topics) < 3:
+                    st.warning("The model generated fewer than 3 topics. This can happen if the data lacks diversity or is too homogeneous. "
                                 "Please try using a dataset with more variability in the text content.")
                 else:
                     # Apply outlier reduction if the option was selected
@@ -274,7 +271,6 @@ if uploaded_file is not None:
 
                     # Display the outputs (topics table, intertopic map, probabilities)
                     display_outputs(BERTmodel, text_data, st.session_state.doc_ids)
-
                     # Provide download link for original CSV with unique IDs
                     st.write("Download your original CSV with unique document IDs:")
                     create_download_link(st.session_state.original_csv_with_ids, "original_csv_with_ids.csv", "Download CSV with IDs")
