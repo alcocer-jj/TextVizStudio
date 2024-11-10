@@ -169,36 +169,42 @@ with merge_col:
 
 # Define function to display outputs (reused after both model fitting and topic merging)
 def display_outputs(BERTmodel, text_data, doc_ids):
-    # Use the built-in method to fetch topic info
-    topic_info_df = BERTmodel.get_topic_info()  # This will include topic numbers, counts, and possibly labels
-
-    # Remove "Name" column if it exists
+    # Fetch topic info and remove unnecessary columns if they exist
+    topic_info_df = BERTmodel.get_topic_info()
     columns_to_remove = ['Name', 'Representation']
     topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
-
-    # Show the identified topics and intertopic distance map
-    topic_col, map_col = st.columns([1, 1])
-    with topic_col:
-        st.write("Identified Topics:")
-        st.dataframe(topic_info_df)
-
+    
+    # Visualize hierarchy and intertopic distance in a two-column layout
+    hierarchy_col, map_col = st.columns([1, 1])
+    
+    with hierarchy_col:
+        st.write("Topic Hierarchy:")
+        hierarchy_fig = BERTmodel.visualize_hierarchy()
+        st.plotly_chart(hierarchy_fig)
+    
     with map_col:
         st.write("Intertopic Distance Map:")
         intertopic_map = BERTmodel.visualize_topics()
         st.plotly_chart(intertopic_map)
 
-    # Show document-topic probabilities with doc_id
-    st.write("Document-Topic Probabilities:")
-    doc_info_df = BERTmodel.get_document_info(text_data)
+    # Display topic info and document-topic probabilities in another two-column layout below
+    topic_info_col, doc_prob_col = st.columns([1, 1])
+    
+    with topic_info_col:
+        st.write("Identified Topics:")
+        st.dataframe(topic_info_df)
 
-    # Add the doc_id to document-topic probabilities for easy merging later
-    doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
+    with doc_prob_col:
+        st.write("Document-Topic Probabilities:")
+        # Get document info and add doc_id to facilitate merging later
+        doc_info_df = BERTmodel.get_document_info(text_data)
+        doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
+        
+        # Drop unnecessary columns
+        columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
+        doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
 
-    # Remove unnecessary columns
-    columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
-    doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns])
-
-    st.dataframe(doc_info_df)
+        st.dataframe(doc_info_df)
 
 # Function to create download link for DataFrame as CSV
 def create_download_link(df, filename, link_text):
@@ -256,9 +262,9 @@ if uploaded_file is not None:
                         [DOCUMENTS]
 
                         Based on the information above, please give a short label and an informative description of this topic in the following format:
-                        topic: <label>; <description>
+                        <label>; <description>
                         """
-
+                        
                         # Create OpenAI representation model
                         openai_model = OpenAI(client=client, 
                                               model="gpt-4o",
