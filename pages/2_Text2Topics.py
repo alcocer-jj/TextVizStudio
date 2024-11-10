@@ -92,19 +92,19 @@ st.warning("**Instructions:** For CSV files, ensure that the text data is in a c
 # Function to extract text from CSV file and add unique identifiers (doc_id)
 def extract_text_from_csv(file):
     df = pd.read_csv(file)
-    
+
     # Convert all column names to lowercase
     df.columns = df.columns.str.lower()
 
     if 'text' in df.columns:
         # Drop rows where the 'text' column is NaN
         df = df.dropna(subset=['text'])
-        
+
         # Create unique doc_id for each text
         df['doc_id'] = df['text'].apply(create_unique_id)
-        
+
         # Return the doc_id and text columns
-        return df.reset_index(drop=True), df
+        return df[['doc_id', 'text']].reset_index(drop=True), df
     else:
         st.error("The CSV file must contain a 'text' column.")
         return None, None
@@ -154,13 +154,56 @@ if use_openai_option:
     api_key = st.text_input("Enter your OpenAI API Key", type="password")
 
 st.subheader("Analyze", divider=True)
+
 # Get the topic pairs to merge
 topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
 
 st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
 
-run_model_btn = st.button("Run Model")
+# Run the topic model button and merge button side by side
+run_col, merge_col = st.columns([2, 1])
+with run_col:
+    run_model_btn = st.button("Run Topic Model")
+with merge_col:
+    merge_topics_btn = st.button("Merge Topics")
 
+# Define function to display outputs (reused after both model fitting and topic merging)
+def display_outputs(BERTmodel, text_data, doc_ids):
+    # Use the built-in method to fetch topic info
+    topic_info_df = BERTmodel.get_topic_info()  # This will include topic numbers, counts, and possibly labels
+
+    # Remove "Name" column if it exists
+    columns_to_remove = ['Name', 'Representation']
+    topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
+
+    # Show the identified topics and intertopic distance map
+    topic_col, map_col = st.columns([1, 1])
+    with topic_col:
+        st.write("Identified Topics:")
+        st.dataframe(topic_info_df)
+
+    with map_col:
+        st.write("Intertopic Distance Map:")
+        intertopic_map = BERTmodel.visualize_topics()
+        st.plotly_chart(intertopic_map)
+
+    # Show document-topic probabilities with doc_id
+    st.write("Document-Topic Probabilities:")
+    doc_info_df = BERTmodel.get_document_info(text_data)
+
+    # Add the doc_id to document-topic probabilities for easy merging later
+    doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
+
+    # Remove unnecessary columns
+    columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
+    doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns])
+
+    st.dataframe(doc_info_df)
+
+# Function to create download link for DataFrame as CSV
+def create_download_link(df, filename, link_text):
+    csv = df.to_csv(index=False)
+    st.download_button(label=link_text, data=csv, file_name=filename)
 
 # Run the topic model functionality
 if uploaded_file is not None:
@@ -178,14 +221,14 @@ if uploaded_file is not None:
 
         if run_model_btn:
             with st.spinner("Running topic model..."):
-                
+
                 # Generate a random seed if the user didn't provide one
                 if umap_random_state is None:
                     umap_random_state = random.randint(1, 10000)  # Random seed between 1 and 10000
                     st.write(f"No seed provided, using random seed: {umap_random_state}")
                 else:
                     st.write(f"Using user-provided seed: {umap_random_state}")
-                
+
                 # Initialize SentenceTransformer, UMAP, and CountVectorizer models
                 model = SentenceTransformer("all-MiniLM-L6-v2")
                 umap_model = UMAP(n_neighbors=10,
@@ -206,16 +249,16 @@ if uploaded_file is not None:
                     try:
                         # Set up OpenAI API client
                         client = openai.OpenAI(api_key=api_key)
-                        
+
                         label_prompt = """
                         I have a topic that is described by the following keywords: [KEYWORDS]
                         In this topic, the following documents are a small but representative subset of all documents in the topic:
                         [DOCUMENTS]
 
-                        Based on the information above, please give a topic label AND a topic description of this topic in the following format:
+                        Based on the information above, please give a short label and an informative description of this topic in the following format:
                         topic: <label>; <description>
                         """
-                
+
                         # Create OpenAI representation model
                         openai_model = OpenAI(client=client, prompt=label_prompt)
                         # Add OpenAI to the representation model
@@ -233,7 +276,7 @@ if uploaded_file is not None:
                     except Exception as e:
                         st.error(f"Failed to initialize Text2Text generation model: {e}")
                         representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
-                
+
                 # Initialize BERTopic model with the selected representation models
                 BERTmodel = BERTopic(
                     representation_model=representation_model,
@@ -246,14 +289,14 @@ if uploaded_file is not None:
                     calculate_probabilities=True,
                     verbose=True
                 )
-                
+
                 # Fit and transform the topic model
                 topics, probs = BERTmodel.fit_transform(text_data)
                 st.session_state.BERTmodel = BERTmodel  # Store the model in session state
                 st.session_state.topics = topics  # Store topics in session state
-                
+
                 unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
-                
+
                 if len(unique_topics) < 3:
                     st.warning("The model generated fewer than 3 topics. This can happen if the data lacks diversity or is too homogeneous. "
                                 "Please try using a dataset with more variability in the text content.")
@@ -265,7 +308,7 @@ if uploaded_file is not None:
                         # Then, reduce remaining outliers with the "distributions" strategy
                         new_topics = BERTmodel.reduce_outliers(text_data, new_topics, strategy="distributions")
                         st.write(f"Outliers reduced using c-TF-IDF threshold {c_tf_idf_threshold} and distributions strategy.")
-                    
+
                         # Update topic representations based on the new topics
                         BERTmodel.update_topics(text_data, topics=new_topics)
                         st.session_state.topics = new_topics
@@ -273,6 +316,7 @@ if uploaded_file is not None:
 
                     # Display the outputs (topics table, intertopic map, probabilities)
                     display_outputs(BERTmodel, text_data, st.session_state.doc_ids)
+
                     # Provide download link for original CSV with unique IDs
                     st.write("Download your original CSV with unique document IDs:")
                     create_download_link(st.session_state.original_csv_with_ids, "original_csv_with_ids.csv", "Download CSV with IDs")
@@ -282,16 +326,16 @@ if uploaded_file is not None:
 if merge_topics_btn and st.session_state.BERTmodel is not None and st.session_state.topics is not None:
     try:
         topics_to_merge = ast.literal_eval(topics_to_merge_input)  # Convert input to list
-        
+
         # Ensure it's a list of lists
         if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
             merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
             st.success("Topics have been successfully merged!")
-            
+
             # Update topic representations after merging
             st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
             st.session_state.topics = merged_topics
-            
+
             # Re-display the outputs (topics table, intertopic map, probabilities)
             display_outputs(st.session_state.BERTmodel, st.session_state.text_data, st.session_state.doc_ids)
         else:
