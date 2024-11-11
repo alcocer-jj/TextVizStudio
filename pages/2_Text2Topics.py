@@ -48,7 +48,7 @@ st.sidebar.markdown("For full documentation and future updates to the appliction
 
 st.sidebar.markdown("")
 
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.0) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
+st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.1) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
 
 
 # Sidebar: Title and description (sticky)
