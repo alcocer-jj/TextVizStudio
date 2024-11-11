@@ -11,7 +11,7 @@ st.sidebar.markdown("For full documentation and future updates to the appliction
 
 st.sidebar.markdown("")
 
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.0) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
+st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.1) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
 
 #st.title("Welcome to TextViz Studio")
 st.markdown("<h1 style='text-align: center'>Welcome to TextViz Studio</h1>", unsafe_allow_html=True)
@@ -100,38 +100,17 @@ st.markdown("""
 
 expander = st.expander("**Key Features**")
 expander.write('''
-    - Multilingual Support: Analyze text in multiple languages including English, French, Spanish, Italian, Portuguese, Chinese, and Arabic.
+    - Multilingual Support: Analyze text in multiple languages.
     - Sentiment Analysis: Detect positive, negative, and neutral sentiments in your text data.
     - Emotion Analysis: Identify emotions such as joy, anger, fear, and more with detailed emotion breakdowns.
     - Visualization Tools: Generate visualizations like bar charts for sentiment and emotion distributions.
-    - Customizable Models: Choose between different analysis models such as VADER, Zero-shot classification, and the NRC Emotion Lexicon for granular insights.
+    - Customizable Models: Choose between different dictionary models and a multi-lingual LLM for granular insights.
     - Export Results: Download your sentiment and emotion analysis for further exploration.
 ''')
     
 st.text("")
 st.text("")
 
-
-st.markdown("### **Future Plans**")
-        
-expander = st.expander("**Application Tools**")
-expander.write('''
-    - **Data2Viz:** Exploratory data tool that will allow users to display relationships with customizable plots (e.g., line, bar, kernal, box, etc.).
-    - **Stats2Viz:** Statistical data tool that will allow users to conduct regressions, inference, clustering/classification, time-series, and causal inference while producing output tables and plots.
-''')    
-
-expander = st.expander("**Current Applications**")
-expander.write('''
-    - Text2Topics: 
-        - Allow users to select their embedding model of choice or stick to the default one.
-        - Integrate LLAMA 3.2 as baseline LLM representation model for topic labeling instead of Transformer models.
-        - Integrate option for users to conduct dynamic topic modeling (across time) and zero-shot topic modeling (when you have existing topics in mind).
-''')    
-
-st.text("")
-st.text("")
-
-    
 st.markdown("### **About the Developer**")
 
 st.text("")
