@@ -62,7 +62,7 @@ st.markdown("""
 **StatsDashboard** is an all-in-one tool for statistical data exploration, visualization, and analysis, 
 designed to accommodate a wide range of data analysis needs. Upload your dataset in CSV format and gain 
 immediate access to powerful tools for data subsetting, filtering, and dynamic column selection. Dive 
-into comprehensive descriptive statistics, correlation analysis, and advanced statistical tests such as 
+into comprehensive descriptive statistics, correlation analysis, and statistical tests such as 
 T-tests, Chi-Square, ANOVA, Mann-Whitney, and Kruskal-Wallis, enabling robust hypothesis testing for 
 both categorical and numeric data. Additionally, the module includes customizable proportion tables with 
 optional weighted calculations—ideal for survey or demographic analysis.
