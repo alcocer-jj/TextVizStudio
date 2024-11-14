@@ -20,3 +20,4 @@ pathlib
 scipy
 sentencepiece
 stanza
+sympy
