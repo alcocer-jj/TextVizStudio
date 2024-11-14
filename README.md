@@ -42,8 +42,25 @@ Key Features
 - Customizable Models: Choose between dictionary methods or a large language model trained for sentiment.
 - Export Results: Download your analysis results for further exploration.
 
+### StatsDashboard: Statistical Data Exploration & Visualization
+
+StatsDashboard offers an accessible, all-in-one platform for statistical data analysis and visualization, tailored to meet the needs of researchers and social scientists. This module simplifies data subsetting, descriptive statistics, statistical testing, and visualization, making complex analysis more approachable for users without coding expertise.
+
+- Data Subsetting & Filtering: Refine datasets by selecting specific rows and columns for focused analysis.
+- Proportion Tables & Weighted Analysis: Generate proportion tables with optional weighted calculations, ideal for survey and demographic data.
+- Comprehensive Statistical Tests: Perform T-tests, Chi-Square, ANOVA, and more to uncover relationships within your data.
+- Descriptive Statistics & Correlation Analysis: Summarize data distributions and calculate correlations to understand variable interactions.
+- Flexible Visualization Tools: Create histograms, scatter plots, line plots, regression plots, bar charts, and box plots, each with customizable themes, grouping, and aggregation functions.
+- Export High-Quality Visualizations: Download plots in high-resolution PNG or interactive HTML formats for sharing and reporting.
 
 ## Updates and References
+
+#### Update 1.2 (11/13/2024)
+
+- **StatsDashboard**:
+  - Added new **StatsDashboard** module for statistical data analysis and visualization.
+  - Features include data subsetting, customizable proportion tables with weighted options, statistical tests (T-tests, Chi-Square, ANOVA), and a variety of visualization tools (histograms, scatter plots, line plots, etc.).
+  - Includes high-quality export options for PNG and HTML visualizations.
 
 #### Update 1.1 (11/05/2024)
 
