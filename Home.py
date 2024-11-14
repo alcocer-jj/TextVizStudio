@@ -30,7 +30,7 @@ st.text("")
 
     
 st.markdown("""
-                TextViz Studio is an all-in-one platform designed to simplify complex text analysis for social scientists 
+                TextViz Studio is an all-in-one platform designed to simplify complex computational analysis for social scientists 
                 and researchers. Delving into programming and data science can be daunting, especially when our primary focus as 
                 social scientists is on the substantive aspects of our work. That's why I've set to streamline a suite of existing tools 
                 in a more intuitive way that eliminates the need for coding expertise, allowing users to uncover deep insights from 
@@ -45,6 +45,30 @@ st.text("")
 
 
 st.markdown("### **Application Tools**")
+    
+st.text("")
+
+st.markdown(" #### StatsDashboard: Statistical Data Exploration & Visualization")
+
+st.markdown("""
+    StatsDashboard provides an intuitive, user-friendly interface for comprehensive statistical analysis and visualization. Designed to simplify complex data 
+    analysis tasks, StatsDashboard empowers researchers and social scientists to explore, visualize, and interpret their data without needing programming skills. 
+    By supporting diverse statistical tests, including T-tests, Chi-Square, ANOVA, and correlation analysis, StatsDashboard offers the tools to investigate 
+    relationships within data. Its customizable visualizations, proportion tables, and weighted calculations make it ideal for in-depth examination of survey 
+    responses, demographic distributions, and experimental results. StatsDashboard’s flexibility, combined with easy data uploads and export options, ensures 
+    a seamless analytical experience tailored for effective, data-driven insights.
+""")
+
+expander = st.expander("**Key Features**")
+expander.write('''
+    - Data Subsetting & Filtering: Easily refine your dataset by selecting specific rows and columns for analysis.
+    - Proportion Tables & Weighted Analysis: Generate proportion tables with optional weighted calculations for accurate survey data interpretation.
+    - Comprehensive Statistical Tests: Perform T-tests, Chi-Square, ANOVA, and more to analyze relationships within your data.
+    - Descriptive Statistics & Correlation Analysis: Gain detailed insight into your dataset through summary statistics and correlation matrices.
+    - Versatile Visualization Tools: Create histograms, scatter plots, line plots, regression plots, and box plots with options for customization.
+    - Aggregation Functions: Apply sum, mean, count, and other aggregation functions to streamline data summaries.
+    - High-Quality Export Options: Download visualizations in high-resolution PNG or interactive HTML formats for reporting and sharing.
+''')    
     
 st.text("")
     

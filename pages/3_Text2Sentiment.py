@@ -52,7 +52,7 @@ st.sidebar.markdown(
 
 st.sidebar.markdown("")
 
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.1) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
+st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.2) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
 
 
 st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment Discovery</h1>", unsafe_allow_html=True)
