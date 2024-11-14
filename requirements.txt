@@ -21,3 +21,4 @@ scipy
 sentencepiece
 stanza
 sympy
+kaleido
