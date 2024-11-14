@@ -11,7 +11,7 @@ st.sidebar.markdown("For full documentation and future updates to the appliction
 
 st.sidebar.markdown("")
 
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.1) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
+st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.2) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
 
 #st.title("Welcome to TextViz Studio")
 st.markdown("<h1 style='text-align: center'>Welcome to TextViz Studio</h1>", unsafe_allow_html=True)
