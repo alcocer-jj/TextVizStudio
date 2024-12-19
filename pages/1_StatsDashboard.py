@@ -220,6 +220,7 @@ if uploaded_file:
         st.write("### Data Preview")
         st.dataframe(selected_data, use_container_width=True)
 
+ 
         # Proportion Tables Section
         st.write("### Proportion Table")
 
@@ -238,38 +239,51 @@ if uploaded_file:
             # Initialize proportion_table as None
             proportion_table = None
 
-            # Generate and display proportion table if valid variables are selected
-            if cat_var1 != "None" and cat_var2 != "None":
-                if weight_column != "None":
-                    # Apply weighted counts to create the proportion table
-                    weighted_counts = pd.crosstab(
-                        selected_data[cat_var1],
-                        selected_data[cat_var2],
-                        values=selected_data[weight_column],
-                        aggfunc='sum'
-                        )
-        
-                    # Normalize weighted counts based on user selection
-                    if normalize_option == "Total":
-                        proportion_table = weighted_counts / weighted_counts.sum().sum()
-                    elif normalize_option == "Row":
-                        proportion_table = weighted_counts.div(weighted_counts.sum(axis=1), axis=0)
-                    elif normalize_option == "Column":
-                        proportion_table = weighted_counts.div(weighted_counts.sum(axis=0), axis=1)
+            # Generate and display proportion table based on user selections
+            if cat_var1 != "None":
+                if cat_var2 == "None":
+                    # Single variable proportion
+                    if weight_column != "None":
+                        # Weighted proportion for a single variable
+                        weighted_counts = selected_data.groupby(cat_var1)[weight_column].sum()
+                        if normalize_option == "Total":
+                            proportion_table = weighted_counts / weighted_counts.sum()
+                        else:
+                            st.warning("Row and Column normalization not applicable for single variable.")
+                    else:
+                        # Standard unweighted proportions for a single variable
+                        proportion_table = selected_data[cat_var1].value_counts(normalize=True)
                 else:
-                    # Map the user selection to pandas-compatible normalize argument
-                    normalize_map = {"Total": "all", "Row": "index", "Column": "columns"}
-                    normalize_arg = normalize_map[normalize_option]
+                    # Two-variable proportion
+                    if weight_column != "None":
+                        # Apply weighted counts to create the proportion table
+                        weighted_counts = pd.crosstab(
+                            selected_data[cat_var1],
+                            selected_data[cat_var2],
+                            values=selected_data[weight_column],
+                            aggfunc='sum'
+                        )
+                        # Normalize weighted counts based on user selection
+                        if normalize_option == "Total":
+                            proportion_table = weighted_counts / weighted_counts.sum().sum()
+                        elif normalize_option == "Row":
+                            proportion_table = weighted_counts.div(weighted_counts.sum(axis=1), axis=0)
+                        elif normalize_option == "Column":
+                            proportion_table = weighted_counts.div(weighted_counts.sum(axis=0), axis=1)
+                    else:
+                        # Map the user selection to pandas-compatible normalize argument
+                        normalize_map = {"Total": "all", "Row": "index", "Column": "columns"}
+                        normalize_arg = normalize_map[normalize_option]
+                        # Standard unweighted proportion table
+                        proportion_table = pd.crosstab(selected_data[cat_var1], selected_data[cat_var2], normalize=normalize_arg)
 
-                    # Standard unweighted proportion table
-                    proportion_table = pd.crosstab(selected_data[cat_var1], selected_data[cat_var2], normalize=normalize_arg)
-                
         with colPropTable:        
             # Display and download proportion table if it was created
             if proportion_table is not None:
                 st.dataframe(proportion_table)
             else:
-                st.warning("Please select two categorical variables to generate the proportion table.")
+                st.warning("Please select at least one categorical variable to generate the proportion table.")
+
 
     # Layout: Second Row - Correlation Analysis and Chi-Square Test
     st.header("Statistical Tests & Hypothesis Testing", divider=True)
