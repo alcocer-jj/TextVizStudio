@@ -4,7 +4,8 @@ numpy==1.26.4
 PyPDF2==3.0.1
 wordcloud==1.9.3 
 matplotlib
-openai==1.51.2
+openai==1.55.3
+httpx==0.27.2
 bertopic==0.16.3
 sentence-transformers==3.1.1
 umap-learn==0.5.6
