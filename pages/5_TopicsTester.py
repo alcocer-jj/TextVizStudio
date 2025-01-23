@@ -82,11 +82,8 @@ if "BERTmodel" not in st.session_state:
     st.session_state.doc_ids = None  # To track document IDs
 
 
-    
-
-    
 # Define function to display outputs (reused after both model fitting and topic merging)
-def display_outputs(BERTmodel, text_data, doc_ids):
+def display_outputs(BERTmodel, text_data):
     # Fetch topic info and remove unnecessary columns if they exist
     topic_info_df = BERTmodel.get_topic_info()
     columns_to_remove = ['Name', 'Representation']
@@ -119,7 +116,6 @@ def display_outputs(BERTmodel, text_data, doc_ids):
         st.write("Document-Topic Probabilities:")
         # Get document info and add doc_id to facilitate merging later
         doc_info_df = BERTmodel.get_document_info(text_data)
-        doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
         
         # Drop unnecessary columns
         columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
