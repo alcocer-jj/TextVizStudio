@@ -238,16 +238,20 @@ if uploaded_file:
                             st.write(f"Using user-provided seed: {umap_random_state}")
 
                         # Initialize submodels
-                        #model = SentenceTransformer("all-MiniLM-L6-v2")
+                        if language == "english":
+                            model = SentenceTransformer("all-MiniLM-L6-v2")
+                        elif language == "multilingual":
+                            model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+                        
                         umap_model = UMAP(n_neighbors=10,
                                           n_components=5,
                                           min_dist=0.0,
                                           metric='cosine',
                                           random_state=umap_random_state)  # Use either the user-defined or random seed
-                        #vectorizer_model = CountVectorizer(stop_words='english',
-                        #                                   min_df=1,
-                        #                                   max_df=0.9,
-                        #                                   ngram_range=(1, 3))
+                        vectorizer_model = CountVectorizer(stop_words='english',
+                                                           min_df=1,
+                                                           max_df=0.9,
+                                                           ngram_range=(1, 3))
 
                         # Use KeyBERTInspired for keywords representation
                         representation_model = {"Unique Keywords": KeyBERTInspired()}
@@ -300,11 +304,11 @@ if uploaded_file:
                         BERTmodel = BERTopic(
                             representation_model=representation_model,
                             umap_model=umap_model,
-                            #embedding_model=model,
-                            #vectorizer_model=vectorizer_model,
+                            embedding_model=model,
+                            vectorizer_model=vectorizer_model,
                             top_n_words=10,  # Set top_n_words to avoid issues
                             nr_topics=nr_topics,  # Use the chosen number of topics
-                            language=language,  # Use selected language option (English or Multilanguage)
+                            #language=language,  # Use selected language option (English or Multilanguage)
                             calculate_probabilities=True,
                             verbose=True)
 
