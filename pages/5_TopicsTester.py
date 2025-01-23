@@ -106,6 +106,53 @@ def extract_text_from_csv(file):
         st.error("The CSV file must contain a 'text' column.")
         return None, None
     
+# Define function to display outputs (reused after both model fitting and topic merging)
+def display_outputs(BERTmodel, text_data, doc_ids):
+    # Fetch topic info and remove unnecessary columns if they exist
+    topic_info_df = BERTmodel.get_topic_info()
+    columns_to_remove = ['Name', 'Representation']
+    topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
+
+    # Generate hierarchical topics from the model
+    hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
+    
+    # Visualize hierarchy and intertopic distance in a two-column layout
+    hierarchy_col, map_col = st.columns([1, 1])
+    
+    with hierarchy_col:
+        st.write("Topic Hierarchy:")
+        hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
+        st.plotly_chart(hierarchy_fig, config = configuration)
+        
+    with map_col:
+        st.write("Intertopic Distance Map:")
+        intertopic_map = BERTmodel.visualize_topics()
+        st.plotly_chart(intertopic_map, config = configuration)
+
+    # Display topic info and document-topic probabilities in another two-column layout below
+    topic_info_col, doc_prob_col = st.columns([1, 1])
+    
+    with topic_info_col:
+        st.write("Identified Topics:")
+        st.dataframe(topic_info_df)
+
+    with doc_prob_col:
+        st.write("Document-Topic Probabilities:")
+        # Get document info and add doc_id to facilitate merging later
+        doc_info_df = BERTmodel.get_document_info(text_data)
+        doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
+        
+        # Drop unnecessary columns
+        columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
+        doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
+
+        st.dataframe(doc_info_df)
+
+# Function to create download link for DataFrame as CSV
+def create_download_link(df, filename, link_text):
+    csv = df.to_csv(index=False)
+    st.download_button(label=link_text, data=csv, file_name=filename)
+    
 configuration = {
     'toImageButtonOptions': {
         'format': 'png',
@@ -131,6 +178,7 @@ if uploaded_file:
 
     # Model selection for topic modeling: Unsupervised or Zero-shot
     model_selection = st.selectbox("Select Topic Modeling Method", ["Unsupervised", "Zero-Shot"])
+    st.info("**Tip:** Unsupervised Topic Modeling discovers topics from the text data. Zero-Shot Topic Modeling uses keywords provided to look for topics in the text data and it discovers topics that don't match the keywords.")
 
     # Begin Logic for Unsupervised Topic Modeling
     if model_selection == "Unsupervised":
@@ -196,9 +244,153 @@ if uploaded_file:
             run_model_btn = st.button("Run Topic Model")
         with merge_col:
             merge_topics_btn = st.button("Merge Topics")
-
-
-
             
+        # Run the topic model
+        if uploaded_file is not None:
+            # Ensure the uploaded file is CSV only
+            st.write("CSV file uploaded.")
+            df, original_csv = extract_text_from_csv(uploaded_file)
+            text_data = df['text'].tolist()
+            doc_ids = df[['doc_id']]  # Store doc_id for reference
+            st.session_state.doc_ids = doc_ids  # Store doc_ids in session_state
+            st.session_state.original_csv_with_ids = original_csv  # Store the original CSV with doc_ids
+
+            # Proceed if text data was successfully extracted
+            if text_data:
+                st.session_state.text_data = text_data  # Store the text data for later use
+
+                if run_model_btn: 
+                    with st.spinner("Running topic model..."):
+                        
+                        # Generate a random seed if the user didn't provide one
+                        if umap_random_state is None:
+                            umap_random_state = random.randint(1, 10000)  # Random seed between 1 and 10000
+                            st.write(f"No seed provided, using random seed: {umap_random_state}")
+                        else:
+                            st.write(f"Using user-provided seed: {umap_random_state}")
+
+                        # Initialize submodels
+                        model = SentenceTransformer("all-MiniLM-L6-v2")
+                        umap_model = UMAP(n_neighbors=10,
+                                          n_components=5,
+                                          min_dist=0.0,
+                                          metric='cosine',
+                                          random_state=umap_random_state)  # Use either the user-defined or random seed
+                        vectorizer_model = CountVectorizer(stop_words='english',
+                                                           min_df=1,
+                                                           max_df=0.9,
+                                                           ngram_range=(1, 3))
+
+                        # Use KeyBERTInspired for keywords representation
+                        representation_model = {"Unique Keywords": KeyBERTInspired()}
+
+                        # Check if user wants to use OpenAI for topic labels    
+                        if use_openai_option and api_key:
+                            try:
+                                # Set up OpenAI API client
+                                client = openai.OpenAI(api_key=api_key)
+
+                                label_prompt = """
+                                I have a topic that is described by the following keywords: [KEYWORDS]
+                                In this topic, the following documents are a small but representative subset of all documents in the topic:
+                                [DOCUMENTS]
+
+                                Based on the information above, please give a short label and an informative description of this topic in the following format:
+                                <label>; <description>
+                                """
+                        
+                                # Create OpenAI representation model
+                                openai_model = OpenAI(client=client, 
+                                                      model="gpt-4o",
+                                                      prompt=label_prompt,
+                                                      chat=True,
+                                                      nr_docs=10,
+                                                      delay_in_seconds=3)
+                        
+                                # Add OpenAI to the representation model
+                                representation_model["GPT Topic Label"] = openai_model
+                            except Exception as e:
+                                st.error(f"Failed to initialize OpenAI API: {e}")
+                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
+                        else:
+                            # Fallback to Hugging Face text2text generation (TextGeneration model)
+                            try:
+                                prompt = """ 
+                                I have topic that contains the following documents: \n[DOCUMENTS]
+                                The topic is described by the following keywords: [KEYWORDS]
+                                Based on the above information, can you give a short label of the topic?"""
+                            
+                                generator = pipeline('text2text-generation', model='google/flan-t5-base')
+                                text2text_model = TextGeneration(generator)
+                                representation_model["T2T Topic Label"] = text2text_model
+                            
+                            except Exception as e:
+                                st.error(f"Failed to initialize Text2Text generation model: {e}")
+                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
+
+                        # Initialize BERTopic model with the selected representation models
+                        BERTmodel = BERTopic(
+                            representation_model=representation_model,
+                            umap_model=umap_model,
+                            #embedding_model=model,
+                            vectorizer_model=vectorizer_model,
+                            top_n_words=10,  # Set top_n_words to avoid issues
+                            nr_topics=nr_topics,  # Use the chosen number of topics
+                            language=language,  # Use selected language option (English or Multilanguage)
+                            calculate_probabilities=True,
+                            verbose=True)
+
+                        # Fit and transform the topic model
+                        topics, probs = BERTmodel.fit_transform(text_data)
+                        st.session_state.BERTmodel = BERTmodel  # Store the model in session state
+                        st.session_state.topics = topics  # Store topics in session state
+
+                        unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
+
+                        if len(unique_topics) < 3:
+                            st.warning("The model generated fewer than 3 topics. This can happen if the data lacks diversity or is too homogeneous. "
+                                "Please try using a dataset with more variability in the text content.")
+                        else:
+                            # Apply outlier reduction if the option was selected
+                            if reduce_outliers_option:
+                                # First, reduce outliers using the "c-tf-idf" strategy with the chosen threshold
+                                new_topics = BERTmodel.reduce_outliers(text_data, topics, strategy="c-tf-idf", threshold=c_tf_idf_threshold)
+                                
+                                # Then, reduce remaining outliers with the "distributions" strategy
+                                new_topics = BERTmodel.reduce_outliers(text_data, new_topics, strategy="distributions")
+                                st.write(f"Outliers reduced using c-TF-IDF threshold {c_tf_idf_threshold} and distributions strategy.")
+
+                                # Update topic representations based on the new topics
+                                BERTmodel.update_topics(text_data, topics=new_topics)
+                                st.session_state.topics = new_topics
+                                st.write("Topics and their representations have been updated based on the new outlier-free documents.")
+
+                            # Display the outputs (topics table, intertopic map, probabilities)
+                            display_outputs(BERTmodel, text_data, st.session_state.doc_ids)
+
+
+
+        # Manual topic merge functionality
+        if merge_topics_btn and st.session_state.BERTmodel is not None and st.session_state.topics is not None:
+            try:
+                topics_to_merge = ast.literal_eval(topics_to_merge_input)  # Convert input to list
+
+                # Ensure it's a list of lists
+                if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
+                    merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
+                    st.success("Topics have been successfully merged!")
+
+                    # Update topic representations after merging
+                    st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
+                    st.session_state.topics = merged_topics
+
+                    # Re-display the outputs (topics table, intertopic map, probabilities)
+                    display_outputs(st.session_state.BERTmodel, st.session_state.text_data, st.session_state.doc_ids)
+                else:
+                    st.error("Invalid input. Please provide a list of lists in the format `[[1, 2], [3, 4]]`.")
+            except Exception as e:
+                st.error(f"An error occurred while merging topics: {e}")
+
     # Begin Logic for Zero-Shot Topic Modeling
-#    elif model_selection == "Zero-Shot":
+    elif model_selection == "Zero-Shot":
+        
