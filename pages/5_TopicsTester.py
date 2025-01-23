@@ -127,6 +127,8 @@ if uploaded_file:
     # Load data
     data = pd.read_csv(uploaded_file)
     
+    st.subheader("Topic Modeling Configuration", divider=True)
+
     # Model selection for topic modeling: Unsupervised or Zero-shot
     model_selection = st.selectbox("Select Topic Modeling Method", ["Unsupervised", "Zero-Shot"])
 
@@ -142,8 +144,6 @@ if uploaded_file:
         
         # Use `text_column` as the designated text column
         text = data[text_column]
-
-        st.subheader("Topic Modeling Configuration", divider=True)
         
         # Input field for UMAP random_state (user seed)
         umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
