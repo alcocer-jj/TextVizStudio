@@ -338,7 +338,7 @@ if uploaded_file:
                                 st.write("Topics and their representations have been updated based on the new outlier-free documents.")
 
                             # Display the outputs (topics table, intertopic map, probabilities)
-                            display_outputs(BERTmodel, text_data, st.session_state.doc_ids)
+                            display_outputs(BERTmodel, text_data)
 
         # Manual topic merge functionality
         if merge_topics_btn and st.session_state.BERTmodel is not None and st.session_state.topics is not None:
@@ -355,7 +355,7 @@ if uploaded_file:
                     st.session_state.topics = merged_topics
 
                     # Re-display the outputs (topics table, intertopic map, probabilities)
-                    display_outputs(st.session_state.BERTmodel, st.session_state.text_data, st.session_state.doc_ids)
+                    display_outputs(st.session_state.BERTmodel, st.session_state.text_data)
                 else:
                     st.error("Invalid input. Please provide a list of lists in the format `[[1, 2], [3, 4]]`.")
             except Exception as e:
