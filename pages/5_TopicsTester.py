@@ -392,5 +392,5 @@ if uploaded_file:
                 st.error(f"An error occurred while merging topics: {e}")
 
     # Begin Logic for Zero-Shot Topic Modeling
-    elif model_selection == "Zero-Shot":
+    #elif model_selection == "Zero-Shot":
         
