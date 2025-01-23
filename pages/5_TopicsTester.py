@@ -177,7 +177,7 @@ if uploaded_file:
     st.subheader("Topic Modeling Configuration", divider=True)
 
     # Model selection for topic modeling: Unsupervised or Zero-shot
-    model_selection = st.selectbox("Select Topic Modeling Method", ["Unsupervised", "Zero-Shot"])
+    model_selection = st.selectbox("Select Topic Modeling Method", ["", "Unsupervised", "Zero-Shot"])
     st.info("**Tip:** Unsupervised Topic Modeling discovers topics from the text data. Zero-Shot Topic Modeling uses keywords provided to look for topics in the text data and it discovers topics that don't match the keywords.")
 
     # Begin Logic for Unsupervised Topic Modeling
