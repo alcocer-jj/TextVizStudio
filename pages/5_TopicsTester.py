@@ -169,7 +169,6 @@ if uploaded_file:
         data = data.dropna(subset=[text_column])
         
         # Use `text_column` as the designated text column 
-        st.session_state.text_column = text_column
         text_data = data[text_column]
         
         # Input field for UMAP random_state (user seed)
