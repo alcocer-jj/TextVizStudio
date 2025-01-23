@@ -80,31 +80,10 @@ if "BERTmodel" not in st.session_state:
     st.session_state.topics = None
     st.session_state.text_data = None
     st.session_state.doc_ids = None  # To track document IDs
-    st.session_state.original_csv_with_ids = None  # Store original CSV with doc_ids
 
-# Function to create unique identifiers for each document
-def create_unique_id(text):
-    return hashlib.md5(text.encode()).hexdigest()
+
     
-# Function to extract text from CSV file and add unique identifiers (doc_id)
-def extract_text_from_csv(file, text_column):
-    df = pd.read_csv(file)
 
-    # Convert all column names to lowercase
-    df.columns = df.columns.str.lower()
-
-    if text_column.lower() in df.columns:
-        # Drop rows where the text column is NaN
-        df = df.dropna(subset=[text_column.lower()])
-
-        # Create unique doc_id for each text
-        df['doc_id'] = df[text_column.lower()].apply(create_unique_id)
-
-        # Return the doc_id and text columns
-        return df[['doc_id', text_column.lower()]].reset_index(drop=True), df
-    else:
-        st.error(f"The CSV file must contain the selected column: {text_column}.")
-        return None, None    
     
 # Define function to display outputs (reused after both model fitting and topic merging)
 def display_outputs(BERTmodel, text_data, doc_ids):
@@ -148,11 +127,7 @@ def display_outputs(BERTmodel, text_data, doc_ids):
 
         st.dataframe(doc_info_df)
 
-# Function to create download link for DataFrame as CSV
-def create_download_link(df, filename, link_text):
-    csv = df.to_csv(index=False)
-    st.download_button(label=link_text, data=csv, file_name=filename)
-    
+
 configuration = {
     'toImageButtonOptions': {
         'format': 'png',
@@ -190,8 +165,12 @@ if uploaded_file:
             key="text_column"
             )
         
-        # Use `text_column` as the designated text column
+        # Filter out rows with NaN values in the selected text column
+        data = data.dropna(subset=[text_column])
+        
+        # Use `text_column` as the designated text column 
         st.session_state.text_column = text_column
+        text_data = data[text_column]
         
         # Input field for UMAP random_state (user seed)
         umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
@@ -250,18 +229,8 @@ if uploaded_file:
             # Ensure the uploaded file is CSV only
             st.write("CSV file uploaded.")
 
-            # Call the function with the selected text column
-            df, original_csv = extract_text_from_csv(uploaded_file, st.session_state.text_column)
-
-            if df is not None:
-                text_data = df['text'].tolist()
-                doc_ids = df[['doc_id']]  # Store doc_id for reference
-                st.session_state.doc_ids = doc_ids  # Store doc_ids in session_state
-                st.session_state.original_csv_with_ids = original_csv  # Store the original CSV with doc_ids
-
-            # Proceed if text data was successfully extracted
-            if text_data:
-                st.session_state.text_data = text_data  # Store the text data for later use
+            if not text_data.empty:
+                st.session_state.text_data = text_data  # Store the filtered text data for later use
 
                 if run_model_btn: 
                     with st.spinner("Running topic model..."):
@@ -274,16 +243,16 @@ if uploaded_file:
                             st.write(f"Using user-provided seed: {umap_random_state}")
 
                         # Initialize submodels
-                        model = SentenceTransformer("all-MiniLM-L6-v2")
+                        #model = SentenceTransformer("all-MiniLM-L6-v2")
                         umap_model = UMAP(n_neighbors=10,
                                           n_components=5,
                                           min_dist=0.0,
                                           metric='cosine',
                                           random_state=umap_random_state)  # Use either the user-defined or random seed
-                        vectorizer_model = CountVectorizer(stop_words='english',
-                                                           min_df=1,
-                                                           max_df=0.9,
-                                                           ngram_range=(1, 3))
+                        #vectorizer_model = CountVectorizer(stop_words='english',
+                        #                                   min_df=1,
+                        #                                   max_df=0.9,
+                        #                                   ngram_range=(1, 3))
 
                         # Use KeyBERTInspired for keywords representation
                         representation_model = {"Unique Keywords": KeyBERTInspired()}
@@ -337,7 +306,7 @@ if uploaded_file:
                             representation_model=representation_model,
                             umap_model=umap_model,
                             #embedding_model=model,
-                            vectorizer_model=vectorizer_model,
+                            #vectorizer_model=vectorizer_model,
                             top_n_words=10,  # Set top_n_words to avoid issues
                             nr_topics=nr_topics,  # Use the chosen number of topics
                             language=language,  # Use selected language option (English or Multilanguage)
@@ -371,8 +340,6 @@ if uploaded_file:
 
                             # Display the outputs (topics table, intertopic map, probabilities)
                             display_outputs(BERTmodel, text_data, st.session_state.doc_ids)
-
-
 
         # Manual topic merge functionality
         if merge_topics_btn and st.session_state.BERTmodel is not None and st.session_state.topics is not None:
