@@ -185,4 +185,4 @@ if uploaded_file:
 
             
     # Begin Logic for Zero-Shot Topic Modeling
-    elif model_selection == "Zero-Shot":
+#    elif model_selection == "Zero-Shot":
