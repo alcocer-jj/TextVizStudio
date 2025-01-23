@@ -85,26 +85,26 @@ if "BERTmodel" not in st.session_state:
 # Function to create unique identifiers for each document
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
-
+    
 # Function to extract text from CSV file and add unique identifiers (doc_id)
-def extract_text_from_csv(file):
+def extract_text_from_csv(file, text_column):
     df = pd.read_csv(file)
 
     # Convert all column names to lowercase
     df.columns = df.columns.str.lower()
 
-    if 'text' in df.columns:
-        # Drop rows where the 'text' column is NaN
-        df = df.dropna(subset=['text'])
+    if text_column.lower() in df.columns:
+        # Drop rows where the text column is NaN
+        df = df.dropna(subset=[text_column.lower()])
 
         # Create unique doc_id for each text
-        df['doc_id'] = df['text'].apply(create_unique_id)
+        df['doc_id'] = df[text_column.lower()].apply(create_unique_id)
 
         # Return the doc_id and text columns
-        return df[['doc_id', 'text']].reset_index(drop=True), df
+        return df[['doc_id', text_column.lower()]].reset_index(drop=True), df
     else:
-        st.error("The CSV file must contain a 'text' column.")
-        return None, None
+        st.error(f"The CSV file must contain the selected column: {text_column}.")
+        return None, None    
     
 # Define function to display outputs (reused after both model fitting and topic merging)
 def display_outputs(BERTmodel, text_data, doc_ids):
@@ -191,7 +191,7 @@ if uploaded_file:
             )
         
         # Use `text_column` as the designated text column
-        text = data[text_column]
+        st.session_state.text_column = text_column
         
         # Input field for UMAP random_state (user seed)
         umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
@@ -249,11 +249,15 @@ if uploaded_file:
         if uploaded_file is not None:
             # Ensure the uploaded file is CSV only
             st.write("CSV file uploaded.")
-            df, original_csv = extract_text_from_csv(uploaded_file)
-            text_data = df['text'].tolist()
-            doc_ids = df[['doc_id']]  # Store doc_id for reference
-            st.session_state.doc_ids = doc_ids  # Store doc_ids in session_state
-            st.session_state.original_csv_with_ids = original_csv  # Store the original CSV with doc_ids
+
+            # Call the function with the selected text column
+            df, original_csv = extract_text_from_csv(uploaded_file, st.session_state.text_column)
+
+            if df is not None:
+                text_data = df['text'].tolist()
+                doc_ids = df[['doc_id']]  # Store doc_id for reference
+                st.session_state.doc_ids = doc_ids  # Store doc_ids in session_state
+                st.session_state.original_csv_with_ids = original_csv  # Store the original CSV with doc_ids
 
             # Proceed if text data was successfully extracted
             if text_data:
