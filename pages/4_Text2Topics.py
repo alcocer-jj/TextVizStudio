@@ -251,7 +251,7 @@ if uploaded_file is not None:
 
                 # Initialize SentenceTransformer, UMAP, and CountVectorizer models
                 #model = SentenceTransformer("all-MiniLM-L6-v2")
-                model = SentenceTransformer('Alibaba-NLP/gte-base-en-v1.5', trust_remote_code=True)
+                model = SentenceTransformer('sentence-transformers/all-MiniLM-L12-v2')
                 umap_model = UMAP(n_neighbors=10,
                                   n_components=5,
                                   min_dist=0.0,
