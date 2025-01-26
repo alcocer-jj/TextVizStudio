@@ -380,18 +380,9 @@ if uploaded_file:
         umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
         st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
     
-        # Select topic generation mode
-        #topic_option = st.selectbox(
-         #   "Select how you want the number of topics to be handled:",
-         #   ("Auto", "Specific Number")
-         #   )
-        
-        # Default nr_topics value
-        #nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
-
         # Option for OpenAI API use
-        #use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
-        #st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
+        use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
+        st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
 
         # Ask for OpenAI API key if user chooses to use OpenAI
         #api_key = None
