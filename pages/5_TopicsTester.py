@@ -371,44 +371,44 @@ if uploaded_file:
             )
         
         # Filter out rows with NaN values in the selected text column
-        data = data.dropna(subset=[text_column])
+        #data = data.dropna(subset=[text_column])
         
         # Use `text_column` as the designated text column 
-        text_data = data[text_column]
+        #text_data = data[text_column]
         
         # Input field for UMAP random_state (user seed)
-        umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-        st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+        #umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+        #st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
     
         # Select topic generation mode
-        topic_option = st.selectbox(
-            "Select how you want the number of topics to be handled:",
-            ("Auto", "Specific Number")
-            )
+        #topic_option = st.selectbox(
+         #   "Select how you want the number of topics to be handled:",
+         #   ("Auto", "Specific Number")
+         #   )
         
         # Default nr_topics value
-        nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
+        #nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
 
         # Option for OpenAI API use
-        use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
-        st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
+        #use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
+        #st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
 
         # Ask for OpenAI API key if user chooses to use OpenAI
-        api_key = None
-        if use_openai_option:
-            api_key = st.text_input("Enter your OpenAI API Key", type="password")
+        #api_key = None
+        #if use_openai_option:
+        #    api_key = st.text_input("Enter your OpenAI API Key", type="password")
 
-        st.subheader("Analyze", divider=True)
+        #st.subheader("Analyze", divider=True)
 
         # Get the topic pairs to merge
-        topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
-        st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+        #topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
+        #st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
 
         # Run the topic model button and merge button side by side
-        run_col, merge_col = st.columns([2, 1])
-        with run_col:
-            run_model_btn = st.button("Run Topic Model")
-        with merge_col:
-            merge_topics_btn = st.button("Merge Topics")
+        #run_col, merge_col = st.columns([2, 1])
+        #with run_col:
+        #    run_model_btn = st.button("Run Topic Model")
+        #with merge_col:
+        #    merge_topics_btn = st.button("Merge Topics")
 
         
