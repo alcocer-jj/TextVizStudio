@@ -139,7 +139,6 @@ st.subheader("Import Data", divider=True)
 
 # Upload CSV file containing text data
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-st.warning("**Instructions:** For CSV files, ensure that the text data is in a column named 'text'.")
 
 if uploaded_file:
     # Load data
@@ -222,7 +221,7 @@ if uploaded_file:
         # Run the topic model
         if uploaded_file is not None:
             # Ensure the uploaded file is CSV only
-            st.write("CSV file uploaded.")
+            #st.write("CSV file uploaded.")
 
             if not text_data.empty:
                 st.session_state.text_data = text_data  # Store the filtered text data for later use
@@ -362,5 +361,54 @@ if uploaded_file:
                 st.error(f"An error occurred while merging topics: {e}")
 
     # Begin Logic for Zero-Shot Topic Modeling
-    #elif model_selection == "Zero-Shot":
+    elif model_selection == "Zero-Shot":
+        
+        # Dropdown to select the 'text' column
+        text_column = st.selectbox(
+            "Select the column to be designated as 'text' for the model",
+            options=data.columns,
+            key="text_column"
+            )
+        
+        # Filter out rows with NaN values in the selected text column
+        data = data.dropna(subset=[text_column])
+        
+        # Use `text_column` as the designated text column 
+        text_data = data[text_column]
+        
+        # Input field for UMAP random_state (user seed)
+        umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+        st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+    
+        # Select topic generation mode
+        topic_option = st.selectbox(
+            "Select how you want the number of topics to be handled:",
+            ("Auto", "Specific Number")
+            )
+        
+        # Default nr_topics value
+        nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
+
+        # Option for OpenAI API use
+        use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
+        st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
+
+        # Ask for OpenAI API key if user chooses to use OpenAI
+        api_key = None
+        if use_openai_option:
+            api_key = st.text_input("Enter your OpenAI API Key", type="password")
+
+        st.subheader("Analyze", divider=True)
+
+        # Get the topic pairs to merge
+        topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
+        st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+
+        # Run the topic model button and merge button side by side
+        run_col, merge_col = st.columns([2, 1])
+        with run_col:
+            run_model_btn = st.button("Run Topic Model")
+        with merge_col:
+            merge_topics_btn = st.button("Merge Topics")
+
         
