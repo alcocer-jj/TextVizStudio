@@ -371,10 +371,10 @@ if uploaded_file:
             )
         
         # Filter out rows with NaN values in the selected text column
-        #data = data.dropna(subset=[text_column])
+        data = data.dropna(subset=[text_column])
         
         # Use `text_column` as the designated text column 
-        #text_data = data[text_column]
+        text_data = data[text_column]
         
         # Input field for UMAP random_state (user seed)
         #umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
