@@ -377,8 +377,8 @@ if uploaded_file:
         text_data = data[text_column]
         
         # Input field for UMAP random_state (user seed)
-        #umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-        #st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+        umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+        st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
     
         # Select topic generation mode
         #topic_option = st.selectbox(
