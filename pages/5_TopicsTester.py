@@ -408,7 +408,7 @@ if uploaded_file:
         st.info("**Tip:** Adjust this parameter to control how closely a document must match a predefined topic.")
 
         # Parameter for minimum number of topics
-        min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, value=5, step=1)
+        min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, max_value=100, value=5, step=1)
         st.info("**Tip:** Adjust this to control the minimum number of topics the model will generate.")
 
         if not predefined_topics:
