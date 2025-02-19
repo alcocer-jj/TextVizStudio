@@ -400,9 +400,16 @@ if uploaded_file:
         # Convert input string to list
         predefined_topics = [topic.strip() for topic in predefined_topics_input.split(',') if topic.strip()]
 
+        # Ensure predefined topics are formatted correctly
+        zeroshot_topic_list = predefined_topics if predefined_topics else []
+
         # Parameter for minimum similarity threshold in zero-shot topic modeling
-        zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.5)
+        zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.85)
         st.info("**Tip:** Adjust this parameter to control how closely a document must match a predefined topic.")
+
+        # Parameter for minimum number of topics
+        min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, value=5, step=1)
+        st.info("**Tip:** Adjust this to control the minimum number of topics the model will generate.")
 
         if not predefined_topics:
             st.error("Please enter at least one predefined topic.")
@@ -420,9 +427,8 @@ if uploaded_file:
                             st.write(f"Using user-provided seed: {umap_random_state}")
 
                         # Initialize submodels
-                        model = SentenceTransformer("all-MiniLM-L6-v2")
+                        model = SentenceTransformer("thenlper/gte-small")
                         umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
-                        vectorizer_model = CountVectorizer(stop_words='english', min_df=1, max_df=0.9, ngram_range=(1, 3))
 
                         # Representation model
                         representation_model = {"Unique Keywords": KeyBERTInspired()}
@@ -462,11 +468,8 @@ if uploaded_file:
                             representation_model=representation_model,
                             umap_model=umap_model,
                             embedding_model=model,
-                            vectorizer_model=vectorizer_model,
-                            top_n_words=10,
-                            calculate_probabilities=True,
-                            verbose=True,
-                            zeroshot_topic_list=predefined_topics,
+                            min_topic_size=min_topic_size,
+                            zeroshot_topic_list=zeroshot_topic_list,
                             zeroshot_min_similarity=zeroshot_min_similarity)
 
                         # Fit BERTopic with predefined topics
