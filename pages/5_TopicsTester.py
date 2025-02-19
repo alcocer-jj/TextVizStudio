@@ -457,7 +457,7 @@ if uploaded_file:
                                 st.error(f"Failed to initialize Text2Text generation model: {e}")
                                 representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
 
-                        # Initialize BERTopic model
+                        # Initialize BERTopic model with zero-shot topic list
                         BERTmodel = BERTopic(
                             representation_model=representation_model,
                             umap_model=umap_model,
@@ -466,10 +466,11 @@ if uploaded_file:
                             top_n_words=10,
                             calculate_probabilities=True,
                             verbose=True,
+                            zeroshot_topic_list=predefined_topics,
                             zeroshot_min_similarity=zeroshot_min_similarity)
 
                         # Fit BERTopic with predefined topics
-                        topics, _ = BERTmodel.fit_transform(text_data, y=predefined_topics)
+                        topics, _ = BERTmodel.fit_transform(text_data)
                         st.session_state.BERTmodel = BERTmodel
                         st.session_state.topics = topics
 
@@ -485,4 +486,3 @@ if uploaded_file:
                             display_outputs(BERTmodel, text_data)
                     except Exception as e:
                         st.error(f"An error occurred during Zero-Shot Topic Modeling: {e}")
-
