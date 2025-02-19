@@ -360,6 +360,8 @@ if uploaded_file:
             except Exception as e:
                 st.error(f"An error occurred while merging topics: {e}")
 
+# ======================================================================================================== # 
+
     # Begin Logic for Zero-Shot Topic Modeling
     elif model_selection == "Zero-Shot":
         
@@ -385,21 +387,102 @@ if uploaded_file:
         st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
 
         # Ask for OpenAI API key if user chooses to use OpenAI
-        #api_key = None
-        #if use_openai_option:
-        #    api_key = st.text_input("Enter your OpenAI API Key", type="password")
+        api_key = None
+        if use_openai_option:
+            api_key = st.text_input("Enter your OpenAI API Key", type="password")
 
-        #st.subheader("Analyze", divider=True)
+        st.subheader("Analyze", divider=True)
 
-        # Get the topic pairs to merge
-        #topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
-        #st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+        # User input for predefined topics
+        predefined_topics_input = st.text_area("Enter predefined topics (comma-separated):", "")
+        st.warning("**Instructions:** Enter the topics you want the model to detect in the text data. Separate them with commas, e.g., 'Politics, Technology, Environment'.")
 
-        # Run the topic model button and merge button side by side
-        #run_col, merge_col = st.columns([2, 1])
-        #with run_col:
-        #    run_model_btn = st.button("Run Topic Model")
-        #with merge_col:
-        #    merge_topics_btn = st.button("Merge Topics")
+        # Convert input string to list
+        predefined_topics = [topic.strip() for topic in predefined_topics_input.split(',') if topic.strip()]
 
-        
+        # Parameter for minimum similarity threshold in zero-shot topic modeling
+        zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.5)
+        st.info("**Tip:** Adjust this parameter to control how closely a document must match a predefined topic.")
+
+        if not predefined_topics:
+            st.error("Please enter at least one predefined topic.")
+        else:
+            run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
+
+            if run_zero_shot_btn:
+                with st.spinner("Running Zero-Shot Topic Model..."):
+                    try:
+                        # Generate a random seed if not provided
+                        if umap_random_state is None:
+                            umap_random_state = random.randint(1, 10000)
+                            st.write(f"No seed provided, using random seed: {umap_random_state}")
+                        else:
+                            st.write(f"Using user-provided seed: {umap_random_state}")
+
+                        # Initialize submodels
+                        model = SentenceTransformer("all-MiniLM-L6-v2")
+                        umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
+                        vectorizer_model = CountVectorizer(stop_words='english', min_df=1, max_df=0.9, ngram_range=(1, 3))
+
+                        # Representation model
+                        representation_model = {"Unique Keywords": KeyBERTInspired()}
+
+                        # OpenAI topic labeling
+                        if use_openai_option and api_key:
+                            try:
+                                client = openai.OpenAI(api_key=api_key)
+                                label_prompt = """
+                                Given the topic described by the following keywords: [KEYWORDS],
+                                and the following representative documents: [DOCUMENTS],
+                                provide a short label and a concise description in the format:
+                                <label>; <description>
+                                """
+                                openai_model = OpenAI(client=client, model="gpt-4o", prompt=label_prompt, chat=True, nr_docs=10, delay_in_seconds=3)
+                                representation_model["GPT Topic Label"] = openai_model
+                            except Exception as e:
+                                st.error(f"Failed to initialize OpenAI API: {e}")
+                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
+                        
+                        # Fallback to Flan-T5 if OpenAI is not used
+                        else:
+                            try:
+                                prompt = """
+                                I have a topic that contains the following documents: \n[DOCUMENTS]
+                                The topic is described by the following keywords: [KEYWORDS]
+                                Based on the above information, can you give a short label of the topic?"""
+                                generator = pipeline('text2text-generation', model='google/flan-t5-base')
+                                text2text_model = TextGeneration(generator)
+                                representation_model["T2T Topic Label"] = text2text_model
+                            except Exception as e:
+                                st.error(f"Failed to initialize Text2Text generation model: {e}")
+                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
+
+                        # Initialize BERTopic model
+                        BERTmodel = BERTopic(
+                            representation_model=representation_model,
+                            umap_model=umap_model,
+                            embedding_model=model,
+                            vectorizer_model=vectorizer_model,
+                            top_n_words=10,
+                            calculate_probabilities=True,
+                            verbose=True,
+                            zeroshot_min_similarity=zeroshot_min_similarity)
+
+                        # Fit BERTopic with predefined topics
+                        topics, _ = BERTmodel.fit_transform(text_data, y=predefined_topics)
+                        st.session_state.BERTmodel = BERTmodel
+                        st.session_state.topics = topics
+
+                        # Extract updated probabilities
+                        probs = BERTmodel.transform(text_data)[1]
+                        st.session_state.probs = probs
+
+                        unique_topics = set(topics) - {-1}
+
+                        if len(unique_topics) < 3:
+                            st.warning("The model detected fewer than 3 topics. Try refining the predefined topics or using more diverse data.")
+                        else:
+                            display_outputs(BERTmodel, text_data)
+                    except Exception as e:
+                        st.error(f"An error occurred during Zero-Shot Topic Modeling: {e}")
+
