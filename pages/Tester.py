@@ -18,6 +18,7 @@ import plotly.io as pio
 
 st.set_page_config(
     page_title="Text2Topics: Zero-Shot",
+    page_icon="📝",
     layout="wide"
 )
 
@@ -167,27 +168,26 @@ if uploaded_file:
                 # OpenAI topic labeling integration
                 if use_openai_option and api_key:
                     try:
-                        openai.api_key = api_key  # Correct OpenAI API initialization
+                        openai.api_key = api_key  # ✅ Set API key globally
                         label_prompt = """
-                        Given the topic described by the following keywords: [KEYWORDS],
-                        and the following representative documents: [DOCUMENTS],
-                        provide a short label and a concise description in the format:
-                        <label>; <description>
-                        """
-                        openai_model = OpenAI(model="gpt-4o", prompt=label_prompt, chat=True, nr_docs=10, delay_in_seconds=3)
+                            Given the topic described by the following keywords: [KEYWORDS],
+                            and the following representative documents: [DOCUMENTS],
+                            provide a short label and a concise description in the format:
+                            <label>; <description>
+                            """
+                        # OpenAI initialization
+                        openai_model = OpenAI(
+                            model="gpt-4o",
+                            prompt=label_prompt,
+                            chat=True,
+                            nr_docs=10,
+                            delay_in_seconds=3)
+                        
                         representation_model["GPT Topic Label"] = openai_model
                     except Exception as e:
-                        st.error(f"Failed to initialize OpenAI API: {e}")
+                        st.error(f"❌ Failed to initialize OpenAI API: {e}")
                         representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
-                else:
-                    try:
-                        st.write("✅ Debug: Using Text2Text model as fallback")
-                        generator = pipeline('text2text-generation', model='google/flan-t5-base')
-                        text2text_model = TextGeneration(generator)
-                        representation_model["T2T Topic Label"] = text2text_model
-                    except Exception as e:
-                        st.error(f"Failed to initialize Text2Text generation model: {e}")
-                        representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
+
 
                 # Initialize BERTopic model with zero-shot topic list
                 st.write("✅ Debug: Initializing BERTopic model")
