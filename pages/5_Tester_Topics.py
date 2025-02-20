@@ -18,7 +18,6 @@ import plotly.io as pio
 
 st.set_page_config(
     page_title="Text2Topics: Zero-Shot",
-    page_icon="📝",
     layout="wide"
 )
 
@@ -155,14 +154,14 @@ if uploaded_file:
     if run_zero_shot_btn:
         with st.spinner("Running Zero-Shot Topic Model..."):
             try:
-                st.write("✅ Debug: Initializing Sentence Transformer model")
+                st.write("✅ Initializing Sentence Transformer model")
                 model = SentenceTransformer("thenlper/gte-small")
 
-                st.write("✅ Debug: Initializing UMAP model")
+                st.write("✅ Initializing UMAP model")
                 umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
 
                 # Initialize representation model
-                st.write("✅ Debug: Initializing representation model")
+                st.write("✅ Initializing representation model")
                 representation_model = {"Unique Keywords": KeyBERTInspired()}
 
                 # OpenAI topic labeling integration
@@ -192,7 +191,7 @@ if uploaded_file:
 
 
                 # Initialize BERTopic model with zero-shot topic list
-                st.write("✅ Debug: Initializing BERTopic model")
+                st.write("✅ Initializing BERTopic model")
                 BERTmodel = BERTopic(
                     representation_model=representation_model,
                     umap_model=umap_model,
@@ -202,17 +201,17 @@ if uploaded_file:
                     zeroshot_min_similarity=zeroshot_min_similarity
                 )
 
-                st.write("✅ Debug: Running BERTopic.fit_transform()")
+                st.write("✅ Running BERTopic.fit_transform()")
                 topics, _ = BERTmodel.fit_transform(text_data)
 
                 # Extract topic info
-                st.write("✅ Debug: Extracting topic info")
+                st.write("✅ Extracting topic info")
                 topic_info = BERTmodel.get_topic_info()
 
                 # Check if topics exist before running transform()
                 unique_topics = set(topics) - {-1}
                 if len(unique_topics) > 0:
-                    st.write("✅ Debug: Extracting document-topic probabilities")
+                    st.write("✅ Extracting document-topic probabilities")
                     topic_docs = BERTmodel.get_document_info(text_data)
                     probabilities = BERTmodel.transform(text_data)
                     probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
