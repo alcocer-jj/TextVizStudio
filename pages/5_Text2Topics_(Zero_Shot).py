@@ -61,14 +61,21 @@ st.markdown("")
 st.markdown("")
 
 st.markdown("""
-**Text2Topic Analysis** is an interactive tool for extracting and visualizing topics from text data.
-Upload a CSV file containing your text data for analysis. Select topic generation
-preferences define a specific number of topics or let the model determine the optimal
-number. Choose advanced options like outlier reduction and the use of OpenAI's 
-GPT-4o for improved topic labels. Visualize the results through a topic summary, 
-intertopic distance map, and document-topic probabilities. Results can be downloaded 
-for further analyses of topics. Configure the parameters to customize your topic 
-modeling experience.
+**Text2Topics: Zero-Shot Analysis** is an interactive tool for extracting and analyzing 
+topics from text data using a Zero-Shot approach. Users can upload a CSV file containing
+textual data and specify predefined topics to guide the topic modeling process. 
+The application leverages BERTopic to categorize documents based on these predefined 
+topics while also identifying new, emerging topics that may not have been explicitly defined.
+
+With this tool, users can fine-tune their topic modeling experience by setting similarity 
+thresholds to control how strictly documents are assigned to topics, defining the minimum 
+number of topics, and utilizing OpenAI’s GPT-4o to generate informative topic labels. 
+If OpenAI is unavailable, the tool seamlessly falls back to KeyBERT labeling. 
+Additionally, users can adjust clustering sensitivity and download results for 
+further external analysis.
+
+Note: This tool currently supports only English due to the use of the 
+"thenlper/gte-small" embedding model.
 """)
 
 st.markdown("")
