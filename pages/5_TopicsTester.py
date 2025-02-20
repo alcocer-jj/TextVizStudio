@@ -451,17 +451,7 @@ if uploaded_file:
                         
                         # Fallback to Flan-T5 if OpenAI is not used
                         else:
-                            try:
-                                prompt = """
-                                I have a topic that contains the following documents: \n[DOCUMENTS]
-                                The topic is described by the following keywords: [KEYWORDS]
-                                Based on the above information, can you give a short label of the topic?"""
-                                generator = pipeline('text2text-generation', model='google/flan-t5-base')
-                                text2text_model = TextGeneration(generator)
-                                representation_model["T2T Topic Label"] = text2text_model
-                            except Exception as e:
-                                st.error(f"Failed to initialize Text2Text generation model: {e}")
-                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
+                            representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
 
                         # Initialize BERTopic model with zero-shot topic list
                         BERTmodel = BERTopic(
