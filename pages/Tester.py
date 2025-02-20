@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import random
+from bertopic.representation import KeyBERTInspired, OpenAI, TextGeneration
 import openai
 from bertopic import BERTopic
-from bertopic.representation import KeyBERTInspired, OpenAI, TextGeneration
 from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from sklearn.feature_extraction.text import CountVectorizer
@@ -168,7 +168,8 @@ if uploaded_file:
                 # OpenAI topic labeling integration
                 if use_openai_option and api_key:
                     try:
-                        openai.api_key = api_key  # ✅ Set API key globally
+                            # Set up OpenAI client
+                        client = openai.OpenAI(api_key=api_key)                    
                         label_prompt = """
                             Given the topic described by the following keywords: [KEYWORDS],
                             and the following representative documents: [DOCUMENTS],
@@ -177,12 +178,13 @@ if uploaded_file:
                             """
                         # OpenAI initialization
                         openai_model = OpenAI(
+                            client=client,
                             model="gpt-4o",
                             prompt=label_prompt,
                             chat=True,
                             nr_docs=10,
                             delay_in_seconds=3)
-                        
+                                                
                         representation_model["GPT Topic Label"] = openai_model
                     except Exception as e:
                         st.error(f"❌ Failed to initialize OpenAI API: {e}")
