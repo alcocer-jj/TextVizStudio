@@ -475,17 +475,35 @@ if uploaded_file:
                         # Fit BERTopic with predefined topics
                         topics, _ = BERTmodel.fit_transform(text_data)
                         st.session_state.BERTmodel = BERTmodel
-                        st.session_state.topics = topics
+                        #st.session_state.topics = topics
 
-                        # Extract updated probabilities
-                        probs = BERTmodel.transform(text_data)[1]
-                        st.session_state.probs = probs
+                        # Extract topic info from zero shot
+                        topic_info = BERTmodel.get_topic_info()
+                        
+                        st.session_state.topic_info = topic_info
 
                         unique_topics = set(topics) - {-1}
 
                         if len(unique_topics) < 3:
                             st.warning("The model detected fewer than 3 topics. Try refining the predefined topics or using more diverse data.")
                         else:
-                            display_outputs(BERTmodel, text_data)
+                            # Get topic info and document-topic probabilities
+                            topic_docs = BERTmodel.get_document_info(text_data)
+                            topic_docs = topic_docs[['Document']]
+                            probabilities = BERTmodel.transform(text_data)
+                            probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
+                            topic_docs = pd.concat([topic_docs, probabilities], axis=1)
+                            
+                            # Display topic info and document-topic probabilities in another two-column layout below
+                            topic_info_col, doc_prob_col = st.columns([1, 1])
+    
+                            with topic_info_col:
+                                st.write("Identified Topics:")
+                                st.dataframe(topic_info)
+
+                            with doc_prob_col:
+                                st.write("Document-Topic Probabilities:")
+                                st.dataframe(topic_docs)
+                                
                     except Exception as e:
                         st.error(f"An error occurred during Zero-Shot Topic Modeling: {e}")
