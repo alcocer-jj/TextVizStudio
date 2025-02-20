@@ -474,14 +474,10 @@ if uploaded_file:
 
                         # Fit BERTopic with predefined topics
                         topics, _ = BERTmodel.fit_transform(text_data)
-                        st.session_state.BERTmodel = BERTmodel
-                        #st.session_state.topics = topics
-
+                        
                         # Extract topic info from zero shot
                         topic_info = BERTmodel.get_topic_info()
                         
-                        st.session_state.topic_info = topic_info
-
                         unique_topics = set(topics) - {-1}
 
                         if len(unique_topics) < 3:
