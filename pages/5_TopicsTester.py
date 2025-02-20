@@ -102,132 +102,133 @@ if uploaded_file:
     data = pd.read_csv(uploaded_file)
     
     st.subheader("Topic Modeling Configuration", divider=True)
+
+    # Reset previous session state
+    if "BERTmodel" in st.session_state:
+        del st.session_state["BERTmodel"]
+    if "topics" in st.session_state:
+        del st.session_state["topics"]
+    if "topic_info" in st.session_state:
+        del st.session_state["topic_info"]
         
     # Dropdown to select the 'text' column
-    text_column = st.selectbox(
-            "Select the column to be designated as 'text' for the model",
-            options=data.columns,
-            key="text_column"
-            )
-        
-    # Filter out rows with NaN values in the selected text column
+    text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
+
+    # Ensure selected column has valid data
     data = data.dropna(subset=[text_column])
-        
-    # Use `text_column` as the designated text column 
     text_data = data[text_column]
-        
-    # Input field for UMAP random_state (user seed)
-    umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-    st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
-    
-    # Option for OpenAI API use
-    use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
-    st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
 
-    # Ask for OpenAI API key if user chooses to use OpenAI
-    api_key = None
-    if use_openai_option:
-            api_key = st.text_input("Enter your OpenAI API Key", type="password")
-
-    st.subheader("Analyze", divider=True)
+    if len(text_data) == 0:
+        st.error("❌ No valid text data found. Please check your file.")
+        st.stop()
 
     # User input for predefined topics
     predefined_topics_input = st.text_area("Enter predefined topics (comma-separated):", "")
-    st.warning("**Instructions:** Enter the topics you want the model to detect in the text data. Separate them with commas, e.g., 'Politics, Technology, Environment'.")
-
-    # Convert input string to list
     predefined_topics = [topic.strip() for topic in predefined_topics_input.split(',') if topic.strip()]
-
-    # Ensure predefined topics are formatted correctly
     zeroshot_topic_list = predefined_topics if predefined_topics else []
 
-    # Parameter for minimum similarity threshold in zero-shot topic modeling
+    if not zeroshot_topic_list:
+        st.error("❌ No predefined topics entered. Please enter at least one topic.")
+        st.stop()
+
+    # Parameters for Zero-Shot modeling
     zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.85)
-    st.info("**Tip:** Adjust this parameter to control how closely a document must match a predefined topic.")
-
-    # Parameter for minimum number of topics
     min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, max_value=100, value=5, step=1)
-    st.info("**Tip:** Adjust this to control the minimum number of topics the model will generate.")
 
-    if not predefined_topics:
-        st.error("Please enter at least one predefined topic.")
+    # Input field for UMAP random_state (user seed)
+    umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+    if umap_random_state is None:
+        umap_random_state = random.randint(1, 10000)
+        st.write(f"No seed provided, using random seed: {umap_random_state}")
     else:
-        run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
+        st.write(f"Using user-provided seed: {umap_random_state}")
 
-        if run_zero_shot_btn:
-            with st.spinner("Running Zero-Shot Topic Model..."):
-                try:
-                    # Generate a random seed if not provided
-                    if umap_random_state is None:
-                        umap_random_state = random.randint(1, 10000)
-                        st.write(f"No seed provided, using random seed: {umap_random_state}")
-                    else:
-                        st.write(f"Using user-provided seed: {umap_random_state}")
+    # Option for OpenAI API use
+    use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
+    api_key = None
+    if use_openai_option:
+        api_key = st.text_input("Enter your OpenAI API Key", type="password")
 
-                    # Initialize submodels
-                    model = SentenceTransformer("thenlper/gte-small")
-                    umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
+    run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
 
-                    # Representation model
-                    representation_model = {"Unique Keywords": KeyBERTInspired()}
+    if run_zero_shot_btn:
+        with st.spinner("Running Zero-Shot Topic Model..."):
+            try:
+                st.write("✅ Debug: Initializing Sentence Transformer model")
+                model = SentenceTransformer("thenlper/gte-small")
 
-                    # OpenAI topic labeling
-                    if use_openai_option and api_key:
-                        try:
-                            client = openai.OpenAI(api_key=api_key)
-                            label_prompt = """
-                                Given the topic described by the following keywords: [KEYWORDS],
-                                and the following representative documents: [DOCUMENTS],
-                                provide a short label and a concise description in the format:
-                                <label>; <description>
-                                """
-                            openai_model = OpenAI(client=client, model="gpt-4o", prompt=label_prompt, chat=True, nr_docs=10, delay_in_seconds=3)
-                            representation_model["GPT Topic Label"] = openai_model
-                        except Exception as e:
-                            st.error(f"Failed to initialize OpenAI API: {e}")
-                            representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
-                        
-                        # Fallback to Flan-T5 if OpenAI is not used
-                    else:
+                st.write("✅ Debug: Initializing UMAP model")
+                umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
+
+                # Initialize representation model
+                st.write("✅ Debug: Initializing representation model")
+                representation_model = {"Unique Keywords": KeyBERTInspired()}
+
+                # OpenAI topic labeling integration
+                if use_openai_option and api_key:
+                    try:
+                        openai.api_key = api_key  # Correct OpenAI API initialization
+                        label_prompt = """
+                        Given the topic described by the following keywords: [KEYWORDS],
+                        and the following representative documents: [DOCUMENTS],
+                        provide a short label and a concise description in the format:
+                        <label>; <description>
+                        """
+                        openai_model = OpenAI(model="gpt-4o", prompt=label_prompt, chat=True, nr_docs=10, delay_in_seconds=3)
+                        representation_model["GPT Topic Label"] = openai_model
+                    except Exception as e:
+                        st.error(f"Failed to initialize OpenAI API: {e}")
+                        representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
+                else:
+                    try:
+                        st.write("✅ Debug: Using Text2Text model as fallback")
+                        generator = pipeline('text2text-generation', model='google/flan-t5-base')
+                        text2text_model = TextGeneration(generator)
+                        representation_model["T2T Topic Label"] = text2text_model
+                    except Exception as e:
+                        st.error(f"Failed to initialize Text2Text generation model: {e}")
                         representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
 
-                    # Initialize BERTopic model with zero-shot topic list
-                    BERTmodel = BERTopic(
-                            representation_model=representation_model,
-                            umap_model=umap_model,
-                            embedding_model=model,
-                            min_topic_size=min_topic_size,
-                            zeroshot_topic_list=zeroshot_topic_list,
-                            zeroshot_min_similarity=zeroshot_min_similarity)
+                # Initialize BERTopic model with zero-shot topic list
+                st.write("✅ Debug: Initializing BERTopic model")
+                BERTmodel = BERTopic(
+                    representation_model=representation_model,
+                    umap_model=umap_model,
+                    embedding_model=model,
+                    min_topic_size=min_topic_size,
+                    zeroshot_topic_list=zeroshot_topic_list,
+                    zeroshot_min_similarity=zeroshot_min_similarity
+                )
 
-                    # Fit BERTopic with predefined topics
-                    topics, _ = BERTmodel.fit_transform(text_data)
-                        
-                    # Extract topic info from zero shot
-                    topic_info = BERTmodel.get_topic_info()
-                        
-                    unique_topics = set(topics) - {-1}
+                st.write("✅ Debug: Running BERTopic.fit_transform()")
+                topics, _ = BERTmodel.fit_transform(text_data)
 
-                    if len(unique_topics) < 3:
-                        st.warning("The model detected fewer than 3 topics. Try refining the predefined topics or using more diverse data.")
-                    else:
-                        # Get topic info and document-topic probabilities
-                        topic_docs = BERTmodel.get_document_info(text_data)
-                        topic_docs = topic_docs[['Document']]
-                        probabilities = BERTmodel.transform(text_data)
-                        probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
-                        topic_docs = pd.concat([topic_docs, probabilities], axis=1)
-                            
-                        # Display topic info and document-topic probabilities in another two-column layout below
-                        topic_info_col, doc_prob_col = st.columns([1, 1])
-    
-                        with topic_info_col:
-                            st.write("Identified Topics:")
-                            st.dataframe(topic_info)
+                # Extract topic info
+                st.write("✅ Debug: Extracting topic info")
+                topic_info = BERTmodel.get_topic_info()
 
-                        with doc_prob_col:
-                            st.write("Document-Topic Probabilities:")
-                            st.dataframe(topic_docs)
-                                
-                except Exception as e:
-                    st.error(f"An error occurred during Zero-Shot Topic Modeling: {e}")
+                # Check if topics exist before running transform()
+                unique_topics = set(topics) - {-1}
+                if len(unique_topics) > 0:
+                    st.write("✅ Debug: Extracting document-topic probabilities")
+                    topic_docs = BERTmodel.get_document_info(text_data)
+                    probabilities = BERTmodel.transform(text_data)
+                    probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
+                    topic_docs = pd.concat([topic_docs[['Document']], probabilities], axis=1)
+                else:
+                    st.warning("⚠ No valid topics were found. Skipping probability calculation.")
+                    topic_docs = pd.DataFrame()
+
+                # Display topic info and document-topic probabilities
+                topic_info_col, doc_prob_col = st.columns([1, 1])
+
+                with topic_info_col:
+                    st.write("Identified Topics:")
+                    st.dataframe(topic_info)
+
+                with doc_prob_col:
+                    st.write("Document-Topic Probabilities:")
+                    st.dataframe(topic_docs)
+
+            except Exception as e:
+                st.error(f"❌ An error occurred: {e}")
