@@ -17,7 +17,7 @@ import plotly.io as pio
 
 
 st.set_page_config(
-    page_title="Text2Topics: Zero-Shot",
+    page_title="Text2Topics: Zero Shot",
     layout="wide"
 )
 

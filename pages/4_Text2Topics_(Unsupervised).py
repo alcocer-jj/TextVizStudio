@@ -17,7 +17,7 @@ import plotly.io as pio
 
 
 st.set_page_config(
-    page_title="Text2Topics",
+    page_title="Text2Topics: Unsupervised",
     layout="wide"
 )
 
@@ -52,7 +52,7 @@ st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.
 
 
 # Sidebar: Title and description (sticky)
-st.markdown("<h1 style='text-align: center'>Text2Topics: Large Language Topic Modeling</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center'>Text2Topics: Large Language Unsupervised Topic Modeling</h1>", unsafe_allow_html=True)
 
 st.markdown("")
 st.markdown("")
