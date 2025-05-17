@@ -92,11 +92,11 @@ configuration = {
 st.subheader("Import Data", divider=True)
 
 # Track file uploads and state reset
-if "last_file_hash" not in st.session_state:
-    st.session_state.last_file_hash = None
+#if "last_file_hash" not in st.session_state:
+    #st.session_state.last_file_hash = None
 
 # Upload CSV file containing text data
-uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+#uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
 # Check if a file has been uploaded
 #if uploaded_file:
@@ -107,32 +107,39 @@ uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 #    for key in ["BERTmodel", "topics", "topic_info"]:
 #        st.session_state.pop(key, None)
  
-# If file is removed manually, clear everything
+
+# Track file uploads and session state
+if "last_file_hash" not in st.session_state:
+    st.session_state.last_file_hash = None
+
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+
+# Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
     st.session_state.last_file_hash = None
     for key in ["BERTmodel", "topics", "topic_info", "text_data"]:
         st.session_state.pop(key, None)
 
-# If a file is uploaded
+# If file uploaded
 if uploaded_file:
-    # Detect whether it's a new file
     file_hash = hash(uploaded_file.getvalue())
     if st.session_state.last_file_hash != file_hash:
         st.session_state.last_file_hash = file_hash
         for key in ["BERTmodel", "topics", "topic_info", "text_data"]:
             st.session_state.pop(key, None)
 
-    # Proceed to parse the file
     data = pd.read_csv(uploaded_file)
     st.subheader("Topic Modeling Configuration", divider=True)
-    
+
     text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
     data = data.dropna(subset=[text_column])
     text_data = data[text_column]
 
+    # Save to session state for persistence
+    st.session_state.text_data = text_data
     if len(text_data) == 0:
         st.error("Error: No valid text data found. Please check your file.")
-        st.stop()
+        st.stop()        
     else:
         method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
 
@@ -384,35 +391,42 @@ if uploaded_file:
                                 #except Exception as e:
                                     #st.error(f"An error occurred while merging topics: {e}")
                             
-                            st.subheader("Post Hoc Topic Merging", divider=True)
-                            with st.form("merge_form"):
-                                topics_to_merge_input = st.text_input(
-                                    "Enter topic pairs to merge (optional):", "[]")
-                                st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
 
-                                merge_topics_btn = st.form_submit_button("Merge Topics")
+                            # Only show merging after the model is run
+                            if "BERTmodel" in st.session_state and "topics" in st.session_state:
+                                st.subheader("Post Hoc Topic Merging", divider=True)
+                                
+                                with st.form("merge_form"):
+                                    topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
+                                    st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+                                    merge_topics_btn = st.form_submit_button("Merge Topics")
 
-                            # Outside the form — only runs when button inside form is submitted
-                            if merge_topics_btn and st.session_state.BERTmodel is not None and st.session_state.topics is not None:
-                                try:
-                                    topics_to_merge = ast.literal_eval(topics_to_merge_input)
+                                    if merge_topics_btn:
+                                        if all(k in st.session_state for k in ["BERTmodel", "topics", "text_data"]):
+                                            try:
+                                                topics_to_merge = ast.literal_eval(topics_to_merge_input)
+                                                if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
+                                                    merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
+                                                    st.success("Topics have been successfully merged!")
 
-                                    if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
-                                        merged_topics = st.session_state.BERTmodel.merge_topics(
-                                            st.session_state.text_data, topics_to_merge)
-                                        st.success("Topics have been successfully merged!")
+                                                    # Update and reassign
+                                                    st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
+                                                    st.session_state.topics = merged_topics
 
-                                        # Update topic representations after merging
-                                        st.session_state.BERTmodel.update_topics(
-                                            st.session_state.text_data, topics=merged_topics)
-                                        st.session_state.topics = merged_topics
-
-                                        # Re-display the outputs
-                                        display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data)
-                                    else:
-                                        st.error("Invalid input. Please provide a list of lists in the format `[[1, 2], [3, 4]]`.")
-                                except Exception as e:
-                                    st.error(f"An error occurred while merging topics: {e}")
+                                                    # Re-display outputs
+                                                    display_unsupervised_outputs(
+                                                    st.session_state.BERTmodel,
+                                                    st.session_state.text_data
+                                                    )
+                                                else:
+                                                    st.error("Invalid input. Please provide a list of lists like `[[1, 2], [3, 4]]`.")
+                                            except Exception as e:
+                                                st.error(f"An error occurred while merging topics: {e}")
+                                        else:
+                                            st.error("Model or data missing. Please run the topic model first.")
+                            
+                            
+                            
                             
                     except Exception as e:
                             st.error(f"Error: An error occurred: {e}")        
