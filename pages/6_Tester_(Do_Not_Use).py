@@ -114,6 +114,43 @@ if uploaded_file:
 
         if method == "Unsupervised":
             st.subheader("Unsupervised Topic Modeling", divider=True)
+            
+            # Language selection dropdown
+            language_option = st.selectbox(
+                "Select the language model to use for topic modeling:",
+                ("English", "Multilanguage"))
+
+            language = "english" if language_option == "English" else "multilingual"
+
+            # Input field for UMAP random_state (user seed)
+            umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+            st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+
+            # Select topic generation mode
+            topic_option = st.selectbox(
+                "Select how you want the number of topics to be handled:",
+                ("Auto", "Specific Number"))
+
+            # Default nr_topics value
+            nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
+
+            # Option to apply outlier reduction
+            reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=True)
+            st.success("**Note:** This process assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics. Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise. Experiment with and without this option to see what works best for your case.")
+
+            if reduce_outliers_option:
+                c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.1)
+                st.info("**Tip:** You can set a threshold (between 0.0 and 1.0), which determines how strict or lenient the reassignment of outlier documents will be. A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
+
+            # Option for OpenAI API use
+            use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
+            st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
+
+            # Ask for OpenAI API key if user chooses to use OpenAI
+            api_key = None
+            if use_openai_option:
+                api_key = st.text_input("Enter your OpenAI API Key", type="password")
+
 
         elif method == "Zero-Shot":
             st.subheader("Zero-Shot Topic Modeling", divider=True)
