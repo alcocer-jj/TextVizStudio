@@ -118,7 +118,12 @@ if uploaded_file:
         elif method == "Zero-Shot":
             st.subheader("Zero-Shot Topic Modeling", divider=True)
             
-            # User input for predefined topics
+            # Language selection dropdown
+            language_option = st.selectbox(
+                "Select the language model to use for topic modeling:",
+                ("English", "Multilanguage"))
+            language = "english" if language_option == "English" else "multilingual"
+            
             predefined_topics_input = st.text_area("Enter predefined topics (comma-separated):", "")
             predefined_topics = [topic.strip() for topic in predefined_topics_input.split(',') if topic.strip()]
             zeroshot_topic_list = predefined_topics if predefined_topics else []
@@ -152,8 +157,10 @@ if uploaded_file:
                     with st.spinner("Running Zero-Shot Topic Model..."):
                         try:
                             st.write("Initializing Sentence Transformer model...")
-                            #model = SentenceTransformer("thenlper/gte-small")
-                            model = SentenceTransformer("intfloat/multilingual-e5-small")
+                            if language == "english":
+                                model = SentenceTransformer("thenlper/gte-small")
+                            else:
+                                model = SentenceTransformer("intfloat/multilingual-e5-small")
                             
                             st.write("Initializing UMAP model...")
                             umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
