@@ -313,8 +313,8 @@ if uploaded_file:
 
                         unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
 
-                        if len(unique_topics) < 3:
-                            st.warning("The model generated fewer than 3 topics. This can happen if the data lacks diversity or is too homogeneous. "
+                        if len(unique_topics) < 1:
+                            st.warning("The model generated fewer than 1 topic. This can happen if the data lacks diversity or is too homogeneous. "
                                        "Please try using a dataset with more variability in the text content.")
                         else:
                             # Apply outlier reduction if the option was selected
@@ -331,7 +331,18 @@ if uploaded_file:
                                 st.write("Topics and their representations have been updated based on the new outlier-free documents.")
 
                             # Display the outputs (topics table, intertopic map, probabilities)
+                            st.subheader("Output", divider=True)
                             display_unsupervised_outputs(BERTmodel, text_data)
+                            
+                            st.subheader("Post Hoc Topic Merging", divider=True)
+                            # Get the topic pairs to merge
+                            topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
+                            st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+
+                            
+                            
+                            
+                            
 
                     except Exception as e:
                             st.error(f"Error: An error occurred: {e}")        
