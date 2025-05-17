@@ -198,6 +198,15 @@ if uploaded_file:
     
                 with topic_info_col:
                     st.write("**Identified Topics:**")
+                    # Create two new columns from 'GPT Topic Label'
+                    if 'GPT Topic Label' in topic_info_df.columns:
+                        topic_info_df['GPT Topic Label'] = topic_info_df['GPT Topic Label'].astype(str)
+                        topic_info_df['GPT Label'] = topic_info_df['GPT Topic Label'].str.split(';').str[0].str.strip()
+                        topic_info_df['GPT Description'] = topic_info_df['GPT Topic Label'].str.split(';').str[1].str.strip()
+                        # Remove unwanted characters from 'GPT Label' and 'GPT Description'
+                        topic_info_df['GPT Label'] = topic_info_df['GPT Label'].str.replace(r"[\"'\[\]]", "", regex=True)
+                        topic_info_df['GPT Description'] = topic_info_df['GPT Description'].str.replace(r"'\]$", "", regex=True)
+                        topic_info_df = topic_info_df.drop(columns=['GPT Topic Label'])        
                     st.dataframe(topic_info_df)
 
                 with doc_prob_col:
@@ -205,7 +214,7 @@ if uploaded_file:
                     doc_info_df = BERTmodel.get_document_info(text_data)
         
                     # Drop unnecessary columns
-                    columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
+                    columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document', 'Representation', 'Unique Keywords', 'GPT Topic Label']
                     doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
                     st.dataframe(doc_info_df)
 
@@ -323,27 +332,8 @@ if uploaded_file:
                             # Display the outputs (topics table, intertopic map, probabilities)
                             display_unsupervised_outputs(BERTmodel, text_data)
 
-                    
-
-                        
-                        
-                        
-    
-                        
-                        
-                        
-                        
-                        
-
                     except Exception as e:
                             st.error(f"Error: An error occurred: {e}")        
-
-
-
-
-
-
-
 
 
         elif method == "Zero-Shot":
