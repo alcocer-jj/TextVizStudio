@@ -122,10 +122,6 @@ if uploaded_file:
 
             language = "english" if language_option == "English" else "multilingual"
 
-            # Input field for UMAP random_state (user seed)
-            umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
-
             # Select topic generation mode
             topic_option = st.selectbox(
                 "Select how you want the number of topics to be handled:",
@@ -142,6 +138,10 @@ if uploaded_file:
                 c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.1)
                 st.info("**Tip:** You can set a threshold (between 0.0 and 1.0), which determines how strict or lenient the reassignment of outlier documents will be. A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
 
+            # Input field for UMAP random_state (user seed)
+            umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+            st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+
             # Option for OpenAI API use
             use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
             st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
@@ -150,6 +150,67 @@ if uploaded_file:
             api_key = None
             if use_openai_option:
                 api_key = st.text_input("Enter your OpenAI API Key", type="password")
+
+            # Get the topic pairs to merge
+            topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
+            st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+
+            # Run the topic model button and merge button side by side
+            run_col, merge_col = st.columns([2, 1])
+            with run_col:
+                run_model_btn = st.button("Run Unsupervised Topic Model")
+            with merge_col:
+                merge_topics_btn = st.button("Merge Topics")
+
+            # Define function to display outputs (reused after both model fitting and topic merging)
+            def display_unsupervised_outputs(BERTmodel, text_data, doc_ids):
+                topic_info_df = BERTmodel.get_topic_info()
+                columns_to_remove = ['Name', 'Representation']
+                topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
+
+            # Generate hierarchical topics from the model
+            hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
+    
+            # Visualize hierarchy and intertopic distance in a two-column layout
+            hierarchy_col, map_col = st.columns([1, 1])
+    
+            with hierarchy_col:
+                st.write("**Topic Hierarchy:**")
+                hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
+                st.plotly_chart(hierarchy_fig, config = configuration)
+        
+            with map_col:
+                st.write("**Intertopic Distance Map:**")
+                intertopic_map = BERTmodel.visualize_topics()
+                st.plotly_chart(intertopic_map, config = configuration)
+
+            # Display topic info and document-topic probabilities in another two-column layout below
+            topic_info_col, doc_prob_col = st.columns([1, 1])
+    
+            with topic_info_col:
+                st.write("**Identified Topics:**")
+                st.dataframe(topic_info_df)
+
+            with doc_prob_col:
+                st.write("**Document-Topic Probabilities:**")
+                doc_info_df = BERTmodel.get_document_info(text_data)
+                doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
+        
+                # Drop unnecessary columns
+                columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
+                doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
+                st.dataframe(doc_info_df)
+
+            
+
+
+
+
+
+
+
+
+
 
 
         elif method == "Zero-Shot":
