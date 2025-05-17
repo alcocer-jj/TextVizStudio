@@ -211,7 +211,7 @@ if uploaded_file:
                                 topic_info['GPT Label'] = topic_info['GPT Topic Label'].str.split(';').str[0].str.strip()
                                 topic_info['GPT Description'] = topic_info['GPT Topic Label'].str.split(';').str[1].str.strip()
                                 # Remove unwanted characters from 'GPT Label' and 'GPT Description'
-                                topic_info['GPT Label'] = topic_info['GPT Label'].str.replace(r"^\['", "", regex=True)
+                                topic_info['GPT Label'] = topic_info['GPT Label'].str.replace(r"[\"'\[\]]", "", regex=True)
                                 topic_info['GPT Description'] = topic_info['GPT Description'].str.replace(r"'\]$", "", regex=True)
                                 topic_info = topic_info.drop(columns=['GPT Topic Label'])
                             
@@ -228,6 +228,7 @@ if uploaded_file:
                                 topic_docs = pd.DataFrame()
 
                             # Display topic info and document-topic probabilities
+                            st.subheader("Output", divider=True)
                             topic_info_col, doc_prob_col = st.columns([1, 1])
 
                             with topic_info_col:
