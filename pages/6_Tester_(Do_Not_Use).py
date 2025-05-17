@@ -91,23 +91,6 @@ configuration = {
 # Create header for the app
 st.subheader("Import Data", divider=True)
 
-# Track file uploads and state reset
-#if "last_file_hash" not in st.session_state:
-    #st.session_state.last_file_hash = None
-
-# Upload CSV file containing text data
-#uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-
-# Check if a file has been uploaded
-#if uploaded_file:
-#    data = pd.read_csv(uploaded_file)
-#    st.subheader("Topic Modeling Configuration", divider=True)
-
-    # Reset session state
-#    for key in ["BERTmodel", "topics", "topic_info"]:
-#        st.session_state.pop(key, None)
- 
-
 # Track file uploads and session state
 if "last_file_hash" not in st.session_state:
     st.session_state.last_file_hash = None
@@ -137,9 +120,12 @@ if uploaded_file:
 
     # Save to session state for persistence
     st.session_state.text_data = text_data
-    if len(text_data) == 0:
+
+    # Guard clause: stop early if no valid data
+    if st.session_state.text_data is None or st.session_state.text_data.empty:
         st.error("Error: No valid text data found. Please check your file.")
-        st.stop()        
+        st.stop()
+
     else:
         method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
 
@@ -394,37 +380,47 @@ if uploaded_file:
 
                             # Only show merging after the model is run
                             # Ensure model and text data are available
-                            if "BERTmodel" in st.session_state and "topics" in st.session_state and "text_data" in st.session_state:
+                            if (
+                                "BERTmodel" in st.session_state and
+                                "topics" in st.session_state and
+                                "text_data" in st.session_state
+                            ):
                                 st.subheader("Post Hoc Topic Merging", divider=True)
 
                                 # Use a form to capture both the input and the submit button
                                 with st.form(key="merge_form"):
                                     topics_to_merge_input = st.text_input(
-                                    "Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):", "[]", key="merge_input"
+                                    "Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):",
+                                    "[]",
+                                    key="merge_input"
                                     )
                                     st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
                                     merge_topics_btn = st.form_submit_button("Merge Topics")
 
-                                    if merge_topics_btn:
-                                        try:
-                                            topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
-                                            if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
-                                                merged_topics = st.session_state.BERTmodel.merge_topics(
-                                                    st.session_state.text_data, topics_to_merge)
-                                                st.success("Topics successfully merged!")
+                                # This must be outside the `with st.form(...)` block
+                                if merge_topics_btn:
+                                    try:
+                                        topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
+                                        if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
+                                            merged_topics = st.session_state.BERTmodel.merge_topics(
+                                                st.session_state.text_data, topics_to_merge
+                                            )
+                                            st.success("Topics successfully merged!")
 
-                                                st.session_state.BERTmodel.update_topics(
-                                                    st.session_state.text_data, topics=merged_topics)
-                                                st.session_state.topics = merged_topics
+                                            st.session_state.BERTmodel.update_topics(
+                                                st.session_state.text_data, topics=merged_topics
+                                            )
+                                            # Update the session state with the merged topics
+                                            st.session_state.topics = merged_topics
 
-                                                # Re-display the output
-                                                display_unsupervised_outputs(
-                                                    st.session_state.BERTmodel, st.session_state.text_data)
-                                            else:
-                                                st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
-                                        except Exception as e:
-                                            st.error(f"Merge failed: {e}")
-                            
+                                            # Re-display the output
+                                            display_unsupervised_outputs(
+                                                st.session_state.BERTmodel, st.session_state.text_data
+                                            )
+                                        else:
+                                            st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
+                                    except Exception as e:
+                                        st.error(f"Merge failed: {e}")
                             
                     except Exception as e:
                             st.error(f"Error: An error occurred: {e}")        
