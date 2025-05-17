@@ -124,28 +124,8 @@ if uploaded_file:
         
         if method == "Unsupervised":
             st.markdown("### Unsupervised Topic Modeling")
-            # Example implementation for unsupervised topic modeling
-            vectorizer = CountVectorizer(stop_words="english")
-            embeddings = SentenceTransformer("all-MiniLM-L6-v2").encode(text_data.tolist())
-            umap_model = UMAP(n_neighbors=15, n_components=5, metric="cosine").fit_transform(embeddings)
-            topic_model = BERTopic(embedding_model="all-MiniLM-L6-v2", vectorizer_model=vectorizer)
-            topics, probs = topic_model.fit_transform(text_data.tolist())
-            st.session_state.BERTmodel = topic_model
-            st.session_state.topics = topics
-            st.write("Topics generated successfully!")
             
         elif method == "Zero-Shot":
             st.markdown("### Zero-Shot Topic Modeling")
-            # Example implementation for zero-shot topic modeling
-            openai.api_key = st.secrets["openai_api_key"]
-            topic_labels = []
-            for text in text_data:
-                response = openai.Completion.create(
-                    engine="text-davinci-003",
-                    prompt=f"Generate a topic label for the following text: {text}",
-                    max_tokens=10
-                )
-                topic_labels.append(response.choices[0].text.strip())
-            st.session_state.topics = topic_labels
-            st.write("Zero-shot topics generated successfully!")
+            
         
