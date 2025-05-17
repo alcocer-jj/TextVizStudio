@@ -152,7 +152,8 @@ if uploaded_file:
                     with st.spinner("Running Zero-Shot Topic Model..."):
                         try:
                             st.write("Initializing Sentence Transformer model...")
-                            model = SentenceTransformer("thenlper/gte-small")
+                            #model = SentenceTransformer("thenlper/gte-small")
+                            model = SentenceTransformer("intfloat/multilingual-e5-small")
                             
                             st.write("Initializing UMAP model...")
                             umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
