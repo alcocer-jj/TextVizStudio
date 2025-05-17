@@ -95,23 +95,14 @@ st.subheader("Import Data", divider=True)
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
 if uploaded_file:
-    # Load data
     data = pd.read_csv(uploaded_file)
-    
     st.subheader("Topic Modeling Configuration", divider=True)
 
-    # Reset previous session state
-    if "BERTmodel" in st.session_state:
-        del st.session_state["BERTmodel"]
-    if "topics" in st.session_state:
-        del st.session_state["topics"]
-    if "topic_info" in st.session_state:
-        del st.session_state["topic_info"]
-        
-    # Dropdown to select the 'text' column
-    text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
+    # Reset session state
+    for key in ["BERTmodel", "topics", "topic_info"]:
+        st.session_state.pop(key, None)
 
-    # Ensure selected column has valid data
+    text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
     data = data.dropna(subset=[text_column])
     text_data = data[text_column]
 
@@ -119,13 +110,10 @@ if uploaded_file:
         st.error("No valid text data found. Please check your file.")
         st.stop()
     else:
-        # Dropdown to choose topic modeling approach
         method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
-        
+
         if method == "Unsupervised":
             st.markdown("### Unsupervised Topic Modeling")
-            
+
         elif method == "Zero-Shot":
             st.markdown("### Zero-Shot Topic Modeling")
-            
-        
