@@ -220,11 +220,11 @@ if uploaded_file:
                             topic_info_col, doc_prob_col = st.columns([1, 1])
 
                             with topic_info_col:
-                                st.write("Identified Topics:")
+                                st.write("**Identified Topics:**")
                                 st.dataframe(topic_info)
 
                             with doc_prob_col:
-                                st.write("Document-Topic Probabilities:")
+                                st.write("**Document-Topic Probabilities:**")
                                 st.dataframe(topic_docs)
 
                         except Exception as e:
