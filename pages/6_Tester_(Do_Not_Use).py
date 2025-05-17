@@ -113,7 +113,7 @@ if uploaded_file:
         method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
 
         if method == "Unsupervised":
-            st.markdown("### Unsupervised Topic Modeling")
+            st.subheader("Unsupervised Topic Modeling", divider=True)
 
         elif method == "Zero-Shot":
-            st.markdown("### Zero-Shot Topic Modeling")
+            st.subheader("Zero-Shot Topic Modeling", divider=True)
