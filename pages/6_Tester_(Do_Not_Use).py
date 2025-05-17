@@ -203,9 +203,11 @@ if uploaded_file:
                             # Extract topic info
                             st.write("Extracting topic info...")
                             topic_info = BERTmodel.get_topic_info()
+                            topic_info = pd.DataFrame(topic_info)
 
                             # Create two new columns from 'GPT Topic Label'
                             if 'GPT Topic Label' in topic_info.columns:
+                                topic_info['GPT Topic Label'] = topic_info['GPT Topic Label'].astype(str)
                                 topic_info['GPT Label'] = topic_info['GPT Topic Label'].str.split(';').str[0].str.strip()
                                 topic_info['GPT Description'] = topic_info['GPT Topic Label'].str.split(';').str[1].str.strip()
                                 topic_info = topic_info.drop(columns=['GPT Topic Label'])
