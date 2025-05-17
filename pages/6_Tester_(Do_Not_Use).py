@@ -9,7 +9,7 @@ from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from sklearn.feature_extraction.text import CountVectorizer
 import ast  # To safely evaluate string input to list format
-import hashlib  # To create unique identifiers
+#import hashlib  # To create unique identifiers
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
@@ -78,6 +78,7 @@ if "BERTmodel" not in st.session_state:
     st.session_state.text_data = None
     st.session_state.doc_ids = None
 
+# Configuration for Plotly chart download
 configuration = {
     'toImageButtonOptions': {
         'format': 'png',
@@ -94,6 +95,7 @@ st.subheader("Import Data", divider=True)
 # Upload CSV file containing text data
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
+# Check if a file has been uploaded
 if uploaded_file:
     data = pd.read_csv(uploaded_file)
     st.subheader("Topic Modeling Configuration", divider=True)
@@ -101,7 +103,7 @@ if uploaded_file:
     # Reset session state
     for key in ["BERTmodel", "topics", "topic_info"]:
         st.session_state.pop(key, None)
-
+    
     text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
     data = data.dropna(subset=[text_column])
     text_data = data[text_column]
@@ -122,6 +124,14 @@ if uploaded_file:
 
             language = "english" if language_option == "English" else "multilingual"
 
+            if language == "multilingual":
+                stop_word_language = st.selectbox(
+                    "Select the stop word language for CountVectorizer via NLTK:",
+                    ("none", "czech", "danish", "dutch", "estonian", "finnish", "french", "german", "greek",
+                     "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
+                     "swedish", "turkish"))
+                st.success("**Note:** The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
+                
             # Select topic generation mode
             topic_option = st.selectbox(
                 "Select how you want the number of topics to be handled:",
@@ -168,42 +178,167 @@ if uploaded_file:
                 columns_to_remove = ['Name', 'Representation']
                 topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
 
-            # Generate hierarchical topics from the model
-            hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
+                # Generate hierarchical topics from the model
+                hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
     
-            # Visualize hierarchy and intertopic distance in a two-column layout
-            hierarchy_col, map_col = st.columns([1, 1])
+                # Visualize hierarchy and intertopic distance in a two-column layout
+                hierarchy_col, map_col = st.columns([1, 1])
     
-            with hierarchy_col:
-                st.write("**Topic Hierarchy:**")
-                hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
-                st.plotly_chart(hierarchy_fig, config = configuration)
+                with hierarchy_col:
+                    st.write("**Topic Hierarchy:**")
+                    hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
+                    st.plotly_chart(hierarchy_fig, config = configuration)
         
-            with map_col:
-                st.write("**Intertopic Distance Map:**")
-                intertopic_map = BERTmodel.visualize_topics()
-                st.plotly_chart(intertopic_map, config = configuration)
+                with map_col:
+                    st.write("**Intertopic Distance Map:**")
+                    intertopic_map = BERTmodel.visualize_topics()
+                    st.plotly_chart(intertopic_map, config = configuration)
 
-            # Display topic info and document-topic probabilities in another two-column layout below
-            topic_info_col, doc_prob_col = st.columns([1, 1])
+                # Display topic info and document-topic probabilities in another two-column layout below
+                topic_info_col, doc_prob_col = st.columns([1, 1])
     
-            with topic_info_col:
-                st.write("**Identified Topics:**")
-                st.dataframe(topic_info_df)
+                with topic_info_col:
+                    st.write("**Identified Topics:**")
+                    st.dataframe(topic_info_df)
 
-            with doc_prob_col:
-                st.write("**Document-Topic Probabilities:**")
-                doc_info_df = BERTmodel.get_document_info(text_data)
-                doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
+                with doc_prob_col:
+                    st.write("**Document-Topic Probabilities:**")
+                    doc_info_df = BERTmodel.get_document_info(text_data)
+                    doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
         
                 # Drop unnecessary columns
                 columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
                 doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
                 st.dataframe(doc_info_df)
 
-            
+            if run_model_btn:
+                from transformers import pipeline
+                with st.spinner("Running Unsupervised Topic Model..."):
+                    try:
+                        # Initialize Sentence Transformer model
+                        st.write("Initializing Sentence Transformer model...")
+                        if language == "english":
+                            model = SentenceTransformer("all-MiniLM-L6-v2")
+                        else:
+                            model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+                        
+                        # Initialize UMAP model
+                        st.write("Initializing UMAP model...")
+                        if umap_random_state is None:
+                            umap_random_state = random.randint(1, 10000)  # Random seed between 1 and 10000
+                            st.write(f"No seed provided, using random seed: {umap_random_state}")
+                        else:
+                            st.write(f"Using user-provided seed: {umap_random_state}")
+                        
+                        umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
 
+                        # Initialize CountVectorizer
+                        st.write("Initializing CountVectorizer...")
+                        if language == "multilingual":
+                            from nltk.corpus import stopwords
+                            
+                            if stop_word_language != "none":
+                                stop_word_language = stopwords.words(stop_word_language)
+                            else:
+                                stop_word_language = None
+                            
+                            vectorizer_model = CountVectorizer(stop_words=stop_word_language,
+                                                               min_df=1,
+                                                               max_df=0.9,
+                                                               ngram_range=(1, 3))
+                        else:
+                            vectorizer_model = CountVectorizer(stop_words='english',
+                                                   min_df=1,
+                                                   max_df=0.9,
+                                                   ngram_range=(1, 3))
 
+                        # Initialize representation model
+                        st.write("Initializing representation model(s)...")
+                        representation_model = {"Unique Keywords": KeyBERTInspired()}
+                        
+                        # Check if user wants to use OpenAI for topic labels    
+                        if use_openai_option and api_key:
+                            try:
+                                # Set up OpenAI API client
+                                client = openai.OpenAI(api_key=api_key)
+
+                                label_prompt = """
+                                I have a topic that is described by the following keywords: [KEYWORDS]
+                                In this topic, the following documents are a small but representative subset of all documents in the topic:
+                                [DOCUMENTS]
+
+                                Based on the information above, please give a short label and an informative description of this topic in the following format:
+                                <label>; <description>
+                                """
+                        
+                                # Create OpenAI representation model
+                                openai_model = OpenAI(client=client, 
+                                                      model="gpt-4o",
+                                                      prompt=label_prompt,
+                                                      chat=True,
+                                                      nr_docs=10,
+                                                      delay_in_seconds=3)
+                        
+                                # Add OpenAI to the representation model
+                                representation_model["GPT Topic Label"] = openai_model
+                            except Exception as e:
+                                st.error(f"Failed to initialize OpenAI API: {e}")
+                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
+                        
+                        # Initialize BERTopic model with the selected representation models
+                        BERTmodel = BERTopic(
+                            representation_model=representation_model,
+                            umap_model=umap_model,
+                            embedding_model=model,
+                            vectorizer_model=vectorizer_model,
+                            top_n_words=10,
+                            nr_topics=nr_topics,
+                            #language=language,
+                            calculate_probabilities=True,
+                            verbose=True
+                            )
+
+                        # Fit and transform the topic model
+                        topics, probs = BERTmodel.fit_transform(text_data)
+                        st.session_state.BERTmodel = BERTmodel
+                        st.session_state.topics = topics
+
+                        unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
+
+                        if len(unique_topics) < 3:
+                            st.warning("The model generated fewer than 3 topics. This can happen if the data lacks diversity or is too homogeneous. "
+                                       "Please try using a dataset with more variability in the text content.")
+                        else:
+                            # Apply outlier reduction if the option was selected
+                            if reduce_outliers_option:
+                                # First, reduce outliers using the "c-tf-idf" strategy with the chosen threshold
+                                new_topics = BERTmodel.reduce_outliers(text_data, topics, strategy="c-tf-idf", threshold=c_tf_idf_threshold)
+                                # Then, reduce remaining outliers with the "distributions" strategy
+                                new_topics = BERTmodel.reduce_outliers(text_data, new_topics, strategy="distributions")
+                                st.write(f"Outliers reduced using c-TF-IDF threshold {c_tf_idf_threshold} and distributions strategy.")
+
+                                # Update topic representations based on the new topics
+                                BERTmodel.update_topics(text_data, topics=new_topics)
+                                st.session_state.topics = new_topics
+                                st.write("Topics and their representations have been updated based on the new outlier-free documents.")
+
+                            # Display the outputs (topics table, intertopic map, probabilities)
+                            display_unsupervised_outputs(BERTmodel, text_data, st.session_state.doc_ids)
+
+                    
+
+                        
+                        
+                        
+    
+                        
+                        
+                        
+                        
+                        
+
+                    except Exception as e:
+                            st.error(f"Error: An error occurred: {e}")        
 
 
 
