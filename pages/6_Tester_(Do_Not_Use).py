@@ -204,6 +204,12 @@ if uploaded_file:
                             st.write("Extracting topic info...")
                             topic_info = BERTmodel.get_topic_info()
 
+                            # Create two new columns from 'GPT Topic Label'
+                            if 'GPT Topic Label' in topic_info.columns:
+                                topic_info['GPT Label'] = topic_info['GPT Topic Label'].str.split(';').str[0].str.strip()
+                                topic_info['GPT Description'] = topic_info['GPT Topic Label'].str.split(';').str[1].str.strip()
+                                topic_info = topic_info.drop(columns=['GPT Topic Label'])
+                            
                             # Check if topics exist before running transform()
                             unique_topics = set(topics) - {-1}
                             if len(unique_topics) > 0:
