@@ -209,6 +209,8 @@ if uploaded_file:
                             if 'GPT Topic Label' in topic_info.columns:
                                 topic_info['GPT Topic Label'] = topic_info['GPT Topic Label'].astype(str)
                                 topic_info['GPT Label'] = topic_info['GPT Topic Label'].str.split(';').str[0].str.strip()
+                                topic_info['GPT Description'] = topic_info['GPT Topic Label'].str.split(';').str[1].str.strip()
+                                # Remove unwanted characters from 'GPT Label' and 'GPT Description'
                                 topic_info['GPT Label'] = topic_info['GPT Label'].str.replace(r"^\['", "", regex=True)
                                 topic_info['GPT Description'] = topic_info['GPT Description'].str.replace(r"'\]$", "", regex=True)
                                 topic_info = topic_info.drop(columns=['GPT Topic Label'])
