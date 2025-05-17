@@ -393,39 +393,37 @@ if uploaded_file:
                             
 
                             # Only show merging after the model is run
-                            if "BERTmodel" in st.session_state and "topics" in st.session_state:
+                            # Ensure model and text data are available
+                            if "BERTmodel" in st.session_state and "topics" in st.session_state and "text_data" in st.session_state:
                                 st.subheader("Post Hoc Topic Merging", divider=True)
-                                
-                                with st.form("merge_form"):
-                                    topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
-                                    st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
+
+                                # Use a form to capture both the input and the submit button
+                                with st.form(key="merge_form"):
+                                    topics_to_merge_input = st.text_input(
+                                    "Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):", "[]", key="merge_input"
+                                    )
+                                    st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
                                     merge_topics_btn = st.form_submit_button("Merge Topics")
 
                                     if merge_topics_btn:
-                                        if all(k in st.session_state for k in ["BERTmodel", "topics", "text_data"]):
-                                            try:
-                                                topics_to_merge = ast.literal_eval(topics_to_merge_input)
-                                                if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
-                                                    merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
-                                                    st.success("Topics have been successfully merged!")
+                                        try:
+                                            topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
+                                            if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
+                                                merged_topics = st.session_state.BERTmodel.merge_topics(
+                                                    st.session_state.text_data, topics_to_merge)
+                                                st.success("Topics successfully merged!")
 
-                                                    # Update and reassign
-                                                    st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
-                                                    st.session_state.topics = merged_topics
+                                                st.session_state.BERTmodel.update_topics(
+                                                    st.session_state.text_data, topics=merged_topics)
+                                                st.session_state.topics = merged_topics
 
-                                                    # Re-display outputs
-                                                    display_unsupervised_outputs(
-                                                    st.session_state.BERTmodel,
-                                                    st.session_state.text_data
-                                                    )
-                                                else:
-                                                    st.error("Invalid input. Please provide a list of lists like `[[1, 2], [3, 4]]`.")
-                                            except Exception as e:
-                                                st.error(f"An error occurred while merging topics: {e}")
-                                        else:
-                                            st.error("Model or data missing. Please run the topic model first.")
-                            
-                            
+                                                # Re-display the output
+                                                display_unsupervised_outputs(
+                                                    st.session_state.BERTmodel, st.session_state.text_data)
+                                            else:
+                                                st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
+                                        except Exception as e:
+                                            st.error(f"Merge failed: {e}")
                             
                             
                     except Exception as e:
