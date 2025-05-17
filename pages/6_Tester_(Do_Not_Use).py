@@ -118,14 +118,14 @@ if uploaded_file:
     if len(text_data) == 0:
         st.error("No valid text data found. Please check your file.")
         st.stop()
-
-    # Dropdown to choose topic modeling approach
-    method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
-
-    if method == "Unsupervised":
-        st.markdown("### Unsupervised Topic Modeling")
+    
+    else:
+        # Dropdown to choose topic modeling approach
+        method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
         
-
-    elif method == "Zero-Shot":
-        st.markdown("### Zero-Shot Topic Modeling")
+        if method == "Unsupervised":
+            st.markdown("### Unsupervised Topic Modeling")
+            
+        elif method == "Zero-Shot":
+            st.markdown("### Zero-Shot Topic Modeling")
         

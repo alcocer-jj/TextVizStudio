@@ -85,7 +85,7 @@ if "BERTmodel" not in st.session_state:
     st.session_state.BERTmodel = None
     st.session_state.topics = None
     st.session_state.text_data = None
-    st.session_state.doc_ids = None  # To track document IDs
+    st.session_state.doc_ids = None
 
 configuration = {
     'toImageButtonOptions': {
