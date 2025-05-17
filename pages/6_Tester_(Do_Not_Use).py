@@ -91,17 +91,40 @@ configuration = {
 # Create header for the app
 st.subheader("Import Data", divider=True)
 
+# Track file uploads and state reset
+if "last_file_hash" not in st.session_state:
+    st.session_state.last_file_hash = None
+
 # Upload CSV file containing text data
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
 # Check if a file has been uploaded
-if uploaded_file:
-    data = pd.read_csv(uploaded_file)
-    st.subheader("Topic Modeling Configuration", divider=True)
+#if uploaded_file:
+#    data = pd.read_csv(uploaded_file)
+#    st.subheader("Topic Modeling Configuration", divider=True)
 
     # Reset session state
-    for key in ["BERTmodel", "topics", "topic_info"]:
+#    for key in ["BERTmodel", "topics", "topic_info"]:
+#        st.session_state.pop(key, None)
+ 
+# If file is removed manually, clear everything
+if uploaded_file is None and st.session_state.last_file_hash is not None:
+    st.session_state.last_file_hash = None
+    for key in ["BERTmodel", "topics", "topic_info", "text_data"]:
         st.session_state.pop(key, None)
+
+# If a file is uploaded
+if uploaded_file:
+    # Detect whether it's a new file
+    file_hash = hash(uploaded_file.getvalue())
+    if st.session_state.last_file_hash != file_hash:
+        st.session_state.last_file_hash = file_hash
+        for key in ["BERTmodel", "topics", "topic_info", "text_data"]:
+            st.session_state.pop(key, None)
+
+    # Proceed to parse the file
+    data = pd.read_csv(uploaded_file)
+    st.subheader("Topic Modeling Configuration", divider=True)
     
     text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
     data = data.dropna(subset=[text_column])
