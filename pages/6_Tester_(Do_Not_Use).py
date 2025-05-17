@@ -321,7 +321,7 @@ if uploaded_file:
                                 st.write("Topics and their representations have been updated based on the new outlier-free documents.")
 
                             # Display the outputs (topics table, intertopic map, probabilities)
-                            display_unsupervised_outputs(BERTmodel, text_data, st.session_state.doc_ids)
+                            display_unsupervised_outputs(BERTmodel, text_data)
 
                     
 
