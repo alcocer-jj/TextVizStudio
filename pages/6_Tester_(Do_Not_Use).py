@@ -206,10 +206,10 @@ if uploaded_file:
                     doc_info_df = BERTmodel.get_document_info(text_data)
                     doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
         
-                # Drop unnecessary columns
-                columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
-                doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
-                st.dataframe(doc_info_df)
+                    # Drop unnecessary columns
+                    columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
+                    doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
+                    st.dataframe(doc_info_df)
 
             if run_model_btn:
                 from transformers import pipeline
