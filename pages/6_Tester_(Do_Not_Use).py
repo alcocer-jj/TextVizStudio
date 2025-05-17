@@ -4,7 +4,7 @@ import numpy as np
 import random
 import openai
 from bertopic import BERTopic
-from bertopic.representation import KeyBERTInspired, OpenAI as OpenAIRep, TextGeneration, ZeroShotTopicModel
+from bertopic.representation import KeyBERTInspired, OpenAI, TextGeneration
 from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from sklearn.feature_extraction.text import CountVectorizer
