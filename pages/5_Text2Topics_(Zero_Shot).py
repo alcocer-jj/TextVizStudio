@@ -10,7 +10,6 @@ from umap import UMAP
 from sklearn.feature_extraction.text import CountVectorizer
 import ast  # To safely evaluate string input to list format
 import hashlib  # To create unique identifiers
-from transformers import pipeline
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
@@ -159,6 +158,7 @@ if uploaded_file:
     run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
 
     if run_zero_shot_btn:
+        from transformers import pipeline
         with st.spinner("Running Zero-Shot Topic Model..."):
             try:
                 st.write("✅ Initializing Sentence Transformer model")
