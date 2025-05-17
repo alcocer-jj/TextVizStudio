@@ -169,7 +169,7 @@ if uploaded_file:
             #with run_col:
             run_model_btn = st.button("Run Unsupervised Topic Model")
             #with merge_col:
-            #    merge_topics_btn = st.button("Merge Topics")
+            
 
             # Define function to display outputs (reused after both model fitting and topic merging)
             def display_unsupervised_outputs(BERTmodel, text_data):
@@ -338,12 +338,8 @@ if uploaded_file:
                             # Get the topic pairs to merge
                             topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
                             st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
-
+                            merge_topics_btn = st.button("Merge Topics")
                             
-                            
-                            
-                            
-
                     except Exception as e:
                             st.error(f"Error: An error occurred: {e}")        
 
