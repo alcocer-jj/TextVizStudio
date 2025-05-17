@@ -76,7 +76,6 @@ if "BERTmodel" not in st.session_state:
     st.session_state.BERTmodel = None
     st.session_state.topics = None
     st.session_state.text_data = None
-    st.session_state.doc_ids = None
 
 # Configuration for Plotly chart download
 configuration = {
@@ -145,7 +144,7 @@ if uploaded_file:
             st.success("**Note:** This process assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics. Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise. Experiment with and without this option to see what works best for your case.")
 
             if reduce_outliers_option:
-                c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.1)
+                c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.3)
                 st.info("**Tip:** You can set a threshold (between 0.0 and 1.0), which determines how strict or lenient the reassignment of outlier documents will be. A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
 
             # Input field for UMAP random_state (user seed)
@@ -173,7 +172,7 @@ if uploaded_file:
                 merge_topics_btn = st.button("Merge Topics")
 
             # Define function to display outputs (reused after both model fitting and topic merging)
-            def display_unsupervised_outputs(BERTmodel, text_data, doc_ids):
+            def display_unsupervised_outputs(BERTmodel, text_data):
                 topic_info_df = BERTmodel.get_topic_info()
                 columns_to_remove = ['Name', 'Representation']
                 topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
@@ -204,7 +203,6 @@ if uploaded_file:
                 with doc_prob_col:
                     st.write("**Document-Topic Probabilities:**")
                     doc_info_df = BERTmodel.get_document_info(text_data)
-                    doc_info_df['doc_id'] = doc_ids['doc_id'].tolist()
         
                     # Drop unnecessary columns
                     columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document']
