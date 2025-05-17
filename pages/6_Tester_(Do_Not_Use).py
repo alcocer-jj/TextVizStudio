@@ -340,6 +340,35 @@ if uploaded_file:
                             st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
                             merge_topics_btn = st.button("Merge Topics")
                             
+                            # Manual topic merge functionality
+                            if merge_topics_btn and st.session_state.BERTmodel is not None and st.session_state.topics is not None:
+                                try:
+                                    topics_to_merge = ast.literal_eval(topics_to_merge_input)  # Convert input to list
+
+                                    # Ensure it's a list of lists
+                                    if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
+                                        merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
+                                        st.success("Topics have been successfully merged!")
+
+                                        # Update topic representations after merging
+                                        st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
+                                        st.session_state.topics = merged_topics
+
+                                        # Re-display the outputs (topics table, intertopic map, probabilities)
+                                        display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data, st.session_state.doc_ids)
+                                    else:
+                                        st.error("Invalid input. Please provide a list of lists in the format `[[1, 2], [3, 4]]`.")
+                                except Exception as e:
+                                    st.error(f"An error occurred while merging topics: {e}")
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
                     except Exception as e:
                             st.error(f"Error: An error occurred: {e}")        
 
