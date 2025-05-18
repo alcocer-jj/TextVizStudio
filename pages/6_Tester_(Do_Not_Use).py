@@ -79,12 +79,14 @@ if "BERTmodel" not in st.session_state:
 
 # Configuration for Plotly chart download
 configuration = {
+    'displaylogo': False,
+    'modeBarButtonsToRemove': ['zoomIn2d', 'zoomOut2d'],
     'toImageButtonOptions': {
         'format': 'png',
-        'filename': 'custom_image',
-        'height': 1000,
-        'width': 1400,
-        'scale': 1
+        'filename': 'plotly_image',
+        'height': 800,
+        'width': 1200,
+        'scale': 2  # Higher resolution image
     }
 }
 
@@ -369,18 +371,13 @@ if uploaded_file:
                 try:
                     topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
                     if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
-                        merged_topics = st.session_state.BERTmodel.merge_topics(
-                            st.session_state.text_data, topics_to_merge)
+                        merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
                         st.success("Topics successfully merged!")
                         
-                        st.session_state.BERTmodel.update_topics(
-                            st.session_state.text_data, topics=merged_topics)
-                        # Update the session state with the merged topics
+                        st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
                         st.session_state.topics = merged_topics
 
-                        # Re-display the output
-                        display_unsupervised_outputs(
-                            st.session_state.BERTmodel, st.session_state.text_data)
+                        display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data)
                     else:
                         st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
                 except Exception as e:
