@@ -8,16 +8,23 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from sklearn.feature_extraction.text import CountVectorizer
-import ast  # To safely evaluate string input to list format
-#import hashlib  # To create unique identifiers
+import ast 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
 
 st.set_page_config(
-    page_title="Text2Topics: Unsupervised",
+    page_title="Text2Topics",
     layout="wide"
 )
+
+st.markdown("""
+    <style>
+        a {
+            color: #77bfc7 !important;  /* Replace with your desired color */
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Authenticate with Google Sheets API using Streamlit Secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -49,7 +56,7 @@ st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.
 
 
 # Sidebar: Title and description (sticky)
-st.markdown("<h1 style='text-align: center'>Text2Topics: Large Language Unsupervised Topic Modeling</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center'>Text2Topics: Large Language Topic Modeling</h1>", unsafe_allow_html=True)
 
 st.markdown("")
 st.markdown("")
@@ -58,14 +65,18 @@ st.markdown("")
 st.markdown("")
 
 st.markdown("""
-**Text2Topic Analysis** is an interactive tool for extracting and visualizing topics from text data.
-Upload a CSV file containing your text data for analysis. Select topic generation
-preferences define a specific number of topics or let the model determine the optimal
-number. Choose advanced options like outlier reduction and the use of OpenAI's 
-GPT-4o for improved topic labels. Visualize the results through a topic summary, 
-intertopic distance map, and document-topic probabilities. Results can be downloaded 
-for further analyses of topics. Configure the parameters to customize your topic 
-modeling experience.
+**Text2Topic Analysis** is an interactive Streamlit application that supports both
+Unsupervised Topic Modeling and Zero-Shot Classification for analyzing text data.
+Users can upload a CSV file containing textual content, select the appropriate column,
+and choose between two analysis modes: generating topics automatically using BERTopic
+or classifying text into predefined labels using zero-shot methods. The app offers
+multilingual embedding support, customizable stop word filtering, and advanced options
+like outlier reduction and reproducibility through random seed input. For enhanced
+topic labeling, users can integrate OpenAI’s GPT-4o to generate concise and descriptive
+labels. Visual outputs include a hierarchical topic tree, an intertopic distance map, and
+document-topic probability tables. Topics can be manually merged post hoc to refine results,
+and final outputs are available for download. The interface is designed to provide a
+customizable and user-friendly experience for exploring themes within large text datasets.
 """)
 
 st.markdown("")
@@ -80,7 +91,6 @@ if "BERTmodel" not in st.session_state:
 # Configuration for Plotly chart download
 configuration = {
     'displaylogo': False,
-    'modeBarButtonsToRemove': ['zoomIn2d', 'zoomOut2d'],
     'toImageButtonOptions': {
         'format': 'png',
         'filename': 'plotly_image',
@@ -97,7 +107,9 @@ st.subheader("Import Data", divider=True)
 if "last_file_hash" not in st.session_state:
     st.session_state.last_file_hash = None
 
+# File uploader for CSV files
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+st.no
 
 # Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
@@ -105,7 +117,7 @@ if uploaded_file is None and st.session_state.last_file_hash is not None:
     for key in ["BERTmodel", "topics", "topic_info", "text_data"]:
         st.session_state.pop(key, None)
 
-# If file uploaded
+# Begin app logic
 if uploaded_file:
     file_hash = hash(uploaded_file.getvalue())
     if st.session_state.last_file_hash != file_hash:
@@ -113,9 +125,11 @@ if uploaded_file:
         for key in ["BERTmodel", "topics", "topic_info", "text_data"]:
             st.session_state.pop(key, None)
 
+    # Load the CSV file
     data = pd.read_csv(uploaded_file)
     st.subheader("Topic Modeling Configuration", divider=True)
 
+    # Load proper text column
     text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
     data = data.dropna(subset=[text_column])
     text_data = data[text_column]
@@ -129,8 +143,10 @@ if uploaded_file:
         st.stop()
 
     else:
+        # Choose topic modeling method
         method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
 
+        # Begin logic for unsupervised topic modeling
         if method == "Unsupervised":
             st.subheader("Unsupervised Topic Modeling", divider=True)
             
@@ -177,18 +193,8 @@ if uploaded_file:
             api_key = None
             if use_openai_option:
                 api_key = st.text_input("Enter your OpenAI API Key", type="password")
-
-            # Get the topic pairs to merge
-            #topics_to_merge_input = st.text_input("Enter topic pairs to merge (optional):", "[]")
-            #st.warning("**Instructions:** Provide a list of lists with the topic pairs you want to merge. For example, `[[1, 2], [3, 4]]` will merge topics 1 and 2, and 3 and 4. This must be done after running the topic model.")
-
-            # Run the topic model button and merge button side by side
-            #run_col, merge_col = st.columns([2, 1])
-            #with run_col:
             run_model_btn = st.button("Run Unsupervised Topic Model")
-            #with merge_col:
             
-
             # Define function to display outputs (reused after both model fitting and topic merging)
             def display_unsupervised_outputs(BERTmodel, text_data):
                 topic_info_df = BERTmodel.get_topic_info()
@@ -204,13 +210,13 @@ if uploaded_file:
                 with hierarchy_col:
                     st.write("**Topic Hierarchy:**")
                     hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
-                    hierarchy_fig.update_layout(width=1400, height=1000, margin=dict(l=80, r=80, t=100, b=80))
+                    hierarchy_fig.update_layout(width=1200, height=800, margin=dict(l=80, r=80, t=100, b=80))
                     st.plotly_chart(hierarchy_fig, config = configuration)
         
                 with map_col:
                     st.write("**Intertopic Distance Map:**")
                     intertopic_map = BERTmodel.visualize_topics()
-                    intertopic_map.update_layout(width=1400, height=1000, margin=dict(l=80, r=80, t=100, b=80))
+                    intertopic_map.update_layout(width=1200, height=800, margin=dict(l=80, r=80, t=100, b=80))
                     st.plotly_chart(intertopic_map, config = configuration)
 
                 # Display topic info and document-topic probabilities in another two-column layout below
@@ -239,6 +245,7 @@ if uploaded_file:
                     doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
                     st.dataframe(doc_info_df)
 
+            # Begin logic for running the model
             if run_model_btn:
                 from transformers import pipeline
                 with st.spinner("Running Unsupervised Topic Model..."):
@@ -356,7 +363,8 @@ if uploaded_file:
                                 
                     except Exception as e:
                         st.error(f"Error: An error occurred: {e}")   
-                                        
+                       
+            # Post hoc topic merging                            
             if ("BERTmodel" in st.session_state and
                 "topics" in st.session_state and
                 "text_data" in st.session_state):
@@ -368,7 +376,7 @@ if uploaded_file:
                 st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
                 merge_topics_btn = st.button("Merge Topics")
 
-            
+                # Begin logic for merging topics
                 if merge_topics_btn:
                     try:
                         topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
@@ -384,9 +392,8 @@ if uploaded_file:
                             st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
                     except Exception as e:
                         st.error(f"Merge failed: {e}")
-                            
-                        
-
+                
+        # Begin logic for Zero-Shot topic modeling                    
         elif method == "Zero-Shot":
             st.subheader("Zero-Shot Topic Modeling", divider=True)
             
@@ -421,9 +428,9 @@ if uploaded_file:
                 api_key = None
                 if use_openai_option:
                     api_key = st.text_input("Enter your OpenAI API Key", type="password")
-                
                 run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
                 
+                # Begin logic for running the Zero-Shot model
                 if run_zero_shot_btn:
                     from transformers import pipeline
                     with st.spinner("Running Zero-Shot Topic Model..."):
