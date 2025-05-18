@@ -362,11 +362,11 @@ if uploaded_file:
                 "text_data" in st.session_state):
                 st.subheader("Post Hoc Topic Merging", divider=True)
 
-            # Use a form to capture both the input and the submit button
-            topics_to_merge_input = st.text_input("Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):",
-                                                  "[]", key="merge_input")
-            st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
-            merge_topics_btn = st.button("Merge Topics")
+                # Use a form to capture both the input and the submit button
+                topics_to_merge_input = st.text_input("Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):",
+                                                      "[]", key="merge_input")
+                st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
+                merge_topics_btn = st.button("Merge Topics")
 
             
             if merge_topics_btn:
