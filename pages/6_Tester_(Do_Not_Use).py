@@ -362,7 +362,7 @@ if uploaded_file:
             topics_to_merge_input = st.text_input("Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):",
                                                   "[]", key="merge_input")
             st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
-            merge_topics_btn = st.form_submit_button("Merge Topics")
+            merge_topics_btn = st.button("Merge Topics")
 
             
             if merge_topics_btn:
