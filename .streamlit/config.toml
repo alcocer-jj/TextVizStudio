@@ -8,5 +8,15 @@ codeFont = "monospace"
 headingFont = "serif"
 showSidebarBorder = true
 
+[theme]
+base="dark"
+primaryColor="#77bfc7"
+backgroundColor="#1a1a1a"
+secondaryBackgroundColor="#282828"
+linkColor = "#77bfc7"
+font = "serif"
+codeFont = "monospace"
+headingFont = "serif"
+showSidebarBorder = true
 
 
