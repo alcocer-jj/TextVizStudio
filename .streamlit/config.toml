@@ -1,14 +1,4 @@
 [theme]
-base="light"
-primaryColor="#77bfc7"
-secondaryBackgroundColor="#f5f5f5"
-linkColor = "#77bfc7"
-font = "serif"
-codeFont = "monospace"
-headingFont = "serif"
-showSidebarBorder = true
-
-[theme]
 base="dark"
 primaryColor="#77bfc7"
 backgroundColor="#1a1a1a"
