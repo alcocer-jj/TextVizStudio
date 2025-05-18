@@ -18,14 +18,6 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
-    <style>
-        a {
-            color: #77bfc7 !important;  /* Replace with your desired color */
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 # Authenticate with Google Sheets API using Streamlit Secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
