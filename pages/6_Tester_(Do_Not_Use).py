@@ -352,23 +352,21 @@ if uploaded_file:
                                 
                     except Exception as e:
                         st.error(f"Error: An error occurred: {e}")   
-                        
-                        
+                                        
             if ("BERTmodel" in st.session_state and
                 "topics" in st.session_state and
                 "text_data" in st.session_state):
                 st.subheader("Post Hoc Topic Merging", divider=True)
 
             # Use a form to capture both the input and the submit button
-            with st.form(key="merge_form"):
-                topics_to_merge_input = st.text_input(
+            topics_to_merge_input = st.text_input(
                     "Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):",
                     "[]",
                     key="merge_input")
-                st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
-                merge_topics_btn = st.form_submit_button("Merge Topics")
+            st.warning("**Instructions:** Provide a list of lists like `[[1, 2], [3, 4]]` to merge topics.")
+            merge_topics_btn = st.form_submit_button("Merge Topics")
 
-                                # This must be outside the `with st.form(...)` block
+            
             if merge_topics_btn:
                 try:
                     topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
