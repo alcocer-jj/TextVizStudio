@@ -369,21 +369,21 @@ if uploaded_file:
                 merge_topics_btn = st.button("Merge Topics")
 
             
-            if merge_topics_btn:
-                try:
-                    topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
-                    if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
-                        merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
-                        st.success("Topics successfully merged!")
+                if merge_topics_btn:
+                    try:
+                        topics_to_merge = ast.literal_eval(st.session_state["merge_input"])
+                        if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
+                            merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
+                            st.success("Topics successfully merged!")
                         
-                        st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
-                        st.session_state.topics = merged_topics
+                            st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
+                            st.session_state.topics = merged_topics
 
-                        display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data)
-                    else:
-                        st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
-                except Exception as e:
-                    st.error(f"Merge failed: {e}")
+                            display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data)
+                        else:
+                            st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
+                    except Exception as e:
+                        st.error(f"Merge failed: {e}")
                             
                         
 
