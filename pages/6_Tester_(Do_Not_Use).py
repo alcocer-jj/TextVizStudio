@@ -109,7 +109,7 @@ if "last_file_hash" not in st.session_state:
 
 # File uploader for CSV files
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-st.no
+
 
 # Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
