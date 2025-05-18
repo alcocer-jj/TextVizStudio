@@ -204,11 +204,13 @@ if uploaded_file:
                 with hierarchy_col:
                     st.write("**Topic Hierarchy:**")
                     hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
+                    hierarchy_fig.update_layout(width=1400, height=1000, margin=dict(l=80, r=80, t=100, b=80))
                     st.plotly_chart(hierarchy_fig, config = configuration)
         
                 with map_col:
                     st.write("**Intertopic Distance Map:**")
                     intertopic_map = BERTmodel.visualize_topics()
+                    intertopic_map.update_layout(width=1400, height=1000, margin=dict(l=80, r=80, t=100, b=80))
                     st.plotly_chart(intertopic_map, config = configuration)
 
                 # Display topic info and document-topic probabilities in another two-column layout below
