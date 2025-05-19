@@ -58,9 +58,6 @@ st.sidebar.markdown("For full documentation and future updates to the appliction
 
 st.sidebar.markdown("")
 
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.2) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
-
-
 # Sidebar: Title and description (sticky)
 st.markdown("<h1 style='text-align: center'>Text2Topics: Large Language Topic Modeling</h1>", unsafe_allow_html=True)
 
@@ -476,7 +473,8 @@ if uploaded_file:
                         
                             st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
                             st.session_state.topics = merged_topics
-
+    
+                            st.subheader("Output")
                             display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data)
                         else:
                             st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
@@ -489,8 +487,7 @@ if uploaded_file:
             
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            if umap_random_state is None:
-                umap_random_state = random.randint(1, 10000)
+            st.success("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
             
             # Language selection dropdown
             language_option = st.selectbox(
