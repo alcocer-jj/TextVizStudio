@@ -123,7 +123,7 @@ if uploaded_file:
         encoding = detect_encoding(uploaded_file)
         st.info(f"Detected file encoding: `{encoding}`")
 
-        df = pd.read_csv(uploaded_file, encoding=encoding)
+        data = pd.read_csv(uploaded_file, encoding=encoding)
         st.success("File successfully loaded!")
 
     except Exception as e:
