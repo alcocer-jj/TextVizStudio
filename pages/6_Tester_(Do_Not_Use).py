@@ -239,7 +239,15 @@ if uploaded_file:
                 api_key = None
                 if use_openai_option:
                     api_key = st.text_input("Enter your OpenAI API Key", type="password")
-                st.info("📝 OpenAI's GPT-4o can be used to generate clearer and more descriptive topic labels using representative keywords and sample documents. You’ll need a valid OpenAI API key to use this feature. Delays may occur due to rate limits or API latency.")
+                with st.expander("A Note on using OpenAI for Topic Labels"):
+                    st.markdown("""
+                                This parameter controls whether you want to use an LLM to generate topic labels.
+
+                                OpenAI's GPT-4o can be used to generate clearer and more descriptive topic labels using representative keywords and sample documents.
+                                
+                                You’ll need a valid OpenAI API key to use this feature. Delays may occur due to rate limits or API latency.
+                                """)
+            
             
             run_model_btn = st.button("Run Unsupervised Topic Model")
             
