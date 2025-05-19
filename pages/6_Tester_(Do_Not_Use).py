@@ -142,8 +142,17 @@ if uploaded_file:
 
     else:
         # Choose topic modeling method
-        method = st.selectbox("Choose Topic Modeling Method", ["", "Unsupervised", "Zero-Shot"], key="method")
-
+        method_selection = st.selectbox("Choose Topic Modeling Method", ["", "Unsupervised (Discover topics without predefined labels)",
+                                                                         "Zero-Shot (Classify documents into predefined topics)"], key="method")
+        
+        if method_selection == "":
+            st.warning("⚠️ Please select a topic modeling method to continue.")
+            st.stop()
+        elif method_selection == "Unsupervised":
+            method = "Unsupervised"
+        elif method_selection == "Zero-Shot":
+            method = "Zero-Shot"
+        
         # Begin logic for unsupervised topic modeling
         if method == "Unsupervised":
             st.subheader("Unsupervised Topic Modeling")
