@@ -138,7 +138,12 @@ def preprocess_text_xlm(text):
 def analyze_xlm(text):
     # Preprocess and encode text
     text = preprocess_text_xlm(text)
-    encoded_input = tokenizer(text, return_tensors='pt')
+    encoded_input = tokenizer(
+    text,
+    return_tensors='pt',
+    truncation=True,
+    max_length=512,
+    padding="max_length")
     output = model(**encoded_input)
     
     # Get scores and apply softmax
