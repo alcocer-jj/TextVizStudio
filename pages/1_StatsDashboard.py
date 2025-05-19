@@ -8,6 +8,7 @@ import plotly.graph_objs as go
 import scipy.stats as stats
 from io import BytesIO, StringIO
 import zipfile
+import chardet
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -92,15 +93,41 @@ def get_plotly_download(fig, file_format="png", scale=3):
         buffer.seek(0)
     return buffer
 
+def detect_encoding(file):
+    raw = file.read()
+    result = chardet.detect(raw)
+    encoding = result["encoding"]
+    file.seek(0)  # Reset pointer after reading
+    return encoding
+
 # Descriptive Statistics & Exploratory Analysis
-st.header("Import Data", divider=True)
+st.header("Import Data")
 
 # Data Upload
 uploaded_file = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
 
+if uploaded_file is not None:
+    try:
+        encoding = detect_encoding(uploaded_file)
+        st.info(f"Detected file encoding: `{encoding}`")
+
+        df = pd.read_csv(uploaded_file, encoding=encoding)
+        st.success("File successfully loaded!")
+        st.write(df.head())  # Show preview or do further analysis
+
+    except Exception as e:
+        st.error(f"Failed to read the CSV file: {e}")
+
 if uploaded_file:
-    # Load data
-    data = pd.read_csv(uploaded_file)
+    try:
+        encoding = detect_encoding(uploaded_file)
+        st.info(f"Detected file encoding: `{encoding}`")
+
+        df = pd.read_csv(uploaded_file, encoding=encoding)
+        st.success("File successfully loaded!")
+
+    except Exception as e:
+        st.error(f"Failed to read the CSV file: {e}")
 
     # Define a function to initialize session state
     def initialize_session_state():
