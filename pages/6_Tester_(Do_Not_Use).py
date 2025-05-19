@@ -121,8 +121,14 @@ if uploaded_file:
     st.subheader("Topic Modeling Configuration")
 
     # Load proper text column
-    text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
+    column_options = [""] + list(data.columns)
+    text_column = st.selectbox("Select the text column", options=column_options, key="text_column")
     st.info("**Note:** Rows with missing or empty text values will be automatically excluded.")
+    
+    if text_column == "":
+        st.warning("⚠️ Please select a valid text column to continue.")
+        st.stop()
+    
     data = data.dropna(subset=[text_column])
     text_data = data[text_column]
 
