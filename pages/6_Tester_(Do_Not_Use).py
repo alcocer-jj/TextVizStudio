@@ -317,71 +317,71 @@ if uploaded_file:
             # Begin logic for running the model
             if run_model_btn:
                 from transformers import pipeline
-                with st.spinner("Running Unsupervised Topic Model..."):
-                    try:
-                        # Initialize Sentence Transformer model
-                        st.write("Initializing Sentence Transformer model...")
-                        if language == "english":
-                            model = SentenceTransformer("all-MiniLM-L6-v2")
-                        else:
-                            model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+                progress = st.progress(0, text="Starting topic modeling...")
+                try:
+                    # Initialize Sentence Transformer model
+                    progress.progress(10, text="Initializing and Loading Sentence Transformer model...")
+                    if language == "english":
+                        model = SentenceTransformer("all-MiniLM-L6-v2")
+                    else:
+                        model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
                         
-                        # Initialize UMAP model
-                        st.write("Initializing UMAP model...")
-                        if umap_random_state is None:
-                            umap_random_state = random.randint(1, 10000)  # Random seed between 1 and 10000
-                            st.write(f"No seed provided, using random seed: {umap_random_state}")
-                        else:
-                            st.write(f"Using user-provided seed: {umap_random_state}")
+                    # Initialize UMAP model
+                    progress.progress(25, text="Setting up dimensionality reduction...")
+                    if umap_random_state is None:
+                        umap_random_state = random.randint(1, 10000)  # Random seed between 1 and 10000
+                        st.write(f"No seed provided, using random seed: {umap_random_state}")
+                    else:
+                        st.write(f"Using user-provided seed: {umap_random_state}")
                         
-                        umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
+                    umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
                             
-                        # Initialize CountVectorizer
-                        st.write("Initializing CountVectorizer...")
-                        if language == "multilingual":
-                            import nltk
-                            from nltk.corpus import stopwords
-                            # Ensure the stopwords corpus is available
-                            try:
-                                _ = stopwords.words("english")  # Trigger lookup
-                            except LookupError:
-                                nltk.download("stopwords")
+                    # Initialize CountVectorizer
+                    progress.progress(40, text="Vectorizing documents...")
+                    if language == "multilingual":
+                        import nltk
+                        from nltk.corpus import stopwords
+                        # Ensure the stopwords corpus is available
+                        try:
+                            _ = stopwords.words("english")  # Trigger lookup
+                        except LookupError:
+                            nltk.download("stopwords")
 
-                            if stop_word_language != "none":
-                                if stop_word_language in stopwords.fileids():
-                                    st.write(f"Using stopwords for: {stop_word_language}")
-                                    stop_word_list = stopwords.words(stop_word_language)
-                                else:
-                                    st.warning(f"⚠️ NLTK does not support stopwords for '{stop_word_language}'. Proceeding without stopwords.")
-                                    stop_word_list = None
+                        if stop_word_language != "none":
+                            if stop_word_language in stopwords.fileids():
+                                st.write(f"Using stopwords for: {stop_word_language}")
+                                stop_word_list = stopwords.words(stop_word_language)
                             else:
+                                st.warning(f"⚠️ NLTK does not support stopwords for '{stop_word_language}'. Proceeding without stopwords.")
                                 stop_word_list = None
-
-                            vectorizer_model = CountVectorizer(
-                                stop_words=stop_word_list,
-                                min_df=1,
-                                max_df=0.9,
-                                ngram_range=(1, 3)
-                                )
                         else:
-                            vectorizer_model = CountVectorizer(
-                                stop_words="english",
-                                min_df=1,
-                                max_df=0.9,
-                                ngram_range=(1, 3)
-                                )   
-    
-                        # Initialize representation model
-                        st.write("Initializing representation model(s)...")
-                        representation_model = {"Unique Keywords": KeyBERTInspired()}
-                        
-                        # Check if user wants to use OpenAI for topic labels    
-                        if use_openai_option and api_key:
-                            try:
-                                # Set up OpenAI API client
-                                client = openai.OpenAI(api_key=api_key)
+                            stop_word_list = None
 
-                                label_prompt = """
+                        vectorizer_model = CountVectorizer(
+                            stop_words=stop_word_list,
+                            min_df=1,
+                            max_df=0.9,
+                            ngram_range=(1, 3)
+                            )
+                    else:
+                        vectorizer_model = CountVectorizer(
+                            stop_words="english",
+                            min_df=1,
+                            max_df=0.9,
+                            ngram_range=(1, 3)
+                            )   
+    
+                    # Initialize representation model
+                    progress.progress(55, text="Preparing topic representations...")
+                    representation_model = {"Unique Keywords": KeyBERTInspired()}
+                        
+                    # Check if user wants to use OpenAI for topic labels    
+                    if use_openai_option and api_key:
+                        try:
+                            # Set up OpenAI API client
+                            client = openai.OpenAI(api_key=api_key)
+
+                            label_prompt = """
                                 I have a topic that is described by the following keywords: [KEYWORDS]
                                 In this topic, the following documents are a small but representative subset of all documents in the topic:
                                 [DOCUMENTS]
@@ -390,22 +390,23 @@ if uploaded_file:
                                 <label>; <description>
                                 """
                         
-                                # Create OpenAI representation model
-                                openai_model = OpenAI(client=client, 
-                                                      model="gpt-4o",
-                                                      prompt=label_prompt,
-                                                      chat=True,
-                                                      nr_docs=10,
-                                                      delay_in_seconds=3)
+                            # Create OpenAI representation model
+                            openai_model = OpenAI(client=client, 
+                                                    model="gpt-4o",
+                                                    prompt=label_prompt,
+                                                    chat=True,
+                                                    nr_docs=10,
+                                                    delay_in_seconds=3)
                         
-                                # Add OpenAI to the representation model
-                                representation_model["GPT Topic Label"] = openai_model
-                            except Exception as e:
-                                st.error(f"Failed to initialize OpenAI API: {e}")
-                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
+                            # Add OpenAI to the representation model
+                            representation_model["GPT Topic Label"] = openai_model
+                        except Exception as e:
+                            st.error(f"Failed to initialize OpenAI API: {e}")
+                            representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
                         
-                        # Initialize BERTopic model with the selected representation models
-                        BERTmodel = BERTopic(
+                    # Initialize BERTopic model with the selected representation models
+                    progress.progress(70, text="Building BERTopic model...")
+                    BERTmodel = BERTopic(
                             representation_model=representation_model,
                             umap_model=umap_model,
                             embedding_model=model,
@@ -415,37 +416,39 @@ if uploaded_file:
                             #language=language,
                             calculate_probabilities=True,
                             verbose=True
-                            )
+                        )
 
-                        # Fit and transform the topic model
-                        topics, probs = BERTmodel.fit_transform(text_data)
-                        st.session_state.BERTmodel = BERTmodel
-                        st.session_state.topics = topics
+                    # Fit and transform the topic model
+                    progress.progress(85, text="Fitting topic model...")
+                    topics, probs = BERTmodel.fit_transform(text_data)
+                    st.session_state.BERTmodel = BERTmodel
+                    st.session_state.topics = topics
 
-                        unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
+                    unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
 
-                        if len(unique_topics) < 1:
-                            st.warning("The model generated fewer than 1 topic. This can happen if the data lacks diversity or is too homogeneous. "
+                    if len(unique_topics) < 1:
+                        st.warning("The model generated fewer than 1 topic. This can happen if the data lacks diversity or is too homogeneous. "
                                        "Please try using a dataset with more variability in the text content.")
-                        else:
-                            # Apply outlier reduction if the option was selected
-                            if reduce_outliers_option:
-                                # First, reduce outliers using the "c-tf-idf" strategy with the chosen threshold
-                                new_topics = BERTmodel.reduce_outliers(text_data, topics, strategy="c-tf-idf", threshold=c_tf_idf_threshold)
-                                # Then, reduce remaining outliers with the "distributions" strategy
-                                new_topics = BERTmodel.reduce_outliers(text_data, new_topics, strategy="distributions")
-                                st.write(f"Outliers reduced using c-TF-IDF threshold {c_tf_idf_threshold} and distributions strategy.")
+                    else:
+                        # Apply outlier reduction if the option was selected
+                        if reduce_outliers_option:
+                            # First, reduce outliers using the "c-tf-idf" strategy with the chosen threshold
+                            new_topics = BERTmodel.reduce_outliers(text_data, topics, strategy="c-tf-idf", threshold=c_tf_idf_threshold)
+                            # Then, reduce remaining outliers with the "distributions" strategy
+                            new_topics = BERTmodel.reduce_outliers(text_data, new_topics, strategy="distributions")
+                            st.write(f"Outliers reduced using c-TF-IDF threshold {c_tf_idf_threshold} and distributions strategy.")
 
-                                # Update topic representations based on the new topics
-                                BERTmodel.update_topics(text_data, topics=new_topics)
-                                st.session_state.topics = new_topics
-                                st.write("Topics and their representations have been updated based on the new outlier-free documents.")
+                            # Update topic representations based on the new topics
+                            BERTmodel.update_topics(text_data, topics=new_topics)
+                            st.session_state.topics = new_topics
+                            st.write("Topics and their representations have been updated based on the new outlier-free documents.")
 
-                            # Display the outputs (topics table, intertopic map, probabilities)
-                            st.subheader("Output", divider=True)
-                            display_unsupervised_outputs(BERTmodel, text_data)
+                        # Display the outputs (topics table, intertopic map, probabilities)
+                        progress.progress(100, text="Topic modeling complete!")
+                        st.subheader("Output")
+                        display_unsupervised_outputs(BERTmodel, text_data)
                                 
-                    except Exception as e:
+                except Exception as e:
                         st.error(f"Error: An error occurred: {e}")   
                        
             # Post hoc topic merging                            
