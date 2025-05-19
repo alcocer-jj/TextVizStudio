@@ -93,7 +93,7 @@ configuration = {
 }
 
 # Create header for the app
-st.subheader("Import Data", divider=True)
+st.subheader("Import Data")
 
 # Track file uploads and session state
 if "last_file_hash" not in st.session_state:
@@ -101,7 +101,6 @@ if "last_file_hash" not in st.session_state:
 
 # File uploader for CSV files
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-
 
 # Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
@@ -119,10 +118,11 @@ if uploaded_file:
 
     # Load the CSV file
     data = pd.read_csv(uploaded_file)
-    st.subheader("Topic Modeling Configuration", divider=True)
+    st.subheader("Topic Modeling Configuration")
 
     # Load proper text column
     text_column = st.selectbox("Select the text column", options=data.columns, key="text_column")
+    st.info("**Note:** Rows with missing or empty text values will be automatically excluded.")
     data = data.dropna(subset=[text_column])
     text_data = data[text_column]
 
