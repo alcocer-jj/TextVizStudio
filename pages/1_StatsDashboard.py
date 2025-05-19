@@ -106,18 +106,6 @@ st.header("Import Data")
 # Data Upload
 uploaded_file = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
 
-if uploaded_file is not None:
-    try:
-        encoding = detect_encoding(uploaded_file)
-        st.info(f"Detected file encoding: `{encoding}`")
-
-        df = pd.read_csv(uploaded_file, encoding=encoding)
-        st.success("File successfully loaded!")
-        st.write(df.head())  # Show preview or do further analysis
-
-    except Exception as e:
-        st.error(f"Failed to read the CSV file: {e}")
-
 if uploaded_file:
     try:
         encoding = detect_encoding(uploaded_file)
