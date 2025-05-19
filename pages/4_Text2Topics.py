@@ -13,6 +13,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
 import time
+import datetime
 
 st.set_page_config(
     page_title="Text2Topics",
@@ -40,7 +41,8 @@ try:
     if st.sidebar.button("Submit"):
         if feedback:
             try:
-                sheet.append_row(["Text2Topics:", feedback])
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                sheet.append_row(["Text2Topics:", feedback, timestamp])
                 st.sidebar.success("✅ Thank you for your feedback!")
             except Exception as e:
                 st.sidebar.error("⚠️ Failed to submit feedback.")
@@ -51,6 +53,7 @@ try:
 except Exception as e:
     st.sidebar.error("⚠️ Could not load feedback form.")
     st.sidebar.caption(f"Details: {e}")
+
 
 st.sidebar.markdown("")
 
@@ -609,13 +612,13 @@ if uploaded_file:
                         # Check if topics exist before running transform()
                         unique_topics = set(topics) - {-1}
                         if len(unique_topics) > 0:
-                                topic_docs = BERTmodel.get_document_info(text_data)
-                                probabilities = BERTmodel.transform(text_data)
-                                probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
-                                topic_docs = pd.concat([topic_docs[['Document']], probabilities], axis=1)
+                            topic_docs = BERTmodel.get_document_info(text_data)
+                            probabilities = BERTmodel.transform(text_data)
+                            probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
+                            topic_docs = pd.concat([topic_docs[['Document']], probabilities], axis=1)
                         else:
-                                st.warning("Warning: No valid topics were found. Skipping probability calculation.")
-                                topic_docs = pd.DataFrame()
+                            st.warning("Warning: No valid topics were found. Skipping probability calculation.")
+                            topic_docs = pd.DataFrame()
 
                         # Display topic info and document-topic probabilities
                         progress.progress(100, text="Topic modeling complete!")

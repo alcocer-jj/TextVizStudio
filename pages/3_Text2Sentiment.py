@@ -9,6 +9,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
 from collections import defaultdict
 import re
+import datetime
 from pathlib import Path
 from io import BytesIO, StringIO
 from scipy.special import softmax
@@ -24,26 +25,38 @@ st.set_page_config(
 
 # Authenticate with Google Sheets API using Streamlit Secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
 client = gspread.authorize(creds)
 
-# Open the Google Sheet for feedback
-sheet = client.open("TextViz Studio Feedback").sheet1
+# Try to open the Google Sheet safely
+try:
+    sheet = client.open("TextViz Studio Feedback").sheet1
 
-# Sidebar: Feedback form
-st.sidebar.markdown("### **Feedback**")
-feedback = st.sidebar.text_area(
-    "Experiencing bugs/issues? Have ideas to improve the tool?",
-    placeholder="Leave feedback or error code here"
-)
+    # Feedback form in the sidebar
+    st.sidebar.markdown("### **Feedback**")
+    feedback = st.sidebar.text_area(
+        "Experiencing bugs/issues? Have ideas to better the application tool?",
+        placeholder="Leave feedback or error code here"
+    )
 
-if st.sidebar.button("Submit"):
-    if feedback:
-        sheet.append_row(["Text2Sentiment: ", feedback])
-        st.sidebar.success("Thank you for your feedback!")
-    else:
-        st.sidebar.error("Feedback cannot be empty!")
-        
+    if st.sidebar.button("Submit"):
+        if feedback:
+            try:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                sheet.append_row(["Text2Sentiment:", feedback, timestamp])
+                st.sidebar.success("✅ Thank you for your feedback!")
+            except Exception as e:
+                st.sidebar.error("⚠️ Failed to submit feedback.")
+                st.sidebar.caption(f"Error: {e}")
+        else:
+            st.sidebar.error("⚠️ Feedback cannot be empty!")
+
+except Exception as e:
+    st.sidebar.error("⚠️ Could not load feedback form.")
+    st.sidebar.caption(f"Details: {e}")
+
 st.sidebar.markdown("")
         
 st.sidebar.markdown(
@@ -51,8 +64,6 @@ st.sidebar.markdown(
 )
 
 st.sidebar.markdown("")
-
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). TextViz Studio (Version 1.2) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
 
 
 st.markdown("<h1 style='text-align: center'>Text2Sentiment: Sentiment Discovery</h1>", unsafe_allow_html=True)

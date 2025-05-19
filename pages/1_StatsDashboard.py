@@ -10,6 +10,7 @@ from io import BytesIO, StringIO
 import zipfile
 import chardet
 import gspread
+from datetime import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 
 
@@ -20,32 +21,43 @@ st.set_page_config(
 
 # Authenticate with Google Sheets API using Streamlit Secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
 client = gspread.authorize(creds)
 
-# Open the Google Sheet
-sheet = client.open("TextViz Studio Feedback").sheet1
+# Try to open the Google Sheet safely
+try:
+    sheet = client.open("TextViz Studio Feedback").sheet1
 
+    # Feedback form in the sidebar
+    st.sidebar.markdown("### **Feedback**")
+    feedback = st.sidebar.text_area(
+        "Experiencing bugs/issues? Have ideas to better the application tool?",
+        placeholder="Leave feedback or error code here"
+    )
 
-# Feedback form in the sidebar
-st.sidebar.markdown("### **Feedback**")
-feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to better the application tool?", placeholder="Leave feedback or error code here")
+    if st.sidebar.button("Submit"):
+        if feedback:
+            try:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                sheet.append_row(["StatsDashboard:", feedback, timestamp])
+                st.sidebar.success("✅ Thank you for your feedback!")
+            except Exception as e:
+                st.sidebar.error("⚠️ Failed to submit feedback.")
+                st.sidebar.caption(f"Error: {e}")
+        else:
+            st.sidebar.error("⚠️ Feedback cannot be empty!")
 
-# Submit feedback
-if st.sidebar.button("Submit"):
-    if feedback:
-        sheet.append_row(["StatsDashboard: ", feedback])
-        st.sidebar.success("Thank you for your feedback!")
-    else:
-        st.sidebar.error("Feedback cannot be empty!")
-
+except Exception as e:
+    st.sidebar.error("⚠️ Could not load feedback form.")
+    st.sidebar.caption(f"Details: {e}")
+                
 st.sidebar.markdown("")
 
 st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
 st.sidebar.markdown("")
-
-st.sidebar.markdown("Citation: Alcocer, J. J. (2024). StatsViz Studio (Version 1.2) [Software]. Retrieved from https://textvizstudio.streamlit.app/")
 
 
 # Sidebar: Title and description

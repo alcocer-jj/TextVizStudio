@@ -24,3 +24,5 @@ stanza
 sympy
 kaleido
 chardet
+datetime
+
