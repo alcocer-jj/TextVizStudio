@@ -171,31 +171,30 @@ if uploaded_file:
             
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            st.info("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+            st.success("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
             
-            # Language selection dropdown
-            language_option = st.selectbox(
-                "Select the language model to use for topic modeling:",
-                ("English", "Multilanguage"))
+            # generate two columns for the layout
+            param1, param2 = st.columns([1, 1])
+            with param1:
+                # Language selection dropdown
+                language_option = st.selectbox("Select the language model to use for topic modeling:", ("English", "Multilanguage"))
+                language = "english" if language_option == "English" else "multilingual"
 
-            language = "english" if language_option == "English" else "multilingual"
-
-            if language == "multilingual":
-                stop_word_language = st.selectbox(
-                    "Select the stop word language for CountVectorizer via NLTK:",
-                    ("none", "czech", "danish", "dutch", "estonian", "finnish", "french", "german", "greek",
-                     "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
-                     "swedish", "turkish"))
-                st.success("**Note:** The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
+                if language == "multilingual":
+                    stop_word_language = st.selectbox("Select the stop word language for CountVectorizer via NLTK:",
+                        ("none", "czech", "danish", "dutch", "estonian", "finnish", "french", "german", "greek",
+                        "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
+                        "swedish", "turkish"))
+                    st.info("📝 The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
                 
-            # Select topic generation mode
-            topic_option = st.selectbox(
-                "Select how you want the number of topics to be handled:",
-                ("Auto", "Specific Number"))
+            with param2:
+                # Select topic generation mode
+                topic_option = st.selectbox("Select how you want the number of topics to be handled:", ("Auto", "Specific Number"))
 
-            # Default nr_topics value
-            nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
+                # Default nr_topics value
+                nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
 
+            
             # Option to apply outlier reduction
             reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=True)
             st.success("**Note:** This process assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics. Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise. Experiment with and without this option to see what works best for your case.")
