@@ -97,8 +97,8 @@ configuration = {
     'toImageButtonOptions': {
         'format': 'png',
         'filename': 'plotly_image',
-        'height': 800,
-        'width': 1200,
+        'height': 600,
+        'width': 1000,
         'scale': 2  # Higher resolution image
     }
 }
@@ -258,8 +258,7 @@ if uploaded_file:
                                 
                                 You’ll need a valid OpenAI API key to use this feature. Delays may occur due to rate limits or API latency.
                                 """)
-            
-            
+                    
             run_model_btn = st.button("Run Unsupervised Topic Model")
             
             # Define function to display outputs (reused after both model fitting and topic merging)
