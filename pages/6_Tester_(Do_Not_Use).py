@@ -507,12 +507,6 @@ if uploaded_file:
                                 - **Strengths**: Trained on ~1 billion multilingual text pairs with contrastive learning and fine-tuned on supervised multilingual tasks. Supports over 100 languages. Competitive performance on MTEB and MIRACL benchmarks.
                                 - **Limitations**: Slightly lower performance on English-only tasks compared to large English-specialized models, but provides robust multilingual generalization. Larger and slower than the English model.
                                 """)
-            if language == "multilingual":
-                    stop_word_language = st.selectbox("Select the stop word language for CountVectorizer via NLTK:",
-                        ("none", "czech", "danish", "dutch", "estonian", "finnish", "french", "german", "greek",
-                        "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
-                        "swedish", "turkish"))
-                    st.info("📝 The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
                                     
             predefined_topics_input = st.text_area("Enter predefined topics (comma-separated):", "")
             predefined_topics = [topic.strip() for topic in predefined_topics_input.split(',') if topic.strip()]
@@ -554,41 +548,6 @@ if uploaded_file:
                         else:
                             st.write(f"Using user-provided seed: {umap_random_state}")
                         umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
-
-                        # Initialize CountVectorizer
-                        progress.progress(40, text="Vectorizing documents...")
-                        if language == "multilingual":
-                            import nltk
-                            from nltk.corpus import stopwords
-                            # Ensure the stopwords corpus is available
-                            try:
-                                _ = stopwords.words("english")  # Trigger lookup
-                            except LookupError:
-                                nltk.download("stopwords")
-
-                            if stop_word_language != "none":
-                                if stop_word_language in stopwords.fileids():
-                                    st.write(f"Using stopwords for: {stop_word_language}")
-                                    stop_word_list = stopwords.words(stop_word_language)
-                                else:
-                                    st.warning(f"⚠️ NLTK does not support stopwords for '{stop_word_language}'. Proceeding without stopwords.")
-                                    stop_word_list = None
-                            else:
-                                stop_word_list = None
-
-                            vectorizer_model = CountVectorizer(
-                                stop_words=stop_word_list,
-                                min_df=1,
-                                max_df=0.9,
-                                ngram_range=(1, 3)
-                                )
-                        else:
-                            vectorizer_model = CountVectorizer(
-                                stop_words="english",
-                                min_df=1,
-                                max_df=0.9,
-                                ngram_range=(1, 3)
-                                )   
 
                         # Initialize representation model
                         progress.progress(55, text="Preparing topic representations...")
