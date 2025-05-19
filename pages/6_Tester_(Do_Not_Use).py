@@ -20,23 +20,36 @@ st.set_page_config(
 
 # Authenticate with Google Sheets API using Streamlit Secrets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
 client = gspread.authorize(creds)
 
-# Open the Google Sheet
-sheet = client.open("TextViz Studio Feedback").sheet1
+# Try to open the Google Sheet safely
+try:
+    sheet = client.open("TextViz Studio Feedback").sheet1
 
-# Feedback form in the sidebar
-st.sidebar.markdown("### **Feedback**")
-feedback = st.sidebar.text_area("Experiencing bugs/issues? Have ideas to better the application tool?", placeholder="Leave feedback or error code here")
+    # Feedback form in the sidebar
+    st.sidebar.markdown("### **Feedback**")
+    feedback = st.sidebar.text_area(
+        "Experiencing bugs/issues? Have ideas to better the application tool?",
+        placeholder="Leave feedback or error code here"
+    )
 
-# Submit feedback
-if st.sidebar.button("Submit"):
-    if feedback:
-        sheet.append_row(["Text2Topics: ", feedback])
-        st.sidebar.success("Thank you for your feedback!")
-    else:
-        st.sidebar.error("Feedback cannot be empty!")
+    if st.sidebar.button("Submit"):
+        if feedback:
+            try:
+                sheet.append_row(["Text2Topics:", feedback])
+                st.sidebar.success("✅ Thank you for your feedback!")
+            except Exception as e:
+                st.sidebar.error("⚠️ Failed to submit feedback.")
+                st.sidebar.caption(f"Error: {e}")
+        else:
+            st.sidebar.error("⚠️ Feedback cannot be empty!")
+
+except Exception as e:
+    st.sidebar.error("⚠️ Could not load feedback form.")
+    st.sidebar.caption(f"Details: {e}")
 
 st.sidebar.markdown("")
 
