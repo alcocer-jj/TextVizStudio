@@ -355,7 +355,43 @@ if uploaded_file:
                                                    min_df=1,
                                                    max_df=0.9,
                                                    ngram_range=(1, 3))
+                            
+                            
+                        # Initialize CountVectorizer
+                        st.write("Initializing CountVectorizer...")
+                        if language == "multilingual":
+                            import nltk
+                            from nltk.corpus import stopwords
+                            # Ensure the stopwords corpus is available
+                            try:
+                                _ = stopwords.words("english")  # Trigger lookup
+                            except LookupError:
+                                nltk.download("stopwords")
 
+                            if stop_word_language != "none":
+                                if stop_word_language in stopwords.fileids():
+                                    st.write(f"Using stopwords for: {stop_word_language}")
+                                    stop_word_list = stopwords.words(stop_word_language)
+                                else:
+                                    st.warning(f"⚠️ NLTK does not support stopwords for '{stop_word_language}'. Proceeding without stopwords.")
+                                    stop_word_list = None
+                            else:
+                                stop_word_list = None
+
+                            vectorizer_model = CountVectorizer(
+                                stop_words=stop_word_list,
+                                min_df=1,
+                                max_df=0.9,
+                                ngram_range=(1, 3)
+                                )
+                        else:
+                            vectorizer_model = CountVectorizer(
+                                stop_words="english",
+                                min_df=1,
+                                max_df=0.9,
+                                ngram_range=(1, 3)
+                                )   
+    
                         # Initialize representation model
                         st.write("Initializing representation model(s)...")
                         representation_model = {"Unique Keywords": KeyBERTInspired()}
@@ -464,7 +500,12 @@ if uploaded_file:
                 
         # Begin logic for Zero-Shot topic modeling                    
         elif method == "Zero-Shot":
-            st.subheader("Zero-Shot Topic Modeling", divider=True)
+            st.subheader("Zero-Shot Topic Modeling")
+            
+            # Input field for UMAP random_state (user seed)
+            umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+            if umap_random_state is None:
+                umap_random_state = random.randint(1, 10000)
             
             # Language selection dropdown
             language_option = st.selectbox(
@@ -483,14 +524,6 @@ if uploaded_file:
                 # Parameters for Zero-Shot modeling
                 zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.85)
                 min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, max_value=100, value=5, step=1)
-                
-                # Input field for UMAP random_state (user seed)
-                umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-                if umap_random_state is None:
-                    umap_random_state = random.randint(1, 10000)
-                    st.write(f"No seed provided, using random seed: {umap_random_state}")
-                else:
-                    st.write(f"Using user-provided seed: {umap_random_state}")
                     
                 # Option for OpenAI API use
                 use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
