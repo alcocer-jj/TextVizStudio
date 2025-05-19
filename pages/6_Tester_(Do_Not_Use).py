@@ -147,14 +147,14 @@ if uploaded_file:
         with st.expander("Which model is right for me?"):
             st.markdown("""
             [**Unsupervised**](https://maartengr.github.io/BERTopic/algorithm/algorithm.html):
-            - Best for: Exploring unknown or unstructured data where no labels exist.
-            - Strengths: Automatically discovers latent topic structures; great for insight discovery and exploratory analysis.  
-            - Limitations: Topics may be harder to interpret or control; results depend on data quality and clustering.
+            - **Best for:** Exploring unknown or unstructured data where no labels exist.
+            - **Strengths:** Automatically discovers latent topic structures; great for insight discovery and exploratory analysis.  
+            - **Limitations:** Topics may be harder to interpret or control; results depend on data quality and clustering.
 
             [**Zero-Shot**](https://maartengr.github.io/BERTopic/getting_started/zeroshot/zeroshot.html):
-            - Best for: Classifying documents into predefined topics, especially when domain expertise or prior knowledge is available.
-            - Strengths: No training needed; matches documents to known topics and can generate new topics for unmatched content — flexible across domains.
-            - Limitations: If all documents match predefined topics, no new ones are created. If none match, it defaults to unsupervised topic modeling. Performance depends on how well the predefined topics cover the data.
+            - **Best for:** Classifying documents into predefined topics, especially when domain expertise or prior knowledge is available.
+            - **Strengths:** No training needed; matches documents to known topics and can generate new topics for unmatched content — flexible across domains.
+            - **Limitations:** If all documents match predefined topics, no new ones are created. If none match, it defaults to unsupervised topic modeling. Performance depends on how well the predefined topics cover the data.
             """)        
         
         if method_selection == "":
@@ -168,6 +168,10 @@ if uploaded_file:
         # Begin logic for unsupervised topic modeling
         if method == "Unsupervised":
             st.subheader("Unsupervised Topic Modeling")
+            
+            # Input field for UMAP random_state (user seed)
+            umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
+            st.info("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
             
             # Language selection dropdown
             language_option = st.selectbox(
@@ -199,10 +203,6 @@ if uploaded_file:
             if reduce_outliers_option:
                 c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.3)
                 st.info("**Tip:** You can set a threshold (between 0.0 and 1.0), which determines how strict or lenient the reassignment of outlier documents will be. A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
-
-            # Input field for UMAP random_state (user seed)
-            umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            st.info("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
 
             # Option for OpenAI API use
             use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
