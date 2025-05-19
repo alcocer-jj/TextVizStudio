@@ -493,7 +493,27 @@ if uploaded_file:
                 "Select the language model to use for topic modeling:",
                 ("English", "Multilanguage"))
             language = "english" if language_option == "English" else "multilingual"
-            
+            with st.expander("A Note on Language Selection"):
+                st.markdown("""
+                                Text2Topics supports two main language options, each powered by a specialized sentence transformer:
+
+                                [**English (`gte-small`)**](https://huggingface.co/thenlper/gte-small)  
+                                - **Best for**: High-performance zero-shot and unsupervised topic modeling on English datasets.  
+                                - **Strengths**: Trained on 800M+ web-sourced text pairs and fine-tuned on multi-task annotated datasets using multi-stage contrastive learning. Despite being lightweight (30M parameters), it outperforms larger models like E5 and OpenAI embeddings on several benchmarks (e.g., BEIR, MTEB).
+                                - **Limitations**: Only supports English. Texts longer than 512 tokens are truncated due to its BERT-based architecture.
+                                        	
+                                [**Multilingual (`multilingual-e5-small`)**](https://huggingface.co/intfloat/multilingual-e5-small)  
+                                - **Best for**: High-quality semantic search, topic modeling, and clustering across diverse languages.  
+                                - **Strengths**: Trained on ~1 billion multilingual text pairs with contrastive learning and fine-tuned on supervised multilingual tasks. Supports over 100 languages. Competitive performance on MTEB and MIRACL benchmarks.
+                                - **Limitations**: Slightly lower performance on English-only tasks compared to large English-specialized models, but provides robust multilingual generalization. Larger and slower than the English model.
+                                """)
+            if language == "multilingual":
+                    stop_word_language = st.selectbox("Select the stop word language for CountVectorizer via NLTK:",
+                        ("none", "czech", "danish", "dutch", "estonian", "finnish", "french", "german", "greek",
+                        "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
+                        "swedish", "turkish"))
+                    st.info("📝 The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
+                                    
             predefined_topics_input = st.text_area("Enter predefined topics (comma-separated):", "")
             predefined_topics = [topic.strip() for topic in predefined_topics_input.split(',') if topic.strip()]
             zeroshot_topic_list = predefined_topics if predefined_topics else []
@@ -504,8 +524,11 @@ if uploaded_file:
             else:    
                 # Parameters for Zero-Shot modeling
                 zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.85)
+                st.info("📝 This parameter controls how many documents are matched to zero-shot topics.")
                 min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, max_value=100, value=5, step=1)
-                    
+                st.info("📝 This parameter sets the minimum number of documents required to form a topic Lower values create more (and smaller) topics, while higher values reduce topic count. If set too high, no topics may be formed at all.")
+                st.success("💡 For larger datasets (e.g., hundreds of thousands to millions of documents), increase min_topic_size well beyond the default of 10 — try values like 100 or 500 to avoid excessive micro-clustering. Experimentation is key.")
+                
                 # Option for OpenAI API use
                 use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
                 api_key = None
@@ -516,62 +539,102 @@ if uploaded_file:
                 # Begin logic for running the Zero-Shot model
                 if run_zero_shot_btn:
                     from transformers import pipeline
-                    with st.spinner("Running Zero-Shot Topic Model..."):
-                        try:
-                            st.write("Initializing Sentence Transformer model...")
-                            if language == "english":
-                                model = SentenceTransformer("thenlper/gte-small")
-                            else:
-                                model = SentenceTransformer("intfloat/multilingual-e5-small")
+                    progress = st.progress(0, text="Starting topic modeling...")
+                    try:
+                        progress.progress(10, text="Initializing and Loading Sentence Transformer model...")
+                        if language == "english":
+                            model = SentenceTransformer("thenlper/gte-small")
+                        else:
+                            model = SentenceTransformer("intfloat/multilingual-e5-small")
                             
-                            st.write("Initializing UMAP model...")
-                            umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
+                        progress.progress(25, text="Setting up dimensionality reduction...")
+                        if umap_random_state is None:
+                            umap_random_state = random.randint(1, 10000)  # Random seed between 1 and 10000
+                            st.write(f"No seed provided, using random seed: {umap_random_state}")
+                        else:
+                            st.write(f"Using user-provided seed: {umap_random_state}")
+                        umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
 
-                            # Initialize representation model
-                            st.write("Initializing representation model...")
-                            representation_model = {"Unique Keywords": KeyBERTInspired()}
+                        # Initialize CountVectorizer
+                        progress.progress(40, text="Vectorizing documents...")
+                        if language == "multilingual":
+                            import nltk
+                            from nltk.corpus import stopwords
+                            # Ensure the stopwords corpus is available
+                            try:
+                                _ = stopwords.words("english")  # Trigger lookup
+                            except LookupError:
+                                nltk.download("stopwords")
 
-                            # OpenAI topic labeling integration
-                            if use_openai_option and api_key:
-                                try:
-                                    # Set up OpenAI client
-                                    client = openai.OpenAI(api_key=api_key)                    
-                                    label_prompt = """
+                            if stop_word_language != "none":
+                                if stop_word_language in stopwords.fileids():
+                                    st.write(f"Using stopwords for: {stop_word_language}")
+                                    stop_word_list = stopwords.words(stop_word_language)
+                                else:
+                                    st.warning(f"⚠️ NLTK does not support stopwords for '{stop_word_language}'. Proceeding without stopwords.")
+                                    stop_word_list = None
+                            else:
+                                stop_word_list = None
+
+                            vectorizer_model = CountVectorizer(
+                                stop_words=stop_word_list,
+                                min_df=1,
+                                max_df=0.9,
+                                ngram_range=(1, 3)
+                                )
+                        else:
+                            vectorizer_model = CountVectorizer(
+                                stop_words="english",
+                                min_df=1,
+                                max_df=0.9,
+                                ngram_range=(1, 3)
+                                )   
+
+                        # Initialize representation model
+                        progress.progress(55, text="Preparing topic representations...")
+                        representation_model = {"Unique Keywords": KeyBERTInspired()}
+
+                        # OpenAI topic labeling integration
+                        if use_openai_option and api_key:
+                            try:
+                                # Set up OpenAI client
+                                client = openai.OpenAI(api_key=api_key)                    
+                                label_prompt = """
                                     Given the topic described by the following keywords: [KEYWORDS],
                                     and the following representative documents: [DOCUMENTS],
                                     provide a short label and a concise description in the format:
                                     <label>; <description>
                                     """
-                                    # OpenAI initialization
-                                    openai_model = OpenAI(
-                                        client=client,
-                                        model="gpt-4o",
-                                        prompt=label_prompt,
-                                        chat=True,
-                                        nr_docs=10,
-                                        delay_in_seconds=3)
+                                # OpenAI initialization
+                                openai_model = OpenAI(
+                                    client=client,
+                                    model="gpt-4o",
+                                    prompt=label_prompt,
+                                    chat=True,
+                                    nr_docs=10,
+                                    delay_in_seconds=3)
                                                 
-                                    representation_model["GPT Topic Label"] = openai_model
-                                except Exception as e:
-                                    st.error(f"Error: Failed to initialize OpenAI API: {e}")
-                                    representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
+                                representation_model["GPT Topic Label"] = openai_model
+                            except Exception as e:
+                                st.error(f"Error: Failed to initialize OpenAI API: {e}")
+                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
 
                             # Initialize BERTopic model with zero-shot topic list
-                            st.write("Initializing BERTopic model...")
+                            progress.progress(70, text="Building BERTopic model...")
                             BERTmodel = BERTopic(
                                 representation_model=representation_model,
                                 umap_model=umap_model,
                                 embedding_model=model,
+                                vectorizer_model=vectorizer_model,
                                 min_topic_size=min_topic_size,
                                 zeroshot_topic_list=zeroshot_topic_list,
                                 zeroshot_min_similarity=zeroshot_min_similarity
                             )
 
-                            st.write("Running BERTopic.fit_transform()...")
+                            progress.progress(85, text="Fitting topic model...")
                             topics, _ = BERTmodel.fit_transform(text_data)
 
                             # Extract topic info
-                            st.write("Extracting topic info...")
                             topic_info = BERTmodel.get_topic_info()
                             topic_info = pd.DataFrame(topic_info)
 
@@ -588,7 +651,6 @@ if uploaded_file:
                             # Check if topics exist before running transform()
                             unique_topics = set(topics) - {-1}
                             if len(unique_topics) > 0:
-                                st.write("Extracting document-topic probabilities...")
                                 topic_docs = BERTmodel.get_document_info(text_data)
                                 probabilities = BERTmodel.transform(text_data)
                                 probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
@@ -598,7 +660,10 @@ if uploaded_file:
                                 topic_docs = pd.DataFrame()
 
                             # Display topic info and document-topic probabilities
-                            st.subheader("Output", divider=True)
+                            progress.progress(100, text="Topic modeling complete!")
+                            time.sleep(3)
+                            progress.empty()
+                            st.subheader("Output")
                             topic_info_col, doc_prob_col = st.columns([1, 1])
 
                             with topic_info_col:
@@ -609,5 +674,5 @@ if uploaded_file:
                                 st.write("**Document-Topic Probabilities:**")
                                 st.dataframe(topic_docs)
 
-                        except Exception as e:
-                            st.error(f"Error: An error occurred: {e}")        
+                    except Exception as e:
+                        st.error(f"Error: An error occurred: {e}")        
