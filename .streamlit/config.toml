@@ -7,12 +7,3 @@ font = "serif"
 codeFont = "monospace"
 headingFont = "serif"
 showSidebarBorder = true
-
-[theme.sidebar]
-primaryColor = "#77bfc7"
-backgroundColor = "1a1a1a"
-textColor = "FAFAFA"
-linkColor = "#77bfc7"
-font = "serif"
-codeFont = "monospace"
-headingFont = "serif"
