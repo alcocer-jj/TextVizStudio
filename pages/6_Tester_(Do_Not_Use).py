@@ -202,11 +202,17 @@ if uploaded_file:
                 
                 # Option to apply outlier reduction
                 reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=False)
-                st.info("📝 This process assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics. Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise. Experiment with and without this option to see what works best for your case.")
-
+                with st.expander("A Note on Outlier Reduction"):
+                    st.markdown("""
+                                This parameter controls whether the model assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics.
+                                
+                                Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise.
+                                
+                                Experiment with and without this option to see what works best for your case.
+                                """)
                 if reduce_outliers_option:
                     c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.3)
-                    st.success("💡 You can set a threshold (between 0.0 and 1.0), which determines how strict or lenient the reassignment of outlier documents will be. A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
+                    st.success("💡 A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
                 
             with param2:
                 # Select topic generation mode
