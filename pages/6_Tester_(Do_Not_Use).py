@@ -335,27 +335,6 @@ if uploaded_file:
                             st.write(f"Using user-provided seed: {umap_random_state}")
                         
                         umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
-
-                        # Initialize CountVectorizer
-                        st.write("Initializing CountVectorizer...")
-                        if language == "multilingual":
-                            from nltk.corpus import stopwords
-                            
-                            if stop_word_language != "none":
-                                stop_word_language = stopwords.words(stop_word_language)
-                            else:
-                                stop_word_language = None
-                            
-                            vectorizer_model = CountVectorizer(stop_words=stop_word_language,
-                                                               min_df=1,
-                                                               max_df=0.9,
-                                                               ngram_range=(1, 3))
-                        else:
-                            vectorizer_model = CountVectorizer(stop_words='english',
-                                                   min_df=1,
-                                                   max_df=0.9,
-                                                   ngram_range=(1, 3))
-                            
                             
                         # Initialize CountVectorizer
                         st.write("Initializing CountVectorizer...")
