@@ -429,7 +429,7 @@ if uploaded_file:
                 # Use a form to capture both the input and the submit button
                 topics_to_merge_input = st.text_input("Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):",
                                                       "[]", key="merge_input")
-                st.success("📝 If you want to further combine topics that may be similar based on the model's output, you can specify the topic pairs to merge in the format [[1, 2], [3, 4]]. The first number in each pair is the topic to be merged into, and the second number is the topic to be merged. For example, [[1, 2], [3, 4]] means merge topic 2 into topic 1 and topic 4 into topic 3.")
+                st.success("📝 If you want to further combine topics that may be similar based on the model's output, you can specify the topic pairs to merge in the format [[1, 2], [3, 4]]. The first number in each pair is the topic to be merged into, and the second number is the topic to be merged.")
                 merge_topics_btn = st.button("Merge Topics")
 
                 # Begin logic for merging topics
