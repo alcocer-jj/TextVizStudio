@@ -144,7 +144,18 @@ if uploaded_file:
         # Choose topic modeling method
         method_selection = st.selectbox("Choose Topic Modeling Method", ["", "Unsupervised",
                                                                          "Zero-Shot"], key="method")
-        st.info("📝 \n \n **Unsupervised**: Discover topics automatically from your data.\n- **Zero-Shot**: Use your own topic labels without training.\n\nChoose based on whether you want to explore unknown patterns or classify into known themes.")
+        with st.expander("Which model is right for me?"):
+            st.markdown("""
+            [**Unsupervised**](https://maartengr.github.io/BERTopic/algorithm/algorithm.html):
+            - Best for: Exploring unknown or unstructured data where no labels exist.
+            - Strengths: Automatically discovers latent topic structures; great for insight discovery and exploratory analysis.  
+            - Limitations: Topics may be harder to interpret or control; results depend on data quality and clustering.
+
+            [**Zero-Shot**](https://maartengr.github.io/BERTopic/getting_started/zeroshot/zeroshot.html):
+            - Best for: Classifying documents into predefined topics, especially when domain expertise or prior knowledge is available.
+            - Strengths: No training needed; matches documents to known topics and can generate new topics for unmatched content — flexible across domains.
+            - Limitations: If all documents match predefined topics, no new ones are created. If none match, it defaults to unsupervised topic modeling. Performance depends on how well the predefined topics cover the data.
+            """)        
         
         if method_selection == "":
             st.warning("⚠️ Please select a topic modeling method to continue.")
