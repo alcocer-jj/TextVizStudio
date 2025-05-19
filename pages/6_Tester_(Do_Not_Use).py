@@ -146,7 +146,7 @@ if uploaded_file:
 
         # Begin logic for unsupervised topic modeling
         if method == "Unsupervised":
-            st.subheader("Unsupervised Topic Modeling", divider=True)
+            st.subheader("Unsupervised Topic Modeling")
             
             # Language selection dropdown
             language_option = st.selectbox(
