@@ -193,13 +193,20 @@ if uploaded_file:
                                 - **Strengths**: Adapted for semantic understanding across diverse languages. Maintains strong performance across multilingual corpora.  
                                 - **Limitations**: Slightly larger and slower than the English model; performance may vary depending on language and domain.
                                 """)
-
                 if language == "multilingual":
                     stop_word_language = st.selectbox("Select the stop word language for CountVectorizer via NLTK:",
                         ("none", "czech", "danish", "dutch", "estonian", "finnish", "french", "german", "greek",
                         "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
                         "swedish", "turkish"))
                     st.info("📝 The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
+                
+                # Option to apply outlier reduction
+                reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=False)
+                st.info("📝 This process assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics. Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise. Experiment with and without this option to see what works best for your case.")
+
+                if reduce_outliers_option:
+                    c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.3)
+                    st.success("💡 You can set a threshold (between 0.0 and 1.0), which determines how strict or lenient the reassignment of outlier documents will be. A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
                 
             with param2:
                 # Select topic generation mode
@@ -219,14 +226,6 @@ if uploaded_file:
                                 - Can be computationally expensive; each reduction step requires a new c-TF-IDF calculation.
                                 """)
             
-            # Option to apply outlier reduction
-            reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=True)
-            st.success("**Note:** This process assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics. Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise. Experiment with and without this option to see what works best for your case.")
-
-            if reduce_outliers_option:
-                c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.3)
-                st.info("**Tip:** You can set a threshold (between 0.0 and 1.0), which determines how strict or lenient the reassignment of outlier documents will be. A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
-
             # Option for OpenAI API use
             use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
             st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
