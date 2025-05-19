@@ -179,6 +179,20 @@ if uploaded_file:
                 # Language selection dropdown
                 language_option = st.selectbox("Select the language model to use for topic modeling:", ("English", "Multilanguage"))
                 language = "english" if language_option == "English" else "multilingual"
+                with st.expander("A Note on Language Models"):
+                    st.markdown("""
+                                Text2Topics supports two main language options, each powered by a specialized sentence transformer:
+
+                                [**English (`all-MiniLM-L6-v2`)**](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)  
+                                - **Best for**: High-performance topic modeling on English-only datasets.  
+                                - **Strengths**: Lightweight and fast; trained on 1 billion sentence pairs using contrastive learning. Excels at semantic clustering, sentence similarity, and short-text embedding.  
+                                - **Limitations**: Only supports English. Input texts longer than 256 tokens are truncated.
+
+                                [**Multilingual (`paraphrase-multilingual-MiniLM-L12-v2`)**](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2)  
+                                - **Best for**: Working with non-English or mixed-language datasets (supports 50+ languages).  
+                                - **Strengths**: Adapted for semantic understanding across diverse languages. Maintains strong performance across multilingual corpora.  
+                                - **Limitations**: Slightly larger and slower than the English model; performance may vary depending on language and domain.
+                                """)
 
                 if language == "multilingual":
                     stop_word_language = st.selectbox("Select the stop word language for CountVectorizer via NLTK:",
