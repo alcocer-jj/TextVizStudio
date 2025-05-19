@@ -179,7 +179,7 @@ if uploaded_file:
                 # Language selection dropdown
                 language_option = st.selectbox("Select the language model to use for topic modeling:", ("English", "Multilanguage"))
                 language = "english" if language_option == "English" else "multilingual"
-                with st.expander("A Note on Language Models"):
+                with st.expander("A Note on Language Selection"):
                     st.markdown("""
                                 Text2Topics supports two main language options, each powered by a specialized sentence transformer:
 
@@ -204,10 +204,20 @@ if uploaded_file:
             with param2:
                 # Select topic generation mode
                 topic_option = st.selectbox("Select how you want the number of topics to be handled:", ("Auto", "Specific Number"))
-
                 # Default nr_topics value
                 nr_topics = None if topic_option == "Auto" else st.number_input("Enter the number of topics you want to generate", min_value=1, step=1)
+                with st.expander("A Note on Topic Number Selection"):
+                    st.markdown("""
+                                This parameter controls how many topics you want after the model is trained.
 
+                                **Use `"auto"`**:  
+                                - Automatically reduces topics based on topic similarity. Internally, BERTopic uses clustering techniques like **HDBSCAN** to find a natural number of coherent topics.  
+                                - Best for exploratory analysis when you're unsure how many topics to expect.
+
+                                **Set a number (e.g., `20`)**:
+                                - Reduces the number of discovered topics to that exact value. This is useful when you want a fixed number of topics for interpretability or downstream tasks.  
+                                - Can be computationally expensive; each reduction step requires a new c-TF-IDF calculation.
+                                """)
             
             # Option to apply outlier reduction
             reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=True)
