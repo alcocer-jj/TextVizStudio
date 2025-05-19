@@ -225,15 +225,16 @@ if uploaded_file:
                                 - Reduces the number of discovered topics to that exact value. This is useful when you want a fixed number of topics for interpretability or downstream tasks.  
                                 - Can be computationally expensive; each reduction step requires a new c-TF-IDF calculation.
                                 """)
+                    
+                # Option for OpenAI API use
+                use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
             
-            # Option for OpenAI API use
-            use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
-            st.success("**Note:** OpenAI's GPT-4o can be used to generate topic labels based on the documents and keywords provided. You must provide an OpenAI API key to use this feature.")
-
-            # Ask for OpenAI API key if user chooses to use OpenAI
-            api_key = None
-            if use_openai_option:
-                api_key = st.text_input("Enter your OpenAI API Key", type="password")
+                # Ask for OpenAI API key if user chooses to use OpenAI
+                api_key = None
+                if use_openai_option:
+                    api_key = st.text_input("Enter your OpenAI API Key", type="password")
+                st.info("📝 OpenAI's GPT-4o can be used to generate clearer and more descriptive topic labels using representative keywords and sample documents. You’ll need a valid OpenAI API key to use this feature. Delays may occur due to rate limits or API latency.")
+            
             run_model_btn = st.button("Run Unsupervised Topic Model")
             
             # Define function to display outputs (reused after both model fitting and topic merging)
