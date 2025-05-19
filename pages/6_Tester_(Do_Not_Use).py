@@ -12,6 +12,7 @@ import ast
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
+import time
 
 st.set_page_config(
     page_title="Text2Topics",
@@ -445,6 +446,7 @@ if uploaded_file:
 
                         # Display the outputs (topics table, intertopic map, probabilities)
                         progress.progress(100, text="Topic modeling complete!")
+                        time.sleep(3)
                         progress.empty()
                         st.subheader("Output")
                         display_unsupervised_outputs(BERTmodel, text_data)
