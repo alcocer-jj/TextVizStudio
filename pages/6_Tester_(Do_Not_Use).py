@@ -584,7 +584,6 @@ if uploaded_file:
                                 representation_model=representation_model,
                                 umap_model=umap_model,
                                 embedding_model=model,
-                                vectorizer_model=vectorizer_model,
                                 min_topic_size=min_topic_size,
                                 zeroshot_topic_list=zeroshot_topic_list,
                                 zeroshot_min_similarity=zeroshot_min_similarity
