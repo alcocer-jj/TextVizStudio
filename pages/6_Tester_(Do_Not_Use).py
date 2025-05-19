@@ -445,6 +445,7 @@ if uploaded_file:
 
                         # Display the outputs (topics table, intertopic map, probabilities)
                         progress.progress(100, text="Topic modeling complete!")
+                        progress.empty()
                         st.subheader("Output")
                         display_unsupervised_outputs(BERTmodel, text_data)
                                 
