@@ -123,7 +123,7 @@ if uploaded_file:
     # Load proper text column
     column_options = [""] + list(data.columns)
     text_column = st.selectbox("Select the text column", options=column_options, key="text_column")
-    st.info("**Note:** Rows with missing or empty text values will be automatically excluded.")
+    st.info("📝 Rows with missing or empty text values will be automatically excluded.")
     
     if text_column == "":
         st.warning("⚠️ Please select a valid text column to continue.")
@@ -181,7 +181,7 @@ if uploaded_file:
 
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            st.info("**Tip:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+            st.info("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
 
             # Option for OpenAI API use
             use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
