@@ -528,6 +528,7 @@ if uploaded_file:
                 api_key = None
                 if use_openai_option:
                     api_key = st.text_input("Enter your OpenAI API Key", type="password")
+                    
                 run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
                 
                 # Begin logic for running the Zero-Shot model
@@ -578,57 +579,56 @@ if uploaded_file:
                                 st.error(f"Error: Failed to initialize OpenAI API: {e}")
                                 representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
 
-                            # Initialize BERTopic model with zero-shot topic list
-                            progress.progress(70, text="Building BERTopic model...")
-                            BERTmodel = BERTopic(
+                        # Initialize BERTopic model with zero-shot topic list
+                        progress.progress(70, text="Building BERTopic model...")
+                        BERTmodel = BERTopic(
                                 representation_model=representation_model,
                                 umap_model=umap_model,
                                 embedding_model=model,
                                 min_topic_size=min_topic_size,
                                 zeroshot_topic_list=zeroshot_topic_list,
-                                zeroshot_min_similarity=zeroshot_min_similarity
-                            )
+                                zeroshot_min_similarity=zeroshot_min_similarity)
 
-                            progress.progress(85, text="Fitting topic model...")
-                            topics, _ = BERTmodel.fit_transform(text_data)
+                        progress.progress(85, text="Fitting topic model...")
+                        topics, _ = BERTmodel.fit_transform(text_data)
 
-                            # Extract topic info
-                            topic_info = BERTmodel.get_topic_info()
-                            topic_info = pd.DataFrame(topic_info)
+                        # Extract topic info
+                        topic_info = BERTmodel.get_topic_info()
+                        topic_info = pd.DataFrame(topic_info)
 
-                            # Create two new columns from 'GPT Topic Label'
-                            if 'GPT Topic Label' in topic_info.columns:
-                                topic_info['GPT Topic Label'] = topic_info['GPT Topic Label'].astype(str)
-                                topic_info['GPT Label'] = topic_info['GPT Topic Label'].str.split(';').str[0].str.strip()
-                                topic_info['GPT Description'] = topic_info['GPT Topic Label'].str.split(';').str[1].str.strip()
-                                # Remove unwanted characters from 'GPT Label' and 'GPT Description'
-                                topic_info['GPT Label'] = topic_info['GPT Label'].str.replace(r"[\"'\[\]]", "", regex=True)
-                                topic_info['GPT Description'] = topic_info['GPT Description'].str.replace(r"'\]$", "", regex=True)
-                                topic_info = topic_info.drop(columns=['GPT Topic Label'])
+                        # Create two new columns from 'GPT Topic Label'
+                        if 'GPT Topic Label' in topic_info.columns:
+                            topic_info['GPT Topic Label'] = topic_info['GPT Topic Label'].astype(str)
+                            topic_info['GPT Label'] = topic_info['GPT Topic Label'].str.split(';').str[0].str.strip()
+                            topic_info['GPT Description'] = topic_info['GPT Topic Label'].str.split(';').str[1].str.strip()
+                            # Remove unwanted characters from 'GPT Label' and 'GPT Description'
+                            topic_info['GPT Label'] = topic_info['GPT Label'].str.replace(r"[\"'\[\]]", "", regex=True)
+                            topic_info['GPT Description'] = topic_info['GPT Description'].str.replace(r"'\]$", "", regex=True)
+                            topic_info = topic_info.drop(columns=['GPT Topic Label'])
                             
-                            # Check if topics exist before running transform()
-                            unique_topics = set(topics) - {-1}
-                            if len(unique_topics) > 0:
+                        # Check if topics exist before running transform()
+                        unique_topics = set(topics) - {-1}
+                        if len(unique_topics) > 0:
                                 topic_docs = BERTmodel.get_document_info(text_data)
                                 probabilities = BERTmodel.transform(text_data)
                                 probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
                                 topic_docs = pd.concat([topic_docs[['Document']], probabilities], axis=1)
-                            else:
+                        else:
                                 st.warning("Warning: No valid topics were found. Skipping probability calculation.")
                                 topic_docs = pd.DataFrame()
 
-                            # Display topic info and document-topic probabilities
-                            progress.progress(100, text="Topic modeling complete!")
-                            time.sleep(3)
-                            progress.empty()
-                            st.subheader("Output")
-                            topic_info_col, doc_prob_col = st.columns([1, 1])
+                        # Display topic info and document-topic probabilities
+                        progress.progress(100, text="Topic modeling complete!")
+                        time.sleep(3)
+                        progress.empty()
+                        st.subheader("Output")
+                        topic_info_col, doc_prob_col = st.columns([1, 1])
 
-                            with topic_info_col:
+                        with topic_info_col:
                                 st.write("**Identified Topics:**")
                                 st.dataframe(topic_info)
 
-                            with doc_prob_col:
+                        with doc_prob_col:
                                 st.write("**Document-Topic Probabilities:**")
                                 st.dataframe(topic_docs)
 
