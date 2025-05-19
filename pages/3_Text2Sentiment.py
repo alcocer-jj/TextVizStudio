@@ -82,22 +82,24 @@ def create_unique_id(text):
 
 # Function to extract text from CSV file and add unique identifiers (doc_id)
 def extract_text_from_csv(file):
-    df = pd.read_csv(file)
-    
+    try:
+        df = pd.read_csv(file)
+    except Exception as e:
+        st.error("🚫 Failed to read the uploaded file as a CSV.")
+        st.caption(f"Details: {e}")
+        return None, None
+
     df.columns = df.columns.str.lower()
 
     if 'text' in df.columns:
-        # Drop rows where the 'text' column is NaN
         df = df.dropna(subset=['text'])
-        
-        # Create unique doc_id for each text
         df['doc_id'] = df['text'].apply(create_unique_id)
-        
-        # Return the doc_id and text columns
         return df.reset_index(drop=True), df
     else:
-        st.error("The CSV file must contain a 'text' column.")
+        st.error("⚠️ The uploaded CSV file must contain a column named 'text'.")
         return None, None
+
+    
 
 # Function to preprocess text for VADER
 def preprocess_text_VADER(text, lowercase=False, remove_urls=True):
