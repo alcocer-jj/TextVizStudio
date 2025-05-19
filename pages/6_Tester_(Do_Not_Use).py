@@ -142,7 +142,7 @@ if uploaded_file:
 
     else:
         # Choose topic modeling method
-        method = st.selectbox("Choose Topic Modeling Method", ["Unsupervised", "Zero-Shot"], key="method")
+        method = st.selectbox("Choose Topic Modeling Method", ["", "Unsupervised", "Zero-Shot"], key="method")
 
         # Begin logic for unsupervised topic modeling
         if method == "Unsupervised":
