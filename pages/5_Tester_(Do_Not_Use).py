@@ -81,8 +81,9 @@ for i in range(num_models):
 if st.button("Run All Models"):
     results = {}
     for idx, cfg in enumerate(model_configs, start=1):
+        # Build formula for OLS/LPM
         formula = f"{cfg['dv']} ~ {' + '.join(cfg['ivs'])}"
-        # Map SE choices to covariance kwargs
+        # Map SE choices to kwargs
         covmap = {
             "Standard":    {"cov_type": "nonrobust"},
             "White (HC0)": {"cov_type": "HC0"},
@@ -92,39 +93,45 @@ if st.button("Run All Models"):
             groups = data[cfg["cluster_var"]]
             covmap[cfg["se"]] = {"cov_type": "cluster", "cov_kwds": {"groups": groups}}
 
-        # Fit OLS
+        # --- Fit OLS ---
         if "OLS" in cfg["ests"]:
             results[f"Model{idx}_OLS"] = (
                 smf.ols(formula, data=data)
                    .fit(**covmap[cfg["se"]])
             )
-        # Fit LPM (use same SE mapping)
+        # --- Fit LPM ---
         if "LPM" in cfg["ests"]:
             results[f"Model{idx}_LPM"] = (
                 smf.ols(formula, data=data)
                    .fit(**covmap[cfg["se"]])
             )
-        # Fit Fixed Effects
+        # For panel models, prepare y and X
+        if any(e in cfg["ests"] for e in ["Fixed Effects", "Random Effects"]):
+            panel = data.set_index([cfg["entity"], cfg["time"]])
+            y = panel[cfg["dv"]]
+            X = panel[cfg["ivs"]]
+        # --- Fit Fixed Effects ---
         if "Fixed Effects" in cfg["ests"]:
-            panel = data.set_index([cfg["entity"], cfg["time"]])
-            results[f"Model{idx}_FE"] = (
-                PanelOLS.from_formula(formula, panel, entity_effects=True)
-                        .fit(**covmap[cfg["se"]])
+            fe_mod = PanelOLS(
+                y,
+                X,
+                entity_effects=True
             )
-        # Fit Random Effects
+            results[f"Model{idx}_FE"] = fe_mod.fit(**covmap[cfg["se"]])
+        # --- Fit Random Effects ---
         if "Random Effects" in cfg["ests"]:
-            panel = data.set_index([cfg["entity"], cfg["time"]])
-            results[f"Model{idx}_RE"] = (
-                RandomEffects.from_formula(formula, panel)
-                             .fit(**covmap[cfg["se"]])
+            re_mod = RandomEffects(
+                y,
+                X
             )
+            results[f"Model{idx}_RE"] = re_mod.fit(**covmap[cfg["se"]])
 
     # --- Display Results ---
     for name, res in results.items():
         st.subheader(name)
         st.code(res.summary().as_text())
 
-    # --- Combined Table for multiple statsmodels models ---
+    # --- Combined Table ---
     statsmods = [res for res in results.values() if hasattr(res, 'params')]
     if len(statsmods) > 0:
         st.subheader("Combined Results Table")
