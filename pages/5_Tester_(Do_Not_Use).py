@@ -103,7 +103,7 @@ if 'data' not in locals():
 # Model configuration
 st.subheader("Model Configurations")
 num_models = st.number_input("Number of models to run", min_value=1, max_value=4, value=1)
-st.info("📝 To maintain a clean and user-friendly interface, selection is limited to a maximum of four regression models.")
+st.info("📝 To maintain a clean user interface, selection is limited to a maximum of four regression models.")
 with st.expander("About the Available Estimators", expanded=False):
     st.markdown("""
                 #### Predicting Continuous Outcomes
