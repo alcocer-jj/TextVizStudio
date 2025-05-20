@@ -6,10 +6,10 @@ from stargazer.stargazer import Stargazer
 from linearmodels.panel import PanelOLS, RandomEffects
 
 st.set_page_config(
-    page_title="TBD",
+    page_title="No-Code Regression Lab",
     layout="wide"
 )
-st.title("TBD")
+st.title("No-Code Regression Lab")
 
 # --- Data Upload and Preview ---
 uploaded = st.file_uploader("Upload your dataset (CSV)", type=["csv"])
@@ -57,13 +57,20 @@ for i in range(num_models):
             key=f"se_{i}",
             help="Standard: assume homoskedasticity; Robust: heteroskedasticity-robust; Clustered: cluster at entity level"
         )
+        # Cluster variable selection when clustered SEs
+        cluster_var = None
+        if se_type == "Clustered":
+            cluster_var = st.selectbox(
+                "Select cluster variable:", data.columns, key=f"cluster_{i}"
+            )
         model_configs.append({
             "dv": dv,
             "ivs": ivs,
             "ests": estimators,
             "entity": entity,
             "time": time,
-            "se": se_type
+            "se": se_type,
+            "cluster_var": cluster_var
         })
 
 # --- Run Models ---
@@ -71,27 +78,28 @@ if st.button("Run All Models"):
     results = {}
     for idx, cfg in enumerate(model_configs, start=1):
         formula = f"{cfg['dv']} ~ {' + '.join(cfg['ivs'])}"
-        # Map SE choices to kwargs
+        # Configure covariance kwargs
         covmap = {
             "Standard": {"cov_type": "nonrobust"},
             "Robust (HC1)": {"cov_type": "HC1"}
         }
         if cfg["se"] == "Clustered":
-            covmap[cfg["se"]] = {"cov_type": "clustered", "cluster_entity": True}
+            groups = data[cfg["cluster_var"]]
+            covmap[cfg["se"]] = {"cov_type": "cluster", "cov_kwds": {"groups": groups}}
 
-        # OLS
+        # Fit OLS
         if "OLS" in cfg["ests"]:
             results[f"Model{idx}_OLS"] = smf.ols(formula, data).fit(**covmap[cfg["se"]])
-        # LPM (always robust)
+        # Fit LPM (always robust)
         if "LPM" in cfg["ests"]:
             results[f"Model{idx}_LPM"] = smf.ols(formula, data).fit(cov_type="HC1")
-        # Fixed Effects
+        # Fit Fixed Effects
         if "Fixed Effects" in cfg["ests"]:
             panel = data.set_index([cfg["entity"], cfg["time"]])
             results[f"Model{idx}_FE"] = PanelOLS.from_formula(
                 formula, panel, entity_effects=True
             ).fit(**covmap[cfg["se"]])
-        # Random Effects
+        # Fit Random Effects
         if "Random Effects" in cfg["ests"]:
             panel = data.set_index([cfg["entity"], cfg["time"]])
             results[f"Model{idx}_RE"] = RandomEffects.from_formula(
@@ -101,20 +109,15 @@ if st.button("Run All Models"):
     # --- Display Results ---
     for name, res in results.items():
         st.subheader(name)
-        # Show Python-like text output
         st.code(res.summary().as_text())
 
-    # --- LaTeX/HTML Table for statsmodels models ---
+    # --- Combined HTML & LaTeX table for statsmodels models ---
     statsmods = [res for res in results.values() if hasattr(res, 'params')]
-    if len(statsmods) > 1:
+    if len(statsmods) > 0:
         st.subheader("Combined Results Table")
         st.write("Rendered with Stargazer:")
-        st.components.v1.html(
-            Stargazer(statsmods).render_html(),
-            height=400,
-            scrolling=True
-        )
+        html = Stargazer(statsmods).render_html()
+        st.components.v1.html(html, height=400)
         latex = Stargazer(statsmods).render_latex()
-        st.download_button(
-            "Download LaTeX Table", latex, "regression_table.tex"
-        )
+        st.download_button("Download LaTeX Table", latex, "regression_table.tex")
+
