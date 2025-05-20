@@ -132,7 +132,6 @@ if 'data' not in locals():
 
 # Model configuration
 st.subheader("Model Configurations")
-num_models = st.number_input("Number of models to run", min_value=1, max_value=4, value=1)
 num_models = st.number_input(
     "Number of models to run",
     min_value=1,
