@@ -103,6 +103,11 @@ for i in range(num_models):
                 if term not in ivs: ivs.append(term)
         # estimator selection
         ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
+        # Additional fixed effects — disable if user selects "Fixed Effects" estimator
+        disable_fe_ui = "Fixed Effects" in ests
+        if disable_fe_ui:
+            st.info("📝 Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
+        fe_vars = st.multiselect("Add fixed effects (categorical vars)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui)
         # ZINB-specific options
         zinb_infl_vars = []
         zinb_inflation = "logit"
@@ -132,7 +137,7 @@ for i in range(num_models):
         se_type = st.selectbox("Standard errors", se_opts, key=f"se_{i}")
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")
-        cfg = {"dv": dv,"ivs": ivs,"ests": ests,"ent": ent,"time": time,"mg": mg,"ms": ms,"se": se_type,"cl": cl}
+        cfg = {"dv": dv,"ivs": ivs,"ests": ests,"ent": ent,"time": time,"mg": mg,"ms": ms,"se": se_type,"cl": cl, "fe_vars": fe_vars}
         if "Zero-Inflated NB" in ests:
             cfg["zinb_vars"] = zinb_infl_vars
             cfg["zinb_link"] = zinb_inflation
@@ -143,6 +148,17 @@ for i in range(num_models):
 if st.button("Run Models"):
     results={}
     for idx,cfg in enumerate(configs,1):
+        # Build formula and inject fixed effects via dummies, when applicable
+        fe_dummies = []
+        if cfg.get("fe_vars") and "Fixed Effects" not in cfg["ests"]:
+            for fe in cfg["fe_vars"]:
+                dummies = pd.get_dummies(data[fe], prefix=fe, drop_first=True)
+                data = data.join(dummies)
+                fe_dummies.extend(dummies.columns)
+
+            if len(fe_dummies) > 100:
+                st.warning("⚠️ Large number of dummy variables may cause memory or convergence issues.")
+        rhs = cfg["ivs"] + fe_dummies
         form=f"{cfg['dv']} ~ {' + '.join(cfg['ivs'])}"
         stats_cov=COMMON_STATS_SE.get(cfg['se'],{})
         panel_cov=PANEL_SE.get(cfg['se'],{})
