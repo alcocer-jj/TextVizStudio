@@ -223,13 +223,47 @@ if st.button("Run Models"):
                 st.error(f"{est} failed: {e}")
 
     # Display results
-    statsmods = [r for r in results.values() if hasattr(r, "params")]
+    statsmods = []
+    display_models = []
+
     for name, res in results.items():
         st.subheader(name)
-        summ = res.summary() if callable(res.summary) else res.summary
-        txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
-        st.code(txt)
 
+        # Place checkbox LAST after other model options
+        model_type_str = str(type(res.model))
+        supports_exp = any(k in model_type_str for k in ["Logit", "Poisson", "NegativeBinomial", "ZeroInflated"])
+        show_exp = False
+        if supports_exp:
+            show_exp = st.checkbox(f"Show exponentiated coefficients (IRRs / Odds Ratios) for {name}", key=f"exp_{name}")
+
+        # Show either exp(coef) or standard summary
+        if show_exp:
+            try:
+                exp_params = np.exp(res.params)
+                exp_bse = np.exp(res.bse)
+                exp_output = pd.DataFrame({
+                    "exp(coef)": exp_params,
+                    "exp(std err)": exp_bse
+                })
+                st.dataframe(exp_output)
+
+                # Patch result to use exp values in Stargazer
+                from types import SimpleNamespace
+                patched = SimpleNamespace(**vars(res))
+                patched.params = exp_params
+                patched.bse = exp_bse
+                statsmods.append(patched)
+
+            except Exception as e:
+                st.warning(f"Could not exponentiate coefficients: {e}")
+                statsmods.append(res)
+        else:
+            summ = res.summary() if callable(res.summary) else res.summary
+            txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
+            st.code(txt)
+            statsmods.append(res)
+
+    # Stargazer output (handles patched results if any were exponentiated)
     if len(statsmods) > 0:
         st.subheader("Results Table")
         html = Stargazer(statsmods).render_html()
