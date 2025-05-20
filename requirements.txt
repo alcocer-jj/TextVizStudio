@@ -25,4 +25,6 @@ sympy
 kaleido
 chardet
 datetime
-
+statsmodels
+stargazer
+linearmodels
