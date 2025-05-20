@@ -91,7 +91,7 @@ st.subheader("Data Preview"); st.dataframe(data.head(5))
 num_models = st.number_input("Number of models to run", min_value=1, max_value=5, value=1)
 with st.expander("ℹ︎ About the Available Estimators", expanded=False):
     st.markdown("""
-                ### Predicting Continuous Outcomes
+                #### Predicting Continuous Outcomes
                 - **OLS (Ordinary Least Squares)**  
                     - **When to pick it:** You want to predict something like people’s height or test scores based on other factors, and most of your data points hover reasonably close to a line.  
                     - **Why it helps:** Very quick to run and easy to explain (“a one-unit change in X adds β units to Y”).  
@@ -106,7 +106,7 @@ with st.expander("ℹ︎ About the Available Estimators", expanded=False):
                     
                 ---
 
-                ### Choosing Among Categories
+                #### Choosing Among Categories
                 - **Logit / Probit**  
                     - **When to pick it:** Your outcome is yes/no and you want predictions that always stay between 0% and 100%.  
                     - **Why it helps:** Keeps your predictions in bounds and handles uneven spread in the data.  
@@ -121,7 +121,7 @@ with st.expander("ℹ︎ About the Available Estimators", expanded=False):
 
                 ---
 
-                ### Modeling Counts of Events
+                #### Modeling Counts of Events
                 - **Poisson Regression**  
                     - **When to pick it:** You’re counting events (e.g., doctor visits per year) and your counts cluster around an average.  
                     - **Why it helps:** Fast, interpretable “rate” model (mean equals variance).  
@@ -144,7 +144,7 @@ with st.expander("ℹ︎ About the Available Estimators", expanded=False):
 
                 ---
 
-                ### Ordering Things
+                #### Ordering Things
                 - **Ordered Logit / Probit**  
                     - **When to pick it:** Your outcome has a clear order but no exact spacing (e.g., ratings like “low,” “medium,” “high”).  
                     - **Why it helps:** Respects the ranking without treating “high vs. medium” the same as “medium vs. low.”  
@@ -153,7 +153,7 @@ with st.expander("ℹ︎ About the Available Estimators", expanded=False):
 
                 ---
 
-                ### Working with Panel Data
+                #### Working with Panel Data
                 - **Fixed Effects**  
                     - **When to pick it:** You have multiple observations per entity (e.g., states over time) and want to ignore anything that doesn’t change over time.  
                     - **Why it helps:** Automatically removes unchanging traits (like a state’s geography).  
@@ -168,7 +168,7 @@ with st.expander("ℹ︎ About the Available Estimators", expanded=False):
 
                 ---
 
-                ### Mixing It Up
+                #### Mixing It Up
                 - **Mixed Effects (Multilevel Models)**  
                     - **When to pick it:** Your data is nested (e.g., students within schools) and you want to model both overall trends and group-specific deviations.  
                     - **Why it helps:** Captures variation at each level (school vs. student).  
