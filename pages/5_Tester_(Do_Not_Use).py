@@ -39,7 +39,7 @@ for i in range(num_models):
             "Dependent variable", data.columns, key=f"dv_{i}"
         )
         ivs = st.multiselect(
-            "Independent variables", [c for c in data.columns if c != dv], 
+            "Independent variables", [c for c in data.columns if c != dv],
             key=f"ivs_{i}"
         )
         estimators = st.multiselect(
@@ -53,11 +53,15 @@ for i in range(num_models):
             time = st.selectbox("Panel: Time ID", data.columns, key=f"time_{i}")
         se_type = st.selectbox(
             "Standard errors:",
-            ["Standard", "Robust (HC1)", "Clustered"],
+            ["Standard", "White (HC0)", "Robust (HC1)", "Clustered"],
             key=f"se_{i}",
-            help="Standard: assume homoskedasticity; Robust: heteroskedasticity-robust; Clustered: cluster at entity level"
+            help=(
+                "Standard: assume homoskedasticity; "
+                "White (HC0): heteroskedasticity-robust (HC0); "
+                "Robust (HC1): heteroskedasticity-robust (HC1); "
+                "Clustered: cluster at chosen level"
+            )
         )
-        # Cluster variable selection when clustered SEs
         cluster_var = None
         if se_type == "Clustered":
             cluster_var = st.selectbox(
@@ -78,9 +82,10 @@ if st.button("Run All Models"):
     results = {}
     for idx, cfg in enumerate(model_configs, start=1):
         formula = f"{cfg['dv']} ~ {' + '.join(cfg['ivs'])}"
-        # Configure covariance kwargs
+        # Map SE choices to covariance kwargs
         covmap = {
-            "Standard": {"cov_type": "nonrobust"},
+            "Standard":    {"cov_type": "nonrobust"},
+            "White (HC0)": {"cov_type": "HC0"},
             "Robust (HC1)": {"cov_type": "HC1"}
         }
         if cfg["se"] == "Clustered":
@@ -89,29 +94,37 @@ if st.button("Run All Models"):
 
         # Fit OLS
         if "OLS" in cfg["ests"]:
-            results[f"Model{idx}_OLS"] = smf.ols(formula, data).fit(**covmap[cfg["se"]])
-        # Fit LPM (always robust)
+            results[f"Model{idx}_OLS"] = (
+                smf.ols(formula, data=data)
+                   .fit(**covmap[cfg["se"]])
+            )
+        # Fit LPM (use same SE mapping)
         if "LPM" in cfg["ests"]:
-            results[f"Model{idx}_LPM"] = smf.ols(formula, data).fit(cov_type="HC1")
+            results[f"Model{idx}_LPM"] = (
+                smf.ols(formula, data=data)
+                   .fit(**covmap[cfg["se"]])
+            )
         # Fit Fixed Effects
         if "Fixed Effects" in cfg["ests"]:
             panel = data.set_index([cfg["entity"], cfg["time"]])
-            results[f"Model{idx}_FE"] = PanelOLS.from_formula(
-                formula, panel, entity_effects=True
-            ).fit(**covmap[cfg["se"]])
+            results[f"Model{idx}_FE"] = (
+                PanelOLS.from_formula(formula, panel, entity_effects=True)
+                        .fit(**covmap[cfg["se"]])
+            )
         # Fit Random Effects
         if "Random Effects" in cfg["ests"]:
             panel = data.set_index([cfg["entity"], cfg["time"]])
-            results[f"Model{idx}_RE"] = RandomEffects.from_formula(
-                formula, panel
-            ).fit(**covmap[cfg["se"]])
+            results[f"Model{idx}_RE"] = (
+                RandomEffects.from_formula(formula, panel)
+                             .fit(**covmap[cfg["se"]])
+            )
 
     # --- Display Results ---
     for name, res in results.items():
         st.subheader(name)
         st.code(res.summary().as_text())
 
-    # --- Combined HTML & LaTeX table for statsmodels models ---
+    # --- Combined Table for multiple statsmodels models ---
     statsmods = [res for res in results.values() if hasattr(res, 'params')]
     if len(statsmods) > 0:
         st.subheader("Combined Results Table")
@@ -120,4 +133,3 @@ if st.button("Run All Models"):
         st.components.v1.html(html, height=400)
         latex = Stargazer(statsmods).render_latex()
         st.download_button("Download LaTeX Table", latex, "regression_table.tex")
-
