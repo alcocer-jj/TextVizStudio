@@ -236,7 +236,7 @@ for i in range(num_models):
         if len(ivs)>=2:
             pairs=[(ivs[a],ivs[b]) for a in range(len(ivs)) for b in range(a+1,len(ivs))]
             opts=[f"{x}_x_{y}" for x,y in pairs]
-            sel=st.multiselect("Add interaction terms", opts, key=f"ints_{i}")
+            sel=st.multiselect("Interaction terms (optional)", opts, key=f"ints_{i}")
             for term in sel:
                 x,y=term.split("_x_"); data[term]=data[x]*data[y]
                 if term not in ivs: ivs.append(term)
@@ -257,7 +257,7 @@ for i in range(num_models):
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
             st.info("📝 Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
-        fe_vars = st.multiselect("Add fixed effects (categorical vars)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui)
+        fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui)
         # ZINB-specific options
         zinb_infl_vars = []
         zinb_inflation = "logit"
