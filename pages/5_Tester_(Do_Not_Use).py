@@ -84,7 +84,6 @@ def detect_encoding(file):
 # Data upload
 st.subheader("Import Data")
 uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
-
 if uploaded:
     try:
         encoding = detect_encoding(uploaded)
@@ -97,6 +96,9 @@ if uploaded:
         st.subheader("Data Preview"); st.dataframe(data.head(5))
     except Exception as e:
         st.error(f"Failed to read the CSV file: {e}")
+
+if 'data' not in locals():
+    st.stop()
 
 # Model configuration
 st.subheader("Model Configurations")
