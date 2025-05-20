@@ -74,21 +74,34 @@ for est, v in ESTIMATOR_MAP.items():
 st.set_page_config(page_title="TBD", layout="wide")
 st.title("TBD")
 
-# Data upload
-uploaded = st.file_uploader("Upload your CSV data", type=["csv"])
-if not uploaded:
-    st.info("Please upload a CSV file to continue.")
-    st.stop()
-@st.cache_data
-def load_data(f):
-    raw = f.read(); enc = chardet.detect(raw)["encoding"]; f.seek(0)
-    return pd.read_csv(f, encoding=enc)
+def detect_encoding(file):
+    raw = file.read()
+    result = chardet.detect(raw)
+    encoding = result["encoding"]
+    file.seek(0)
+    return encoding
 
-data = load_data(uploaded)
+# Data upload
+st.subheader("Import Data")
+uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
+if uploaded:
+    try:
+        encoding = detect_encoding(uploaded)
+        st.info(f"Detected file encoding: `{encoding}`")
+        @st.cache_data
+        def load_data(uploaded_file, file_encoding):
+            return pd.read_csv(uploaded_file, encoding=file_encoding)
+        data = load_data(uploaded, encoding)
+        st.success("✔︎ File successfully loaded!")
+    except Exception as e:
+        st.error(f"Failed to read the CSV file: {e}")
+
 st.subheader("Data Preview"); st.dataframe(data.head(5))
 
 # Model configuration
-num_models = st.number_input("Number of models to run", min_value=1, max_value=5, value=1)
+st.subheader("Model Configurations")
+num_models = st.number_input("Number of models to run", min_value=1, max_value=4, value=1)
+st.info("📝 To maintain a clean and user-friendly interface, selection is limited to a maximum of four regression models.")
 with st.expander("About the Available Estimators", expanded=False):
     st.markdown("""
                 #### Predicting Continuous Outcomes
