@@ -89,7 +89,7 @@ st.subheader("Data Preview"); st.dataframe(data.head(5))
 
 # Model configuration
 num_models = st.number_input("Number of models to run", min_value=1, max_value=5, value=1)
-with st.expander("ℹ️ About the Available Estimators", expanded=False):
+with st.expander("ℹ︎ About the Available Estimators", expanded=False):
     st.markdown("""
                 ### Predicting Continuous Outcomes
                 - **OLS (Ordinary Least Squares)**  
