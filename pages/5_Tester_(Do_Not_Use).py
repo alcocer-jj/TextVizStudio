@@ -232,9 +232,6 @@ if st.button("Run Models"):
     # Display results
     exp_tables = []
     statsmods = [r for r in results.values() if hasattr(r, "params")]
-    exp_model_blocks = []
-    variable_set = set()
-
     for i, (name, res) in enumerate(results.items()):
         st.subheader(name)
         cfg_exp = configs[i].get("exp_output", False)
@@ -246,18 +243,18 @@ if st.button("Run Models"):
                 coef = res.params
                 se = res.bse
                 pvals = res.pvalues
+                ci_lower = np.exp(coef - 1.96 * se)
+                ci_upper = np.exp(coef + 1.96 * se)
                 exp_coef = np.exp(coef)
 
-                def stars(p):
-                    return '***' if p < 0.01 else '**' if p < 0.05 else '*' if p < 0.1 else ''
-
-                block = {}
-                for var in coef.index:
-                    variable_set.add(var)
-                    block[var] = f"{exp_coef[var]:.3f}{stars(pvals[var])}<br>({se[var]:.3f})"
-
-                exp_model_blocks.append((f"({i+1})", block))
-
+                df = pd.DataFrame({
+                    "exp(coef)": exp_coef.round(4),
+                    "Std Err": se.round(4),
+                    "95% CI Lower": ci_lower.round(4),
+                    "95% CI Upper": ci_upper.round(4),
+                    "P-value": pvals.round(4)
+                })
+                st.dataframe(df)
             except Exception as e:
                 st.warning(f"Could not generate exponentiated output: {e}")
                 summ = res.summary() if callable(res.summary) else res.summary
@@ -276,42 +273,3 @@ if st.button("Run Models"):
             html = Stargazer(raw_models).render_html()
             st.components.v1.html(html, height=500, scrolling=True)
             st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
-
-    # Styled Stargazer-clone for exponentiated models
-    if exp_model_blocks:
-        st.subheader("Exponentiated Results Table (Styled Like Stargazer)")
-        variable_list = sorted(variable_set)
-        cols = ["Variable"] + [label for label, _ in exp_model_blocks]
-        rows = []
-        for var in variable_list:
-            row = [var]
-            for _, block in exp_model_blocks:
-                row.append(block.get(var, ""))
-            rows.append(row)
-
-        df_html = pd.DataFrame(rows, columns=cols)
-        st.markdown("<style>th, td { padding: 6px 12px; text-align: center; font-family: monospace; } table { border-collapse: collapse; width: 100%; }</style>", unsafe_allow_html=True)
-        st.markdown(df_html.to_html(escape=False, index=False), unsafe_allow_html=True)
-
-        # LaTeX rendering block (stacked Stargazer style)
-        latex_string = ""
-        header = " & ".join([" "] + [label for label, _ in exp_model_blocks]) + " \\\\ \n"
-        latex_string += "\\begin{tabular}{l" + "c" * len(exp_model_blocks) + "}\\hline\n"
-        latex_string += header + "\\hline\n"
-        for var in variable_list:
-            line1 = [var]
-            line2 = [""]
-            for _, block in exp_model_blocks:
-                value = block.get(var, "")
-                if value:
-                    top, bottom = value.split('<br>')
-                    line1.append(top)
-                    line2.append(f"({bottom})")
-                else:
-                    line1.append("")
-                    line2.append("")
-            latex_string += " & ".join(line1) + " \\\\ \n"
-            latex_string += " & ".join(line2) + " \\\\ \n"
-        latex_string += "\\hline\\end{tabular}"
-
-        st.download_button("Download Exponentiated LaTeX Table", latex_string, "exp_output_table.tex")
