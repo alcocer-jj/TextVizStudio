@@ -110,6 +110,9 @@ for i in range(num_models):
             st.markdown("**Zero-Inflation Settings**")
             zinb_infl_vars = st.multiselect("Zero-inflation variables", [c for c in data.columns if c != dv], key=f"zinb_vars_{i}")
             zinb_inflation = st.selectbox("Inflation link function", ["logit", "probit"], key=f"zinb_link_{i}")
+            zinb_method = st.selectbox("Fitting method", ["bfgs", "lbfgs", "newton", "nm", "powell"], key=f"zinb_method_{i}")
+            zinb_maxiter = st.number_input("Max iterations", min_value=10, max_value=1000, value=500, step=10, key=f"zinb_maxiter_{i}")
+            zinb_disp = st.checkbox("Show optimizer output?", value=False, key=f"zinb_disp_{i}")
         # panel identifiers
         ent=time=mg=None; ms=[]
         if any(ESTIMATOR_MAP[e]["panel"] for e in ests):
@@ -127,8 +130,7 @@ for i in range(num_models):
         se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}")
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")
-        configs.append({"dv":dv,"ivs":ivs,"ests":ests,"ent":ent,"time":time,"mg":mg,"ms":ms,"se":se_type,"cl":cl,"zinb_vars": zinb_infl_vars,"zinb_link": zinb_inflation})
-
+        configs.append({"dv":dv,"ivs":ivs,"ests":ests,"ent":ent,"time":time,"mg":mg,"ms":ms,"se":se_type,"cl":cl,"zinb_vars":zinb_infl_vars,"zinb_link":zinb_inflation,"zinb_method":zinb_method,"zinb_maxiter":zinb_maxiter,"zinb_disp":zinb_disp})
 # Run models
 if st.button("Run Models"):
     results={}
@@ -143,15 +145,16 @@ if st.button("Run Models"):
                 if ESTIMATOR_MAP[est]["func"]:
                     covargs = stats_cov.copy()
                     if cfg['se'] == "Clustered":
-                        covargs['cov_kwds'] = {'groups': data[cfg['cl']]}
-
+                        covargs['cov_kwds'] = {'groups': data[cfg['cl']]}                    
                     if est == "Zero-Inflated NB":
-                        # Pass cfg to the constructor
                         mod = ESTIMATOR_MAP[est]["func"](form, data, cfg)
-                        res = mod.fit(method='bfgs', maxiter=500, disp=0)
+                        res = mod.fit(
+                        method=cfg.get("zinb_method", "bfgs"),
+                        maxiter=cfg.get("zinb_maxiter", 500),
+                        disp=cfg.get("zinb_disp", False))
                     else:
                         mod = ESTIMATOR_MAP[est]["func"](form, data)
-                        res = mod.fit(**covargs) 
+                        res = mod.fit(**covargs)
                 elif ESTIMATOR_MAP[est]["panel"]:
                     panel_df=data.set_index([cfg['ent'],cfg['time']])
                     y=panel_df[cfg['dv']]; X=panel_df[cfg['ivs']]
