@@ -38,7 +38,7 @@ ESTIMATOR_MAP = {
     "Poisson":           {"func": lambda f,df: count.Poisson.from_formula(f,df),                "panel": False, "mixed": False},
     "Negative Binomial": {"func": lambda f,df: count.NegativeBinomialP.from_formula(f,df),        "panel": False, "mixed": False},
     "Zero-Inflated Poisson":      {"func": lambda f,df: count.ZeroInflatedPoisson.from_formula(f,df),      "panel": False, "mixed": False},
-    "Zero-Inflated NB":           {"func": None,                                                "panel": False, "mixed": False},
+    "Zero-Inflated NB":           {"func": lambda f,df: count.ZeroInflatedNegativeBinomialP.from_formula(f,df),"panel": False, "mixed": False},
     "Ordered Logit":  {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="logit"), "panel": False, "mixed": False},
     "Ordered Probit": {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="probit"),"panel": False, "mixed": False},
     # Panel & mixed
