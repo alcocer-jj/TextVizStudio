@@ -206,5 +206,5 @@ if st.button("Run Models"):
     if len(statsmods)>0:
         st.subheader("Combined Results Table")
         html=Stargazer(statsmods).render_html()
-        st.components.v1.html(html, height="100%", scrolling=True)
+        st.components.v1.html(html, height=500, scrolling=True)
         st.download_button("Download LaTeX Table",Stargazer(statsmods).render_latex(),"regression_table.tex")
