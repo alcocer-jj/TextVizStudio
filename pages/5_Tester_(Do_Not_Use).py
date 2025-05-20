@@ -138,7 +138,7 @@ num_models = st.number_input(
     min_value=1,
     max_value=4,
     value=1,
-    help="To maintain a clean user interface, selection is limited to a maximum of four regression models."
+    help="To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models."
 )
 with st.expander("About the Available Estimators", expanded=False):
     st.markdown("""
