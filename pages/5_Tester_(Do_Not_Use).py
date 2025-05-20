@@ -270,7 +270,7 @@ if st.button("Run Models"):
         raw_models = [r for i, r in enumerate(results.values()) if not configs[i].get("exp_output", False)]
         if len(raw_models) > 0:
             st.subheader("Results Table")
-            #html = Stargazer(raw_models).render_html()
+            html = Stargazer(raw_models).render_html()
             #st.components.v1.html(html, height=500, scrolling=True)
             st.markdown(
                 "<style>div[data-testid='stMarkdownContainer'] table { width: auto !important; }</style>",
