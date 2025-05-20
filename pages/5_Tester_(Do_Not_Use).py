@@ -106,15 +106,23 @@ if st.button("Run Models"):
                 re = RandomEffects(y, X)
                 results[f"Model{idx}_RE"] = re.fit(**panel_cov[cfg['se']])
 
-    # Show summaries
+        # Show summaries
     for name, res in results.items():
         st.subheader(name)
-        st.code(res.summary().as_text())
+        # Summary extraction: handle statsmodels vs linearmodels output
+        if hasattr(res, 'summary'):
+            # statsmodels: summary() is callable; linearmodels: summary is property
+            summ = res.summary() if callable(res.summary) else res.summary
+            try:
+                text = summ.as_text()
+            except Exception:
+                text = str(summ)
+            st.code(text)
 
-    # Combined Stargazer table if >1 statsmodels model
+    # Combined Stargazer table if >1 statsmodels model if >1 statsmodels model
     statsmods = [r for r in results.values() if hasattr(r, 'params')]
     if len(statsmods) > 0:
-        st.subheader("Combined Results Table")
+        st.subheader("Results Table")
         html = Stargazer(statsmods).render_html()
         st.components.v1.html(html, height=400)
         latex = Stargazer(statsmods).render_latex()
