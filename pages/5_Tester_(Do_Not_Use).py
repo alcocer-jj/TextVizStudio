@@ -111,8 +111,7 @@ for i in range(num_models):
             zinb_infl_vars = st.multiselect("Zero-inflation variables", [c for c in data.columns if c != dv], key=f"zinb_vars_{i}")
             zinb_inflation = st.selectbox("Inflation link function", ["logit", "probit"], key=f"zinb_link_{i}")
             zinb_method = st.selectbox("Fitting method", ["bfgs", "lbfgs", "newton", "nm", "powell"], key=f"zinb_method_{i}")
-            zinb_maxiter = st.number_input("Max iterations", min_value=10, max_value=1000, value=500, step=10, key=f"zinb_maxiter_{i}")
-            zinb_disp = st.checkbox("Show optimizer output?", value=False, key=f"zinb_disp_{i}")
+            zinb_maxiter = st.number_input("Max iterations", min_value=500, max_value=1000000, value=500, step=10, key=f"zinb_maxiter_{i}")            
         # panel identifiers
         ent=time=mg=None; ms=[]
         if any(ESTIMATOR_MAP[e]["panel"] for e in ests):
@@ -136,7 +135,6 @@ for i in range(num_models):
             cfg["zinb_link"] = zinb_inflation
             cfg["zinb_method"] = zinb_method
             cfg["zinb_maxiter"] = zinb_maxiter
-            cfg["zinb_disp"] = zinb_disp
         configs.append(cfg)
 # Run models
 if st.button("Run Models"):
@@ -155,10 +153,7 @@ if st.button("Run Models"):
                         covargs['cov_kwds'] = {'groups': data[cfg['cl']]}                    
                     if est == "Zero-Inflated NB":
                         mod = ESTIMATOR_MAP[est]["func"](form, data, cfg)
-                        res = mod.fit(
-                        method=cfg.get("zinb_method", "bfgs"),
-                        maxiter=cfg.get("zinb_maxiter", 500),
-                        disp=cfg.get("zinb_disp", False))
+                        res = mod.fit(method=cfg.get("zinb_method", "bfgs"), maxiter=cfg.get("zinb_maxiter", 500), disp=1)
                     else:
                         mod = ESTIMATOR_MAP[est]["func"](form, data)
                         res = mod.fit(**covargs)
