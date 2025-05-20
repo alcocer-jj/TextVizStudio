@@ -109,7 +109,7 @@ def detect_encoding(file):
     raw = file.read()
     result = chardet.detect(raw)
     encoding = result["encoding"]
-    file.seek(0)  # Reset pointer after reading
+    file.seek(0)
     return encoding
 
 # Descriptive Statistics & Exploratory Analysis
