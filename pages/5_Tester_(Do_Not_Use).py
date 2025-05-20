@@ -270,10 +270,10 @@ if st.button("Run Models"):
         raw_models = [r for i, r in enumerate(results.values()) if not configs[i].get("exp_output", False)]
         if len(raw_models) > 0:
             st.subheader("Results Table")
-            html = Stargazer(raw_models).render_html()
+            #html = Stargazer(raw_models).render_html()
+            #st.components.v1.html(html, height=500, scrolling=True)
             st.markdown(
-                f"""
-                <iframe srcdoc="{html.replace('"', '&quot;')}" width="100%" height="auto" style="border:none;" onload="this.style.height=this.contentWindow.document.body.scrollHeight + 'px';"></iframe>
-                """,
+                "<style>div[data-testid='stMarkdownContainer'] table { width: auto !important; }</style>",
                 unsafe_allow_html=True)
+            st.markdown(html, unsafe_allow_html=True)
             st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
