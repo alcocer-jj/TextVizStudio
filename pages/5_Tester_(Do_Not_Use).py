@@ -130,7 +130,14 @@ for i in range(num_models):
         se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}")
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")
-        configs.append({"dv":dv,"ivs":ivs,"ests":ests,"ent":ent,"time":time,"mg":mg,"ms":ms,"se":se_type,"cl":cl,"zinb_vars":zinb_infl_vars,"zinb_link":zinb_inflation,"zinb_method":zinb_method,"zinb_maxiter":zinb_maxiter,"zinb_disp":zinb_disp})
+        cfg = {"dv": dv,"ivs": ivs,"ests": ests,"ent": ent,"time": time,"mg": mg,"ms": ms,"se": se_type,"cl": cl}
+        if "Zero-Inflated NB" in ests:
+            cfg["zinb_vars"] = zinb_infl_vars
+            cfg["zinb_link"] = zinb_inflation
+            cfg["zinb_method"] = zinb_method
+            cfg["zinb_maxiter"] = zinb_maxiter
+            cfg["zinb_disp"] = zinb_disp
+        configs.append(cfg)
 # Run models
 if st.button("Run Models"):
     results={}
