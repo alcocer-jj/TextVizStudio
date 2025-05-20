@@ -38,7 +38,13 @@ ESTIMATOR_MAP = {
     "Poisson":           {"func": lambda f,df: count.Poisson.from_formula(f,df),                "panel": False, "mixed": False},
     "Negative Binomial": {"func": lambda f,df: count.NegativeBinomialP.from_formula(f,df),        "panel": False, "mixed": False},
     "Zero-Inflated Poisson":      {"func": lambda f,df: count.ZeroInflatedPoisson.from_formula(f,df),      "panel": False, "mixed": False},
-    "Zero-Inflated NB": {"func": lambda f, df: count.ZeroInflatedNegativeBinomialP.from_formula(formula=f, data=df, exog_infl=df[[c.strip() for c in f.split('~')[1].split('+')]], inflation='logit', p=1), "panel": False, "mixed": False},
+    "Zero-Inflated NB": {
+        "func": lambda f, df, cfg: count.ZeroInflatedNegativeBinomialP.from_formula(
+            formula=f,
+            data=df,
+            exog_infl=df[cfg["zinb_vars"]] if cfg.get("zinb_vars") else None,
+            inflation=cfg.get("zinb_link", "logit"),
+            p=1), "panel": False, "mixed": False},
     "Ordered Logit":  {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="logit"), "panel": False, "mixed": False},
     "Ordered Probit": {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="probit"),"panel": False, "mixed": False},
     # Panel & mixed
@@ -97,6 +103,13 @@ for i in range(num_models):
                 if term not in ivs: ivs.append(term)
         # estimator selection
         ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
+        # ZINB-specific options
+        zinb_infl_vars = []
+        zinb_inflation = "logit"
+        if "Zero-Inflated NB" in ests:
+            st.markdown("**Zero-Inflation Settings**")
+            zinb_infl_vars = st.multiselect("Zero-inflation variables", [c for c in data.columns if c != dv], key=f"zinb_vars_{i}")
+            zinb_inflation = st.selectbox("Inflation link function", ["logit", "probit"], key=f"zinb_link_{i}")
         # panel identifiers
         ent=time=mg=None; ms=[]
         if any(ESTIMATOR_MAP[e]["panel"] for e in ests):
@@ -114,7 +127,7 @@ for i in range(num_models):
         se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}")
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")
-        configs.append({"dv":dv,"ivs":ivs,"ests":ests,"ent":ent,"time":time,"mg":mg,"ms":ms,"se":se_type,"cl":cl})
+        configs.append({"dv":dv,"ivs":ivs,"ests":ests,"ent":ent,"time":time,"mg":mg,"ms":ms,"se":se_type,"cl":cl,"zinb_vars": zinb_infl_vars,"zinb_link": zinb_inflation})
 
 # Run models
 if st.button("Run Models"):
@@ -125,17 +138,20 @@ if st.button("Run Models"):
         panel_cov=PANEL_SE.get(cfg['se'],{})
         mixed_cov=MIXED_SE.get(cfg['se'],{})
         for est in cfg['ests']:
-            key=f"Model{idx}_{est.replace(' ','')}"
+            key=f"Model{idx}_{est.replace(' ','')}"                        
             try:
                 if ESTIMATOR_MAP[est]["func"]:
-                    # statsmodels families
-                    mod=ESTIMATOR_MAP[est]["func"](form,data)
-                    covargs=stats_cov.copy()
-                    if cfg['se']=="Clustered": covargs['cov_kwds']={'groups':data[cfg['cl']]}
+                    covargs = stats_cov.copy()
+                    if cfg['se'] == "Clustered":
+                        covargs['cov_kwds'] = {'groups': data[cfg['cl']]}
+
                     if est == "Zero-Inflated NB":
+                        # Pass cfg to the constructor
+                        mod = ESTIMATOR_MAP[est]["func"](form, data, cfg)
                         res = mod.fit(method='bfgs', maxiter=500, disp=0)
                     else:
-                        res = mod.fit(**covargs)
+                        mod = ESTIMATOR_MAP[est]["func"](form, data)
+                        res = mod.fit(**covargs) 
                 elif ESTIMATOR_MAP[est]["panel"]:
                     panel_df=data.set_index([cfg['ent'],cfg['time']])
                     y=panel_df[cfg['dv']]; X=panel_df[cfg['ivs']]
