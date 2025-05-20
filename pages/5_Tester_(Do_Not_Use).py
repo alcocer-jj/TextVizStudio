@@ -96,7 +96,7 @@ if uploaded:
     except Exception as e:
         st.error(f"Failed to read the CSV file: {e}")
 
-st.subheader("Data Preview"); st.dataframe(data.head(5))
+    st.subheader("Data Preview"); st.dataframe(data.head(5))
 
 # Model configuration
 st.subheader("Model Configurations")
