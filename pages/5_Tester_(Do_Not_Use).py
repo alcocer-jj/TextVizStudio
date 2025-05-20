@@ -70,6 +70,10 @@ for est, v in ESTIMATOR_MAP.items():
     else:
         SUPPORTED_SE[est] = {"Standard"}
 
+@st.cache_data
+def render_stargazer(models):
+    return Stargazer(models).render_html(), Stargazer(models).render_latex()
+
 # --- Streamlit UI ---
 st.set_page_config(page_title="TBD", layout="wide")
 st.title("TBD")
@@ -269,8 +273,11 @@ if st.button("Run Models"):
     if any(not cfg.get("exp_output", False) for cfg in configs):
         raw_models = [r for i, r in enumerate(results.values()) if not configs[i].get("exp_output", False)]
         if len(raw_models) > 0:
-            st.subheader("Results Table")
-            html = Stargazer(raw_models).render_html()
-            st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
+            st.subheader("Results Table (Raw Coefficients Only)")
+            html, latex = render_stargazer(raw_models)
+            st.download_button(
+                "Download LaTeX Table",
+                data=latex,
+                file_name="regression_table.tex")
             st.components.v1.html(html, height=3000, scrolling=False)
             
