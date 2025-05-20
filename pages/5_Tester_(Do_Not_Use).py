@@ -6,10 +6,10 @@ from stargazer.stargazer import Stargazer
 from linearmodels.panel import PanelOLS, RandomEffects
 
 st.set_page_config(
-    page_title="No-Code Regression Lab",
+    page_title="TBD",
     layout="wide"
 )
-st.title("No-Code Regression Lab")
+st.title("TBD")
 
 # --- Data Upload and Preview ---
 uploaded = st.file_uploader("Upload your dataset (CSV)", type=["csv"])
