@@ -70,6 +70,11 @@ for est, v in ESTIMATOR_MAP.items():
     else:
         SUPPORTED_SE[est] = {"Standard"}
 
+# --- Models that support weights ---
+WEIGHTABLE_MODELS = [
+    "OLS", "LPM", "Logit", "Probit", "Poisson", "Negative Binomial", "Ordered Logit", "Ordered Probit"
+]
+
 # --- Streamlit UI ---
 st.set_page_config(page_title="TBD", layout="wide")
 st.title("TBD")
@@ -207,7 +212,19 @@ for i in range(num_models):
                 if term not in ivs: ivs.append(term)
         # estimator selection
         ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
-        # Additional fixed effects — disable if user selects "Fixed Effects" estimator
+        #  weights selection - only show the weights dropdown if at least one selected estimator supports weights
+        weightable = any(e in WEIGHTABLE_MODELS for e in ests)
+        if weightable:
+            weight_var = st.selectbox(
+                "Weights variable (optional)",
+                options=[None] + list(data.columns),
+                format_func=lambda x: x if x is not None else "(None)",
+                key=f"weights_{i}"
+            )
+        else:
+            # no weightable estimator selected, so skip weights input
+            weight_var = None  # ensures cfg entry exists with None        
+        # fixed effects — disable if user selects "Fixed Effects" estimator
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
             st.info("📝 Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
@@ -243,14 +260,27 @@ for i in range(num_models):
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")        
         exp_output = False
         if any(e in ["Logit", "Poisson", "Negative Binomial", "Zero-Inflated Poisson", "Zero-Inflated NB"] for e in ests):
-            exp_output = st.checkbox("Display exponentiated coefficients in output", key=f"exp_output_{i}")
-
-        cfg = {"dv": dv,"ivs": ivs,"ests": ests,"ent": ent,"time": time,"mg": mg,"ms": ms,"se": se_type,"cl": cl, "fe_vars": fe_vars}
+            exp_output = st.checkbox("Display exponentiated coefficients in output", key=f"exp_output_{i}")        
+        cfg = {
+            "dv": dv,
+            "ivs": ivs,
+            "ests": ests,
+            "weights": weight_var,
+            "ent": ent,
+            "time": time,
+            "mg": mg,
+            "ms": ms,
+            "se": se_type,
+            "cl": cl,
+            "fe_vars": fe_vars
+        }
         if "Zero-Inflated NB" in ests:
-            cfg["zinb_vars"] = zinb_infl_vars
-            cfg["zinb_link"] = zinb_inflation
-            cfg["zinb_method"] = zinb_method
-            cfg["zinb_maxiter"] = zinb_maxiter
+            cfg.update({
+                "zinb_vars": zinb_infl_vars,
+                "zinb_link": zinb_inflation,
+                "zinb_method": zinb_method,
+                "zinb_maxiter": zinb_maxiter
+            })
         if exp_output:
             cfg["exp_output"] = True
         configs.append(cfg)
