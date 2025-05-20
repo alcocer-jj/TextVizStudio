@@ -268,12 +268,30 @@ if st.button("Run Models"):
     # Stargazer for raw models only
     if any(not cfg.get("exp_output", False) for cfg in configs):
         raw_models = [r for i, r in enumerate(results.values()) if not configs[i].get("exp_output", False)]
-        if len(raw_models) > 0:
-            st.subheader("Results Table")
-            html = Stargazer(raw_models).render_html()
+        #if len(raw_models) > 0:
+         #   st.subheader("Results Table")
+          #  html = Stargazer(raw_models).render_html()
             #st.components.v1.html(html, height=500, scrolling=True)
-            st.markdown(
-                "<style>div[data-testid='stMarkdownContainer'] table { width: auto !important; }</style>",
-                unsafe_allow_html=True)
-            st.markdown(html, unsafe_allow_html=True)
+            #st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
+        if len(raw_models) > 0:
+            st.subheader("Results Table (Raw Coefficients Only)")
+
+            html = Stargazer(raw_models).render_html()
+
+            wrapped_html = f"""
+            <div id="stargazer-table-container">
+            {html}
+            </div>
+            <script>
+            const el = document.getElementById('stargazer-table-container');
+            const observer = new ResizeObserver(entries => {{
+                for (let entry of entries) {{
+                    window.parent.postMessage({{streamlitHeight: entry.contentRect.height}}, "*");
+                }}
+            }});
+            observer.observe(el);
+            </script>
+            """
+
+            st.components.v1.html(wrapped_html, height=100, scrolling=False)
             st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
