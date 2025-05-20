@@ -232,6 +232,7 @@ if st.button("Run Models"):
     # Display results
     exp_tables = []
     statsmods = [r for r in results.values() if hasattr(r, "params")]
+    exp_model_summaries = []
     for i, (name, res) in enumerate(results.items()):
         st.subheader(name)
         cfg_exp = configs[i].get("exp_output", False)
@@ -247,16 +248,25 @@ if st.button("Run Models"):
                 ci_upper = np.exp(coef + 1.96 * se)
                 exp_coef = np.exp(coef)
 
+                def stars(p):
+                    return '***' if p < 0.01 else '**' if p < 0.05 else '*' if p < 0.1 else ''
+
                 summary_df = pd.DataFrame({
                     "Variable": coef.index,
-                    "exp(coef)": exp_coef.values,
-                    "Std Err": se.values,
-                    "95% CI Lower": ci_lower.values,
-                    "95% CI Upper": ci_upper.values,
-                "P-value": pvals.values
-                })
-                st.dataframe(summary_df.set_index("Variable"))
-                exp_tables.append(summary_df.set_index("Variable"))
+                    f"Model {i+1}": [f"{c:.4f}{stars(p)}\n({s:.4f})" for c, s, p in zip(exp_coef, se, pvals)]
+                }).set_index("Variable")
+                exp_model_summaries.append(summary_df)
+
+                # Save table for LaTeX
+                latex_block = pd.DataFrame({
+                    "Variable": coef.index,
+                    "exp(coef)": [f"{c:.4f}{stars(p)}" for c, p in zip(exp_coef, pvals)],
+                    "Std Err": [f"({s:.4f})" for s in se],
+                    "CI Lower": ci_lower.round(4),
+                    "CI Upper": ci_upper.round(4),
+                    "P-value": pvals.round(4)
+                }).set_index("Variable")
+                exp_tables.append((f"Model {i+1}", latex_block))
 
             except Exception as e:
                 st.warning(f"Could not generate exponentiated output: {e}")
@@ -268,7 +278,7 @@ if st.button("Run Models"):
             txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
             st.code(txt)
 
-    # Display Stargazer only if exp_output not enabled
+    # Stargazer for raw models only
     if any(not cfg.get("exp_output", False) for cfg in configs):
         raw_models = [r for i, r in enumerate(results.values()) if not configs[i].get("exp_output", False)]
         if len(raw_models) > 0:
@@ -277,18 +287,18 @@ if st.button("Run Models"):
             st.components.v1.html(html, height=500, scrolling=True)
             st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
 
-    # Display custom HTML and LaTeX tables for exponentiated models
-    if exp_tables:
-        st.subheader("Exponentiated Results Table")
-        for i, df in enumerate(exp_tables):
-            st.markdown(f"**Model {i+1}**")
-            st.markdown(df.to_html(classes="exp-table", float_format="%.4f"), unsafe_allow_html=True)
+    # Custom Stargazer-style for exponentiated results
+    if exp_model_summaries:
+        st.subheader("Exponentiated Results (Styled Table)")
+        final_df = pd.concat(exp_model_summaries, axis=1)
+        st.markdown("<style>th, td { padding: 8px 16px; text-align: center; }</style>", unsafe_allow_html=True)
+        st.markdown(final_df.to_html(escape=False), unsafe_allow_html=True)
 
-        # Offer LaTeX download
+        # Create LaTeX string
         latex_string = ""
-        for i, df in enumerate(exp_tables):
-            latex_string += f"\\textbf{{Model {i+1}}}\\\\\n"
+        for label, df in exp_tables:
+            latex_string += f"\\textbf{{{label}}}\\\\\n"
             latex_string += df.to_latex(float_format="%.4f")
             latex_string += "\\\\\n"
 
-        st.download_button("Download Exponentiated LaTeX Table", latex_string, "exp_table.tex")
+        st.download_button("Download Exponentiated LaTeX Table", latex_string, "exp_output_table.tex")
