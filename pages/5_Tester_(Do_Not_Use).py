@@ -30,7 +30,6 @@ MIXED_SE = {
 
 # --- Estimator registry ---
 ESTIMATOR_MAP = {
-    # Linear & discrete/count/ordered
     "OLS":    {"func": lambda f,df: smf.ols(f,df),                    "panel": False, "mixed": False},
     "LPM":    {"func": lambda f,df: smf.ols(f,df),                    "panel": False, "mixed": False},
     "Logit":  {"func": lambda f,df: discrete.Logit.from_formula(f,df),"panel": False, "mixed": False},
@@ -48,14 +47,9 @@ ESTIMATOR_MAP = {
             p=1), "panel": False, "mixed": False},
     "Ordered Logit":  {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="logit"), "panel": False, "mixed": False},
     "Ordered Probit": {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="probit"),"panel": False, "mixed": False},
-    # Panel & mixed
     "Fixed Effects":  {"func": None, "panel": True,  "mixed": False},
     "Random Effects": {"func": None, "panel": True,  "mixed": False},
     "Mixed Effects":  {"func": None, "panel": False, "mixed": True},
-    # Placeholders
-    #"Tobit":    {"func": None, "panel": False, "mixed": False},
-    #"Hurdle":   {"func": None, "panel": False, "mixed": False},
-    #"Heckman":  {"func": None, "panel": True,  "mixed": False}
 }
 
 # --- Supported SE types per estimator ---
@@ -87,7 +81,6 @@ def detect_encoding(file):
     return encoding
 
 # Data upload
-st.subheader("Import Data")
 uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
 if uploaded:
     try:
@@ -101,7 +94,6 @@ if uploaded:
         st.subheader("Data Preview"); st.dataframe(data.head(5))
     except Exception as e:
         st.error(f"Failed to read the CSV file: {e}")
-
 if 'data' not in locals():
     st.stop()
 
@@ -212,7 +204,7 @@ for i in range(num_models):
                 if term not in ivs: ivs.append(term)
         # estimator selection
         ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
-        #  weights selection - only show the weights dropdown if at least one selected estimator supports weights
+        # Weights dropdown (conditional)
         weightable = any(e in WEIGHTABLE_MODELS for e in ests)
         if weightable:
             weight_var = st.selectbox(
@@ -222,9 +214,8 @@ for i in range(num_models):
                 key=f"weights_{i}"
             )
         else:
-            # no weightable estimator selected, so skip weights input
-            weight_var = None  # ensures cfg entry exists with None        
-        # fixed effects — disable if user selects "Fixed Effects" estimator
+            weight_var = None
+        # Additional fixed effects
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
             st.info("📝 Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
@@ -250,127 +241,97 @@ for i in range(num_models):
             mg=st.selectbox("Grouping variable", data.columns, key=f"mg_{i}")
             ms=st.multiselect("Random slopes", ivs, key=f"ms_{i}")
         # dynamic SE options
-        if any(e in ["Zero-Inflated NB", "Zero-Inflated Poisson"] for e in ests):
-            se_opts = ["Standard"]
+        if any(e in ["Zero-Inflated NB","Zero-Inflated Poisson"] for e in ests):
+            se_opts=["Standard"]
         else:
-            common_sets = [SUPPORTED_SE[e] for e in ests]
-            se_opts = sorted(set.intersection(*common_sets)) if common_sets else []
-        se_type = st.selectbox("Standard errors", se_opts, key=f"se_{i}")
+            common_sets=[SUPPORTED_SE[e] for e in ests]
+            se_opts=sorted(set.intersection(*common_sets)) if common_sets else []
+        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}")
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")        
-        exp_output = False
-        if any(e in ["Logit", "Poisson", "Negative Binomial", "Zero-Inflated Poisson", "Zero-Inflated NB"] for e in ests):
-            exp_output = st.checkbox("Display exponentiated coefficients in output", key=f"exp_output_{i}")        
-        cfg = {
-            "dv": dv,
-            "ivs": ivs,
-            "ests": ests,
-            "weights": weight_var,
-            "ent": ent,
-            "time": time,
-            "mg": mg,
-            "ms": ms,
-            "se": se_type,
-            "cl": cl,
-            "fe_vars": fe_vars
+        exp_output=False
+        if any(e in ["Logit","Poisson","Negative Binomial","Zero-Inflated Poisson","Zero-Inflated NB"] for e in ests):
+            exp_output=st.checkbox("Display exponentiated coefficients in output", key=f"exp_output_{i}")
+
+        cfg={
+            "dv":dv,
+            "ivs":ivs,
+            "ests":ests,
+            "weights":weight_var,
+            "ent":ent,
+            "time":time,
+            "mg":mg,
+            "ms":ms,
+            "se":se_type,
+            "cl":cl,
+            "fe_vars":fe_vars
         }
         if "Zero-Inflated NB" in ests:
-            cfg.update({
-                "zinb_vars": zinb_infl_vars,
-                "zinb_link": zinb_inflation,
-                "zinb_method": zinb_method,
-                "zinb_maxiter": zinb_maxiter
-            })
-        if exp_output:
-            cfg["exp_output"] = True
+            cfg.update({"zinb_vars":zinb_infl_vars,"zinb_link":zinb_inflation,"zinb_method":zinb_method,"zinb_maxiter":zinb_maxiter})
+        if exp_output: cfg["exp_output"]=True
         configs.append(cfg)
 
 # Run models
 if st.button("Run Models"):
-    results = {}
-    for idx, cfg in enumerate(configs, 1):
-        # Create isolated copy for safe manipulation
-        model_data = data.copy()
-
-        # Build formula and inject fixed effects via dummies, when applicable
-        fe_dummies = []
+    results={}
+    for idx,cfg in enumerate(configs,1):
+        model_data=data.copy()
+        # fixed effects dummies
+        fe_dummies=[]
         if cfg.get("fe_vars") and "Fixed Effects" not in cfg["ests"]:
             for fe in cfg["fe_vars"]:
-                dummies = pd.get_dummies(model_data[fe], prefix=fe, drop_first=True)
-                model_data = model_data.join(dummies)
+                dummies=pd.get_dummies(model_data[fe],prefix=fe,drop_first=True)
+                model_data=model_data.join(dummies)
                 fe_dummies.extend(dummies.columns)
-
-            if len(fe_dummies) > 100:
-                st.warning("⚠️ Large number of dummy variables may cause memory or convergence issues.")
-
-        rhs = cfg["ivs"] + fe_dummies
-        form = f"{cfg['dv']} ~ {' + '.join(rhs)}"
-
-        # Standard error mapping
-        stats_cov = COMMON_STATS_SE.get(cfg["se"], {})
-        panel_cov = PANEL_SE.get(cfg["se"], {})
-        mixed_cov = MIXED_SE.get(cfg["se"], {})
-
-        for est in cfg["ests"]:
-            key = f"Model{idx}_{est.replace(' ', '')}"
+            if len(fe_dummies)>100: st.warning("⚠️ Large number of dummy variables may cause memory or convergence issues.")
+        rhs=cfg["ivs"]+fe_dummies
+        form=f"{cfg['dv']} ~ {' + '.join(rhs)}"
+        stats_cov=COMMON_STATS_SE.get(cfg["se"],{})
+        panel_cov=PANEL_SE.get(cfg["se"],{})
+        mixed_cov=MIXED_SE.get(cfg["se"],{})
+        # weights Series
+        weights=model_data[cfg['weights']] if cfg.get('weights') else None
+        for est in cfg['ests']:
+            key=f"Model{idx}_{est.replace(' ','')}"
             try:
-                if ESTIMATOR_MAP[est]["func"]:
-                    covargs = stats_cov.copy()
-                    if cfg["se"] == "Clustered":
-                        covargs["cov_kwds"] = {"groups": model_data[cfg["cl"]]}
-
-                    if est == "Zero-Inflated NB":
-                        mod = ESTIMATOR_MAP[est]["func"](form, model_data, cfg)
-                        res = mod.fit(
-                            method=cfg.get("zinb_method", "bfgs"),
-                            maxiter=cfg.get("zinb_maxiter", 500),
-                            disp=1
-                        )
+                if ESTIMATOR_MAP[est]['func']:
+                    covargs=stats_cov.copy()
+                    if cfg['se']=='Clustered': covargs['cov_kwds']={'groups':model_data[cfg['cl']]}
+                    # conditional weights
+                    if est in WEIGHTABLE_MODELS and weights is not None:
+                        mod=ESTIMATOR_MAP[est]['func'](form,model_data,weights=weights)
                     else:
-                        mod = ESTIMATOR_MAP[est]["func"](form, model_data)
-                        res = mod.fit(**covargs)
-
-                elif ESTIMATOR_MAP[est]["panel"]:
-                    panel_df = model_data.set_index([cfg["ent"], cfg["time"]])
-                    y = panel_df[cfg["dv"]]
-                    X = panel_df[cfg["ivs"]]
-                    if est == "Fixed Effects":
-                        mod = PanelOLS(y, X, entity_effects=True)
+                        mod=ESTIMATOR_MAP[est]['func'](form,model_data)
+                    if est=="Zero-Inflated NB":
+                        res=mod.fit(method=cfg.get("zinb_method","bfgs"),maxiter=cfg.get("zinb_maxiter",500),disp=1)
                     else:
-                        mod = RandomEffects(y, X)
-
-                    pargs = panel_cov.copy()
-                    if cfg["se"] == "Clustered":
-                        if cfg["cl"] == cfg["ent"]:
-                            pargs["cov_kwds"] = {"cluster_entity": True}
-                        else:
-                            pargs["cov_kwds"] = {"cluster_time": True}
-                    res = mod.fit(**pargs)
-
-                elif ESTIMATOR_MAP[est]["mixed"]:
-                    rf = None
-                    if cfg["ms"]:
-                        rf = "~ " + " + ".join(cfg["ms"])
-                    mod = MixedLM(form, model_data, groups=model_data[cfg["mg"]], re_formula=rf)
-                    res = mod.fit(**mixed_cov)
-
+                        res=mod.fit(**covargs)
+                elif ESTIMATOR_MAP[est]['panel']:
+                    panel_df=model_data.set_index([cfg['ent'],cfg['time']])
+                    y=panel_df[cfg['dv']]
+                    X=panel_df[cfg['ivs']]
+                    mod=PanelOLS(y,X,entity_effects=True) if est=="Fixed Effects" else RandomEffects(y,X)
+                    pargs=panel_cov.copy()
+                    if cfg['se']=='Clustered':
+                        pargs['cov_kwds']={'cluster_entity':True} if cfg['cl']==cfg['ent'] else {'cluster_time':True}
+                    res=mod.fit(**pargs)
+                elif ESTIMATOR_MAP[est]['mixed']:
+                    rf="~ " + " + ".join(cfg['ms']) if cfg['ms'] else None
+                    mod=MixedLM(form,model_data,groups=model_data[cfg['mg']],re_formula=rf)
+                    res=mod.fit(**mixed_cov)
                 else:
                     raise NotImplementedError(f"{est} not supported yet")
-
-                results[key] = res
-
+                results[key]=res
             except Exception as e:
                 st.error(f"{est} failed: {e}")
-
-    # Display results
-    exp_tables = []
-    statsmods = [r for r in results.values() if hasattr(r, "params")]
-    for i, (name, res) in enumerate(results.items()):
+    # display code unchanged
+    exp_tables=[]
+    statsmods=[r for r in results.values() if hasattr(r,'params')]
+    for i,(name,res) in enumerate(results.items()):
         st.subheader(name)
-        cfg_exp = configs[i].get("exp_output", False)
-        model_type = str(type(res.model))
-        supports_exp = any(k in model_type for k in ["Logit", "Poisson", "NegativeBinomial", "ZeroInflated"])
-
+        cfg_exp=configs[i].get('exp_output',False)
+        model_type=str(type(res.model))
+        supports_exp=any(k in model_type for k in ["Logit","Poisson","NegativeBinomial","ZeroInflated"])
         if cfg_exp and supports_exp:
             try:
                 coef = res.params
@@ -409,4 +370,4 @@ if st.button("Run Models"):
                 label="Download LaTeX Table",
                 data=latex,
                 file_name="regression_table.tex")
-            st.components.v1.html(html, height=3000, scrolling=False)
+            st.components.v1.html(html, height=3000, scrolling=False) 
