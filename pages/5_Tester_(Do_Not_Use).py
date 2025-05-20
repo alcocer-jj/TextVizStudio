@@ -144,67 +144,94 @@ for i in range(num_models):
             cfg["zinb_method"] = zinb_method
             cfg["zinb_maxiter"] = zinb_maxiter
         configs.append(cfg)
+
 # Run models
 if st.button("Run Models"):
-    results={}
-    for idx,cfg in enumerate(configs,1):
+    results = {}
+    for idx, cfg in enumerate(configs, 1):
+        # Create isolated copy for safe manipulation
+        model_data = data.copy()
+
         # Build formula and inject fixed effects via dummies, when applicable
         fe_dummies = []
         if cfg.get("fe_vars") and "Fixed Effects" not in cfg["ests"]:
             for fe in cfg["fe_vars"]:
-                dummies = pd.get_dummies(data[fe], prefix=fe, drop_first=True)
-                data = data.join(dummies)
+                dummies = pd.get_dummies(model_data[fe], prefix=fe, drop_first=True)
+                model_data = model_data.join(dummies)
                 fe_dummies.extend(dummies.columns)
 
             if len(fe_dummies) > 100:
                 st.warning("⚠️ Large number of dummy variables may cause memory or convergence issues.")
+
         rhs = cfg["ivs"] + fe_dummies
         form = f"{cfg['dv']} ~ {' + '.join(rhs)}"
-        stats_cov=COMMON_STATS_SE.get(cfg['se'],{})
-        panel_cov=PANEL_SE.get(cfg['se'],{})
-        mixed_cov=MIXED_SE.get(cfg['se'],{})
-        for est in cfg['ests']:
-            key=f"Model{idx}_{est.replace(' ','')}"                        
+
+        # Standard error mapping
+        stats_cov = COMMON_STATS_SE.get(cfg["se"], {})
+        panel_cov = PANEL_SE.get(cfg["se"], {})
+        mixed_cov = MIXED_SE.get(cfg["se"], {})
+
+        for est in cfg["ests"]:
+            key = f"Model{idx}_{est.replace(' ', '')}"
             try:
                 if ESTIMATOR_MAP[est]["func"]:
                     covargs = stats_cov.copy()
-                    if cfg['se'] == "Clustered":
-                        covargs['cov_kwds'] = {'groups': data[cfg['cl']]}                    
+                    if cfg["se"] == "Clustered":
+                        covargs["cov_kwds"] = {"groups": model_data[cfg["cl"]]}
+
                     if est == "Zero-Inflated NB":
-                        mod = ESTIMATOR_MAP[est]["func"](form, data, cfg)
-                        res = mod.fit(method=cfg.get("zinb_method", "bfgs"), maxiter=cfg.get("zinb_maxiter", 500), disp=1)
+                        mod = ESTIMATOR_MAP[est]["func"](form, model_data, cfg)
+                        res = mod.fit(
+                            method=cfg.get("zinb_method", "bfgs"),
+                            maxiter=cfg.get("zinb_maxiter", 500),
+                            disp=1
+                        )
                     else:
-                        mod = ESTIMATOR_MAP[est]["func"](form, data)
+                        mod = ESTIMATOR_MAP[est]["func"](form, model_data)
                         res = mod.fit(**covargs)
+
                 elif ESTIMATOR_MAP[est]["panel"]:
-                    panel_df=data.set_index([cfg['ent'],cfg['time']])
-                    y=panel_df[cfg['dv']]; X=panel_df[cfg['ivs']]
-                    if est=="Fixed Effects": mod=PanelOLS(y,X,entity_effects=True)
-                    else: mod=RandomEffects(y,X)
-                    pargs=panel_cov.copy()
-                    if cfg['se']=="Clustered":
-                        if cfg['cl']==cfg['ent']: pargs['cov_kwds']={'cluster_entity':True}
-                        else: pargs['cov_kwds']={'cluster_time':True}
-                    res=mod.fit(**pargs)
+                    panel_df = model_data.set_index([cfg["ent"], cfg["time"]])
+                    y = panel_df[cfg["dv"]]
+                    X = panel_df[cfg["ivs"]]
+                    if est == "Fixed Effects":
+                        mod = PanelOLS(y, X, entity_effects=True)
+                    else:
+                        mod = RandomEffects(y, X)
+
+                    pargs = panel_cov.copy()
+                    if cfg["se"] == "Clustered":
+                        if cfg["cl"] == cfg["ent"]:
+                            pargs["cov_kwds"] = {"cluster_entity": True}
+                        else:
+                            pargs["cov_kwds"] = {"cluster_time": True}
+                    res = mod.fit(**pargs)
+
                 elif ESTIMATOR_MAP[est]["mixed"]:
-                    rf=None
-                    if cfg['ms']: rf="~ "+" + ".join(cfg['ms'])
-                    mod=MixedLM(form,data,groups=data[cfg['mg']],re_formula=rf)
-                    res=mod.fit(**mixed_cov)
+                    rf = None
+                    if cfg["ms"]:
+                        rf = "~ " + " + ".join(cfg["ms"])
+                    mod = MixedLM(form, model_data, groups=model_data[cfg["mg"]], re_formula=rf)
+                    res = mod.fit(**mixed_cov)
+
                 else:
                     raise NotImplementedError(f"{est} not supported yet")
-                results[key]=res
+
+                results[key] = res
+
             except Exception as e:
                 st.error(f"{est} failed: {e}")
+
     # Display results
-    statsmods=[r for r in results.values() if hasattr(r,'params')]
-    for name,res in results.items():
+    statsmods = [r for r in results.values() if hasattr(r, "params")]
+    for name, res in results.items():
         st.subheader(name)
-        summ=res.summary() if callable(res.summary) else res.summary
-        txt=summ.as_text() if hasattr(summ,'as_text') else str(summ)
+        summ = res.summary() if callable(res.summary) else res.summary
+        txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
         st.code(txt)
-    if len(statsmods)>0:
-        st.subheader("Combined Results Table")
-        html=Stargazer(statsmods).render_html()
+
+    if len(statsmods) > 0:
+        st.subheader("Results Table")
+        html = Stargazer(statsmods).render_html()
         st.components.v1.html(html, height=500, scrolling=True)
-        st.download_button("Download LaTeX Table",Stargazer(statsmods).render_latex(),"regression_table.tex")
+        st.download_button("Download LaTeX Table", Stargazer(statsmods).render_latex(), "regression_table.tex")
