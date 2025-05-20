@@ -124,9 +124,12 @@ for i in range(num_models):
             mg=st.selectbox("Grouping variable", data.columns, key=f"mg_{i}")
             ms=st.multiselect("Random slopes", ivs, key=f"ms_{i}")
         # dynamic SE options
-        common_sets=[SUPPORTED_SE[e] for e in ests]
-        se_opts=sorted(set.intersection(*common_sets)) if common_sets else []
-        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}")
+        if any(e in ["Zero-Inflated NB", "Zero-Inflated Poisson"] for e in ests):
+            se_opts = ["Standard"]
+        else:
+            common_sets = [SUPPORTED_SE[e] for e in ests]
+            se_opts = sorted(set.intersection(*common_sets)) if common_sets else []
+        se_type = st.selectbox("Standard errors", se_opts, key=f"se_{i}")
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")
         cfg = {"dv": dv,"ivs": ivs,"ests": ests,"ent": ent,"time": time,"mg": mg,"ms": ms,"se": se_type,"cl": cl}
