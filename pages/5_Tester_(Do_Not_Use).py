@@ -30,26 +30,60 @@ MIXED_SE = {
 
 # --- Estimator registry ---
 ESTIMATOR_MAP = {
-    "OLS":    {"func": lambda f,df: smf.ols(f,df),                    "panel": False, "mixed": False},
-    "LPM":    {"func": lambda f,df: smf.ols(f,df),                    "panel": False, "mixed": False},
-    "Logit":  {"func": lambda f,df: discrete.Logit.from_formula(f,df),"panel": False, "mixed": False},
-    "Probit": {"func": lambda f,df: discrete.Probit.from_formula(f,df),"panel": False, "mixed": False},
-    "Multinomial Logit": {"func": lambda f,df: discrete.MNLogit.from_formula(f,df),"panel": False, "mixed": False},
-    "Poisson":           {"func": lambda f,df: count.Poisson.from_formula(f,df),                "panel": False, "mixed": False},
-    "Negative Binomial": {"func": lambda f,df: count.NegativeBinomialP.from_formula(f,df),        "panel": False, "mixed": False},
-    "Zero-Inflated Poisson":      {"func": lambda f,df: count.ZeroInflatedPoisson.from_formula(f,df),      "panel": False, "mixed": False},
+    "OLS": {
+        "func": (lambda f, df, weights=None: smf.wls(f, df, weights=weights)
+                 if weights is not None else smf.ols(f, df)),
+        "panel": False, "mixed": False
+    },
+    "LPM": {
+        "func": (lambda f, df, weights=None: smf.wls(f, df, weights=weights)
+                 if weights is not None else smf.ols(f, df)),
+        "panel": False, "mixed": False
+    },
+    "Logit": {
+        "func": (lambda f, df, weights=None: discrete.Logit.from_formula(f, df)),
+        "panel": False, "mixed": False
+    },
+    "Probit": {
+        "func": (lambda f, df, weights=None: discrete.Probit.from_formula(f, df)),
+        "panel": False, "mixed": False
+    },
+    "Multinomial Logit": {
+        "func": (lambda f, df, weights=None: discrete.MNLogit.from_formula(f, df)),
+        "panel": False, "mixed": False
+    },
+    "Poisson": {
+        "func": (lambda f, df, weights=None: count.Poisson.from_formula(f, df)),
+        "panel": False, "mixed": False
+    },
+    "Negative Binomial": {
+        "func": (lambda f, df, weights=None: count.NegativeBinomialP.from_formula(f, df)),
+        "panel": False, "mixed": False
+    },
+    "Zero-Inflated Poisson": {
+        "func": (lambda f, df, weights=None: count.ZeroInflatedPoisson.from_formula(f, df)),
+        "panel": False, "mixed": False
+    },
     "Zero-Inflated NB": {
-        "func": lambda f, df, cfg: count.ZeroInflatedNegativeBinomialP.from_formula(
+        "func": (lambda f, df, weights=None: count.ZeroInflatedNegativeBinomialP.from_formula(
             formula=f,
             data=df,
-            exog_infl=df[cfg["zinb_vars"]] if cfg.get("zinb_vars") else None,
-            inflation=cfg.get("zinb_link", "logit"),
-            p=1), "panel": False, "mixed": False},
-    "Ordered Logit":  {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="logit"), "panel": False, "mixed": False},
-    "Ordered Probit": {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="probit"),"panel": False, "mixed": False},
-    "Fixed Effects":  {"func": None, "panel": True,  "mixed": False},
-    "Random Effects": {"func": None, "panel": True,  "mixed": False},
-    "Mixed Effects":  {"func": None, "panel": False, "mixed": True},
+            exog_infl=df[weights] if weights in df.columns else None,
+            inflation="logit",
+            p=1)),
+        "panel": False, "mixed": False
+    },
+    "Ordered Logit": {
+        "func": (lambda f, df, weights=None: OrderedModel.from_formula(f, df, distr="logit")),
+        "panel": False, "mixed": False
+    },
+    "Ordered Probit": {
+        "func": (lambda f, df, weights=None: OrderedModel.from_formula(f, df, distr="probit")),
+        "panel": False, "mixed": False
+    },
+    "Fixed Effects":    {"func": None, "panel": True,  "mixed": False},
+    "Random Effects":   {"func": None, "panel": True,  "mixed": False},
+    "Mixed Effects":    {"func": None, "panel": False, "mixed": True}
 }
 
 # --- Supported SE types per estimator ---
@@ -65,9 +99,8 @@ for est, v in ESTIMATOR_MAP.items():
         SUPPORTED_SE[est] = {"Standard"}
 
 # --- Models that support weights ---
-WEIGHTABLE_MODELS = [
-    "OLS", "LPM", "Logit", "Probit", "Poisson", "Negative Binomial", "Ordered Logit", "Ordered Probit"
-]
+WEIGHTABLE_MODELS = [key for key, val in ESTIMATOR_MAP.items() if val['func'] is not None]
+
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="TBD", layout="wide")
