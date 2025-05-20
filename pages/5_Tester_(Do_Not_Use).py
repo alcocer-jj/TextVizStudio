@@ -269,7 +269,11 @@ if st.button("Run Models"):
     if any(not cfg.get("exp_output", False) for cfg in configs):
         raw_models = [r for i, r in enumerate(results.values()) if not configs[i].get("exp_output", False)]
         if len(raw_models) > 0:
-            st.subheader("Results Table (Raw Coefficients Only)")
+            st.subheader("Results Table")
             html = Stargazer(raw_models).render_html()
-            st.components.v1.html(html, height=500, scrolling=True)
+            st.markdown(
+                f"""
+                <iframe srcdoc="{html.replace('"', '&quot;')}" width="100%" height="auto" style="border:none;" onload="this.style.height=this.contentWindow.document.body.scrollHeight + 'px';"></iframe>
+                """,
+                unsafe_allow_html=True)
             st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
