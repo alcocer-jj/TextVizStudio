@@ -9,7 +9,6 @@ from statsmodels.regression.mixed_linear_model import MixedLM
 from linearmodels.panel import PanelOLS, RandomEffects
 from stargazer.stargazer import Stargazer
 import numpy as np
-from types import SimpleNamespace
 
 # --- Standard error mappings ---
 COMMON_STATS_SE = {
@@ -231,6 +230,7 @@ if st.button("Run Models"):
                 st.error(f"{est} failed: {e}")
 
     # Display results
+    exp_tables = []
     statsmods = [r for r in results.values() if hasattr(r, "params")]
     for i, (name, res) in enumerate(results.items()):
         st.subheader(name)
@@ -240,30 +240,55 @@ if st.button("Run Models"):
 
         if cfg_exp and supports_exp:
             try:
-                exp_params = np.exp(res.params)
-                exp_bse = np.exp(res.bse)
-                exp_table = pd.DataFrame({
-                    "exp(coef)": exp_params,
-                    "exp(std err)": exp_bse
-                })
-                st.dataframe(exp_table)
+                coef = res.params
+                se = res.bse
+                pvals = res.pvalues
+                ci_lower = np.exp(coef - 1.96 * se)
+                ci_upper = np.exp(coef + 1.96 * se)
+                exp_coef = np.exp(coef)
 
-                patched = SimpleNamespace(**vars(res))
-                patched.params = exp_params
-                patched.bse = exp_bse
-                statsmods.append(patched)
+                summary_df = pd.DataFrame({
+                    "Variable": coef.index,
+                    "exp(coef)": exp_coef.values,
+                    "Std Err": se.values,
+                    "95% CI Lower": ci_lower.values,
+                    "95% CI Upper": ci_upper.values,
+                "P-value": pvals.values
+                })
+                st.dataframe(summary_df.set_index("Variable"))
+                exp_tables.append(summary_df.set_index("Variable"))
 
             except Exception as e:
-                st.warning(f"Could not exponentiate coefficients: {e}")
-                statsmods.append(res)
+                st.warning(f"Could not generate exponentiated output: {e}")
+                summ = res.summary() if callable(res.summary) else res.summary
+                txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
+                st.code(txt)
         else:
             summ = res.summary() if callable(res.summary) else res.summary
             txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
             st.code(txt)
-            statsmods.append(res)
 
-    if len(statsmods) > 0:
-        st.subheader("Results Table")
-        html = Stargazer(statsmods).render_html()
-        st.components.v1.html(html, height=500, scrolling=True)
-        st.download_button("Download LaTeX Table", Stargazer(statsmods).render_latex(), "regression_table.tex")
+    # Display Stargazer only if exp_output not enabled
+    if any(not cfg.get("exp_output", False) for cfg in configs):
+        raw_models = [r for i, r in enumerate(results.values()) if not configs[i].get("exp_output", False)]
+        if len(raw_models) > 0:
+            st.subheader("Results Table (Raw Coefficients Only)")
+            html = Stargazer(raw_models).render_html()
+            st.components.v1.html(html, height=500, scrolling=True)
+            st.download_button("Download LaTeX Table", Stargazer(raw_models).render_latex(), "regression_table.tex")
+
+    # Display custom HTML and LaTeX tables for exponentiated models
+    if exp_tables:
+        st.subheader("Exponentiated Results Table")
+        for i, df in enumerate(exp_tables):
+            st.markdown(f"**Model {i+1}**")
+            st.markdown(df.to_html(classes="exp-table", float_format="%.4f"), unsafe_allow_html=True)
+
+        # Offer LaTeX download
+        latex_string = ""
+        for i, df in enumerate(exp_tables):
+            latex_string += f"\\textbf{{Model {i+1}}}\\\\\n"
+            latex_string += df.to_latex(float_format="%.4f")
+            latex_string += "\\\\\n"
+
+        st.download_button("Download Exponentiated LaTeX Table", latex_string, "exp_table.tex")
