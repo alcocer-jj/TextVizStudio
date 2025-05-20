@@ -8,6 +8,8 @@ from statsmodels.miscmodels.ordinal_model import OrderedModel
 from statsmodels.regression.mixed_linear_model import MixedLM
 from linearmodels.panel import PanelOLS, RandomEffects
 from stargazer.stargazer import Stargazer
+import numpy as np
+from types import SimpleNamespace
 
 # --- Standard error mappings ---
 COMMON_STATS_SE = {
@@ -136,13 +138,19 @@ for i in range(num_models):
             se_opts = sorted(set.intersection(*common_sets)) if common_sets else []
         se_type = st.selectbox("Standard errors", se_opts, key=f"se_{i}")
         cl=None
-        if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")
+        if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")        
+        exp_output = False
+        if any(e in ["Logit", "Poisson", "Negative Binomial", "Zero-Inflated Poisson", "Zero-Inflated NB"] for e in ests):
+            exp_output = st.checkbox("Display exponentiated coefficients in output", key=f"exp_output_{i}")
+
         cfg = {"dv": dv,"ivs": ivs,"ests": ests,"ent": ent,"time": time,"mg": mg,"ms": ms,"se": se_type,"cl": cl, "fe_vars": fe_vars}
         if "Zero-Inflated NB" in ests:
             cfg["zinb_vars"] = zinb_infl_vars
             cfg["zinb_link"] = zinb_inflation
             cfg["zinb_method"] = zinb_method
             cfg["zinb_maxiter"] = zinb_maxiter
+        if exp_output:
+            cfg["exp_output"] = True
         configs.append(cfg)
 
 # Run models
@@ -224,11 +232,35 @@ if st.button("Run Models"):
 
     # Display results
     statsmods = [r for r in results.values() if hasattr(r, "params")]
-    for name, res in results.items():
+    for i, (name, res) in enumerate(results.items()):
         st.subheader(name)
-        summ = res.summary() if callable(res.summary) else res.summary
-        txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
-        st.code(txt)
+        cfg_exp = configs[i].get("exp_output", False)
+        model_type = str(type(res.model))
+        supports_exp = any(k in model_type for k in ["Logit", "Poisson", "NegativeBinomial", "ZeroInflated"])
+
+        if cfg_exp and supports_exp:
+            try:
+                exp_params = np.exp(res.params)
+                exp_bse = np.exp(res.bse)
+                exp_table = pd.DataFrame({
+                    "exp(coef)": exp_params,
+                    "exp(std err)": exp_bse
+                })
+                st.dataframe(exp_table)
+
+                patched = SimpleNamespace(**vars(res))
+                patched.params = exp_params
+                patched.bse = exp_bse
+                statsmods.append(patched)
+
+            except Exception as e:
+                st.warning(f"Could not exponentiate coefficients: {e}")
+                statsmods.append(res)
+        else:
+            summ = res.summary() if callable(res.summary) else res.summary
+            txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
+            st.code(txt)
+            statsmods.append(res)
 
     if len(statsmods) > 0:
         st.subheader("Results Table")
