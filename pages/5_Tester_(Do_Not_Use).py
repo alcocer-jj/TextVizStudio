@@ -93,10 +93,9 @@ if uploaded:
             return pd.read_csv(uploaded_file, encoding=file_encoding)
         data = load_data(uploaded, encoding)
         st.success("✔︎ File successfully loaded!")
+        st.subheader("Data Preview"); st.dataframe(data.head(5))
     except Exception as e:
         st.error(f"Failed to read the CSV file: {e}")
-
-    st.subheader("Data Preview"); st.dataframe(data.head(5))
 
 # Model configuration
 st.subheader("Model Configurations")
