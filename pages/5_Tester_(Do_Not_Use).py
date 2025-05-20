@@ -38,7 +38,7 @@ ESTIMATOR_MAP = {
     "Poisson":           {"func": lambda f,df: count.Poisson.from_formula(f,df),                "panel": False, "mixed": False},
     "Negative Binomial": {"func": lambda f,df: count.NegativeBinomialP.from_formula(f,df),        "panel": False, "mixed": False},
     "Zero-Inflated Poisson":      {"func": lambda f,df: count.ZeroInflatedPoisson.from_formula(f,df),      "panel": False, "mixed": False},
-    "Zero-Inflated NB":           {"func": lambda f,df: count.ZeroInflatedNegativeBinomialP.from_formula(f,df),"panel": False, "mixed": False},
+    "Zero-Inflated NB": {"func": lambda f, df: count.ZeroInflatedNegativeBinomialP.from_formula(formula=f, data=df, exog_infl=df[[c.strip() for c in f.split('~')[1].split('+')]], inflation='logit', p=1), "panel": False, "mixed": False},
     "Ordered Logit":  {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="logit"), "panel": False, "mixed": False},
     "Ordered Probit": {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="probit"),"panel": False, "mixed": False},
     # Panel & mixed
@@ -132,7 +132,10 @@ if st.button("Run Models"):
                     mod=ESTIMATOR_MAP[est]["func"](form,data)
                     covargs=stats_cov.copy()
                     if cfg['se']=="Clustered": covargs['cov_kwds']={'groups':data[cfg['cl']]}
-                    res=mod.fit(**covargs)
+                    if est == "Zero-Inflated NB":
+                        res = mod.fit(method='bfgs', maxiter=500, disp=0)
+                    else:
+                        res = mod.fit(**covargs)
                 elif ESTIMATOR_MAP[est]["panel"]:
                     panel_df=data.set_index([cfg['ent'],cfg['time']])
                     y=panel_df[cfg['dv']]; X=panel_df[cfg['ivs']]
