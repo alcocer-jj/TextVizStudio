@@ -52,9 +52,9 @@ ESTIMATOR_MAP = {
     "Random Effects": {"func": None, "panel": True,  "mixed": False},
     "Mixed Effects":  {"func": None, "panel": False, "mixed": True},
     # Placeholders
-    "Tobit":    {"func": None, "panel": False, "mixed": False},
-    "Hurdle":   {"func": None, "panel": False, "mixed": False},
-    "Heckman":  {"func": None, "panel": True,  "mixed": False}
+    #"Tobit":    {"func": None, "panel": False, "mixed": False},
+    #"Hurdle":   {"func": None, "panel": False, "mixed": False},
+    #"Heckman":  {"func": None, "panel": True,  "mixed": False}
 }
 
 # --- Supported SE types per estimator ---
