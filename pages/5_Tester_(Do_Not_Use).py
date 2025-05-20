@@ -159,7 +159,7 @@ if st.button("Run Models"):
             if len(fe_dummies) > 100:
                 st.warning("⚠️ Large number of dummy variables may cause memory or convergence issues.")
         rhs = cfg["ivs"] + fe_dummies
-        form=f"{cfg['dv']} ~ {' + '.join(cfg['ivs'])}"
+        form = f"{cfg['dv']} ~ {' + '.join(rhs)}"
         stats_cov=COMMON_STATS_SE.get(cfg['se'],{})
         panel_cov=PANEL_SE.get(cfg['se'],{})
         mixed_cov=MIXED_SE.get(cfg['se'],{})
