@@ -84,6 +84,7 @@ def detect_encoding(file):
 # Data upload
 st.subheader("Import Data")
 uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
+
 if uploaded:
     try:
         encoding = detect_encoding(uploaded)
