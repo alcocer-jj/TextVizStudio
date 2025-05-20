@@ -30,25 +30,25 @@ MIXED_SE = {
 # --- Estimator registry ---
 ESTIMATOR_MAP = {
     # Linear & discrete/count/ordered
-    "OLS": {"func": lambda f,df: smf.ols(f,df), "panel": False, "mixed": False},
-    "LPM": {"func": lambda f,df: smf.ols(f,df), "panel": False, "mixed": False},
-    "Logit": {"func": lambda f,df: discrete.Logit.from_formula(f,df),"panel": False, "mixed": False},
+    "OLS":    {"func": lambda f,df: smf.ols(f,df),                    "panel": False, "mixed": False},
+    "LPM":    {"func": lambda f,df: smf.ols(f,df),                    "panel": False, "mixed": False},
+    "Logit":  {"func": lambda f,df: discrete.Logit.from_formula(f,df),"panel": False, "mixed": False},
     "Probit": {"func": lambda f,df: discrete.Probit.from_formula(f,df),"panel": False, "mixed": False},
     "Multinomial Logit": {"func": lambda f,df: discrete.MNLogit.from_formula(f,df),"panel": False, "mixed": False},
-    "Poisson": {"func": lambda f,df: count.Poisson.from_formula(f,df), "panel": False, "mixed": False},
-    "Negative Binomial": {"func": lambda f,df: count.NegativeBinomial.from_formula(f,df), "panel": False, "mixed": False},
-    "Zero-Inflated Poisson": {"func": lambda f,df: count.ZeroInflatedPoisson.from_formula(f,df), "panel": False, "mixed": False},
-    "Zero-Inflated NB": {"func": lambda f,df: count.ZeroInflatedNegativeBinomialP.from_formula(f,df),"panel": False, "mixed": False},
-    "Ordered Logit": {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="logit"), "panel": False, "mixed": False},
+    "Poisson":           {"func": lambda f,df: count.Poisson.from_formula(f,df),                "panel": False, "mixed": False},
+    "Negative Binomial": {"func": lambda f,df: count.NegativeBinomialP.from_formula(f,df),        "panel": False, "mixed": False},
+    "Zero-Inflated Poisson":      {"func": lambda f,df: count.ZeroInflatedPoisson.from_formula(f,df),      "panel": False, "mixed": False},
+    "Zero-Inflated NB":           {"func": lambda f,df: count.ZeroInflatedNegativeBinomialP.from_formula(f,df),"panel": False, "mixed": False},
+    "Ordered Logit":  {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="logit"), "panel": False, "mixed": False},
     "Ordered Probit": {"func": lambda f,df: OrderedModel.from_formula(f,df,distr="probit"),"panel": False, "mixed": False},
     # Panel & mixed
-    "Fixed Effects": {"func": None, "panel": True,  "mixed": False},
+    "Fixed Effects":  {"func": None, "panel": True,  "mixed": False},
     "Random Effects": {"func": None, "panel": True,  "mixed": False},
-    "Mixed Effects": {"func": None, "panel": False, "mixed": True},
+    "Mixed Effects":  {"func": None, "panel": False, "mixed": True},
     # Placeholders
-    "Tobit": {"func": None, "panel": False, "mixed": False},
-    "Hurdle": {"func": None, "panel": False, "mixed": False},
-    "Heckman": {"func": None, "panel": True,  "mixed": False}
+    "Tobit":    {"func": None, "panel": False, "mixed": False},
+    "Hurdle":   {"func": None, "panel": False, "mixed": False},
+    "Heckman":  {"func": None, "panel": True,  "mixed": False}
 }
 
 # --- Supported SE types per estimator ---
@@ -66,6 +66,7 @@ for est, v in ESTIMATOR_MAP.items():
 # --- Streamlit UI ---
 st.set_page_config(page_title="TBD", layout="wide")
 st.title("TBD")
+
 # Data upload
 uploaded = st.file_uploader("Upload your CSV data", type=["csv"])
 if not uploaded:
@@ -75,6 +76,7 @@ if not uploaded:
 def load_data(f):
     raw = f.read(); enc = chardet.detect(raw)["encoding"]; f.seek(0)
     return pd.read_csv(f, encoding=enc)
+
 data = load_data(uploaded)
 st.subheader("Data Preview"); st.dataframe(data.head(5))
 
@@ -126,6 +128,7 @@ if st.button("Run Models"):
             key=f"Model{idx}_{est.replace(' ','')}"
             try:
                 if ESTIMATOR_MAP[est]["func"]:
+                    # statsmodels families
                     mod=ESTIMATOR_MAP[est]["func"](form,data)
                     covargs=stats_cov.copy()
                     if cfg['se']=="Clustered": covargs['cov_kwds']={'groups':data[cfg['cl']]}
@@ -133,7 +136,8 @@ if st.button("Run Models"):
                 elif ESTIMATOR_MAP[est]["panel"]:
                     panel_df=data.set_index([cfg['ent'],cfg['time']])
                     y=panel_df[cfg['dv']]; X=panel_df[cfg['ivs']]
-                    mod=PanelOLS(y,X,entity_effects=(est=="Fixed Effects")) if est in ["Fixed Effects"] else RandomEffects(y,X)
+                    if est=="Fixed Effects": mod=PanelOLS(y,X,entity_effects=True)
+                    else: mod=RandomEffects(y,X)
                     pargs=panel_cov.copy()
                     if cfg['se']=="Clustered":
                         if cfg['cl']==cfg['ent']: pargs['cov_kwds']={'cluster_entity':True}
@@ -141,7 +145,7 @@ if st.button("Run Models"):
                     res=mod.fit(**pargs)
                 elif ESTIMATOR_MAP[est]["mixed"]:
                     rf=None
-                    if cfg['ms']: rf="~ " + " + ".join(cfg['ms'])
+                    if cfg['ms']: rf="~ "+" + ".join(cfg['ms'])
                     mod=MixedLM(form,data,groups=data[cfg['mg']],re_formula=rf)
                     res=mod.fit(**mixed_cov)
                 else:
@@ -149,16 +153,15 @@ if st.button("Run Models"):
                 results[key]=res
             except Exception as e:
                 st.error(f"{est} failed: {e}")
-    # Display
+    # Display results
     statsmods=[r for r in results.values() if hasattr(r,'params')]
     for name,res in results.items():
         st.subheader(name)
         summ=res.summary() if callable(res.summary) else res.summary
         txt=summ.as_text() if hasattr(summ,'as_text') else str(summ)
         st.code(txt)
-    if len(statsmods)>1:
+    if len(statsmods)>0:
         st.subheader("Combined Results Table")
         html=Stargazer(statsmods).render_html()
         st.components.v1.html(html,height=400)
         st.download_button("Download LaTeX Table",Stargazer(statsmods).render_latex(),"regression_table.tex")
-
