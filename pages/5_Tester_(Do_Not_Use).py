@@ -130,12 +130,12 @@ if uploaded:
             return pd.read_csv(uploaded_file, encoding=file_encoding)
         data = load_data(uploaded, encoding)
         placeholder2 = st.empty()
-        placeholder2.success("✔︎ ☹︎ File successfully loaded!")
+        placeholder2.success("✔︎ File successfully loaded!")
         time.sleep(1.5)
         placeholder2.empty()
         st.subheader("Data Preview"); st.dataframe(data.head(5))
     except Exception as e:
-        st.error(f"⊗ Failed to read the CSV file: {e}")
+        st.error(f"☹︎ Failed to read the CSV file: {e}")
 if 'data' not in locals():
     st.stop()
 
@@ -146,7 +146,7 @@ num_models = st.number_input(
     min_value=1,
     max_value=4,
     value=1,
-    help="**Note:** To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models."
+    help="**𝐢** To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models."
 )
 configs = []
 for i in range(num_models):
