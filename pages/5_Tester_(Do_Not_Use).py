@@ -265,7 +265,7 @@ for i in range(num_models):
         # Additional fixed effects
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
-            st.warning("**⚠︎** `Fixed Effects` estimator handles unit/time effects using their dedicated parameters. As a result, the 'Fixed effects' parameter below is disabled.")
+            st.warning("**⚠︎** The `Fixed Effects` estimator handles unit/time effects using their dedicated parameters. As a result, the 'Fixed effects' parameter below is disabled.")
         fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui, help="**𝐢** The `Fixed Effects` estimator is designed for panel data analysis, controlling for unobserved heterogeneity across entities. In contrast, this ‘Fixed effects’ parameter refers to explicitly controlling for categorical variables (e.g., via dummy variables) in a regression model.")
         # ZINB-specific options
         zinb_infl_vars = []
@@ -436,4 +436,5 @@ if st.button("Run Models"):
                 label="Download LaTeX Table",
                 data=latex,
                 file_name="regression_table.tex")
+            st.warning("**⚠︎** Downloading the LaTeX table will reset the whole interface. Make sure it is the last action you perform.")
             st.components.v1.html(html, height=3000, scrolling=False) 
