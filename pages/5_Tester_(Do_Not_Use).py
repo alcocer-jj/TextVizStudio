@@ -155,7 +155,7 @@ for i in range(num_models):
                 x,y=term.split("_x_"); data[term]=data[x]*data[y]
                 if term not in ivs: ivs.append(term)
         # estimator selection
-        ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
+        ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}", help="**Note:** The `Fixed Effects` estimator is for panel data, whereas the `Fixed Effects` parameter is used for holding categorical variables constant.")
         with st.expander("About the Available Estimators", expanded=False):
             st.markdown("""
                         #### Predicting Continuous Outcomes
