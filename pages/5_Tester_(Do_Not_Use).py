@@ -286,7 +286,7 @@ for i in range(num_models):
         else:
             common_sets=[SUPPORTED_SE[e] for e in ests]
             se_opts=sorted(set.intersection(*common_sets)) if common_sets else []
-        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}", help="**Note:** To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models.")
+        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}", help="**Note:** Available standard error estimators are limited to those compatible with the selected estimation method.")
         with st.expander("Which Standard Error Estimator should I use?", expanded=False):
             st.markdown("""
                         **Standard**  
