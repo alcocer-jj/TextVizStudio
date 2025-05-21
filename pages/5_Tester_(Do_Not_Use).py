@@ -122,7 +122,7 @@ if uploaded:
     try:
         encoding = detect_encoding(uploaded)
         placeholder = st.empty()
-        placeholder.info(f"𝐢 Detected file encoding: {encoding}")
+        placeholder.info(f"𝐢 ⊘ Detected file encoding: {encoding}")
         time.sleep(1.6)
         placeholder.empty()
         @st.cache_data
@@ -135,7 +135,7 @@ if uploaded:
         placeholder2.empty()
         st.subheader("Data Preview"); st.dataframe(data.head(5))
     except Exception as e:
-        st.error(f"Failed to read the CSV file: {e}")
+        st.error(f" Failed to read the CSV file: {e}")
 if 'data' not in locals():
     st.stop()
 
