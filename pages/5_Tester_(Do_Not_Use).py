@@ -155,7 +155,7 @@ for i in range(num_models):
                 x,y=term.split("_x_"); data[term]=data[x]*data[y]
                 if term not in ivs: ivs.append(term)
         # estimator selection
-        ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}", help="**Note:** The `Fixed Effects` estimator is for panel data, whereas the `Fixed Effects` parameter is used for holding categorical variables constant.")
+        ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
         with st.expander("About the Available Estimators", expanded=False):
             st.markdown("""
                         #### Predicting Continuous Outcomes
@@ -259,7 +259,7 @@ for i in range(num_models):
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
             st.warning("⚠︎ Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
-        fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui)
+        fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui, help="**Note:** The `Fixed Effects` estimator is designed for panel data analysis, controlling for unobserved heterogeneity across entities. In contrast, this ‘fixed effects’ parameter refers to explicitly controlling for categorical variables (e.g., via dummy variables) in a regression model.")
         # ZINB-specific options
         zinb_infl_vars = []
         zinb_inflation = "logit"
