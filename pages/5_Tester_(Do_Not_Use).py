@@ -163,7 +163,7 @@ for i in range(num_models):
                 if term not in ivs: ivs.append(term)
         # estimator selection
         ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
-        with st.expander("About the Available Estimators", expanded=False):
+        with st.expander("**𝐢** About the Available Estimators", expanded=False):
             st.markdown("""
                         #### Predicting Continuous Outcomes
                         - **OLS (Ordinary Least Squares)**  
@@ -265,7 +265,7 @@ for i in range(num_models):
         # Additional fixed effects
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
-            st.warning("**⚠︎** `Fixed Effects` estimator handles unit/time effects using their dedicated parameters. As a result, the 'Fixed effects' parameter is disabled.")
+            st.warning("**⚠︎** `Fixed Effects` estimator handles unit/time effects using their dedicated parameters. As a result, the 'Fixed effects' parameter below is disabled.")
         fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui, help="**𝐢** The `Fixed Effects` estimator is designed for panel data analysis, controlling for unobserved heterogeneity across entities. In contrast, this ‘Fixed effects’ parameter refers to explicitly controlling for categorical variables (e.g., via dummy variables) in a regression model.")
         # ZINB-specific options
         zinb_infl_vars = []
@@ -294,7 +294,7 @@ for i in range(num_models):
             common_sets=[SUPPORTED_SE[e] for e in ests]
             se_opts=sorted(set.intersection(*common_sets)) if common_sets else []
         se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}", help="**𝐢** Available standard error estimators are limited to those compatible with the selected estimation method.")
-        with st.expander("Which Standard Error Estimator should I use?", expanded=False):
+        with st.expander("**𝐢** Which Standard Error Estimator should I use?", expanded=False):
             st.markdown("""
                         **Standard**  
                         - Assumes every observation is independent and has the same variability.  
