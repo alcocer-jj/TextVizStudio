@@ -106,8 +106,84 @@ WEIGHTABLE_MODELS = [key for key, val in ESTIMATOR_MAP.items() if val['func'] is
 
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="TBD", layout="wide")
-st.title("TBD")
+
+st.set_page_config(
+    page_title="StatsModeling",
+    layout="wide"
+)
+
+# Authenticate with Google Sheets API using Streamlit Secrets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
+client = gspread.authorize(creds)
+
+# Try to open the Google Sheet safely
+try:
+    sheet = client.open("TextViz Studio Feedback").sheet1
+
+    # Feedback form in the sidebar
+    st.sidebar.markdown("### **Feedback**")
+    feedback = st.sidebar.text_area(
+        "Experiencing bugs/issues? Have ideas to better the application tool?",
+        placeholder="Leave feedback or error code here"
+    )
+
+    if st.sidebar.button("Submit"):
+        if feedback:
+            try:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                sheet.append_row(["StatsModeling:", feedback, timestamp])
+                st.sidebar.success("✅ Thank you for your feedback!")
+            except Exception as e:
+                st.sidebar.error("⚠️ Failed to submit feedback.")
+                st.sidebar.caption(f"Error: {e}")
+        else:
+            st.sidebar.error("⚠️ Feedback cannot be empty!")
+
+except Exception as e:
+    st.sidebar.error("⚠️ Could not load feedback form.")
+    st.sidebar.caption(f"Details: {e}")
+                
+st.sidebar.markdown("")
+
+st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
+
+st.sidebar.markdown("")
+
+
+# Sidebar: Title and description
+st.markdown("<h1 style='text-align: center'>StatsModeling</h1>", unsafe_allow_html=True)
+
+
+st.markdown("")
+st.markdown("")
+st.markdown("")
+st.markdown("")
+st.markdown("")
+
+st.markdown("""
+**StatsModeling** is an interactive Streamlit application for end-to-end regression analysis across 
+a wide range of model types. Users begin by uploading a CSV dataset and previewing their data, then 
+configure up to four separate models via a clean, expandable UI. Parameters consist of: choosing a 
+dependent variable, multiple predictors (including optional interaction terms), fixed‐effects dummies
+or panel identifiers, and even analytic weights where supported. 
+
+The app provides 14 estimators, from OLS and LPM to logit/probit, Poisson and negative-binomial 
+(including zero-inflated variants), ordered outcomes, and both fixed- and random-effects panel and 
+mixed-effects models. Each with dynamic standard-error options (homoskedastic, robust/HC0–HC1, or 
+clustered) and a nested “About Standard Errors” expander for non-technical guidance. Advanced settings
+let you toggle exponentiated coefficients for interpretability, along with customizing zero-inflation links
+and solver methods. Once run, results are presented as formatted summaries and dataframes, with the option 
+to export consolidated LaTeX or interactive HTML tables via Stargazer. Designed for both seasoned practitioners 
+and newcomers, TBD delivers a highly customizable, yet user-friendly, workflow for exploring and comparing 
+regression results on any tabular dataset.
+""")
+
+st.markdown("")
+st.markdown("")
+
 
 def detect_encoding(file):
     raw = file.read()
@@ -117,6 +193,7 @@ def detect_encoding(file):
     return encoding
 
 # Data upload
+st.subheader("Import Data")
 uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
 if uploaded:
     try:
