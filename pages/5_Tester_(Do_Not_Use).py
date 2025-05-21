@@ -10,6 +10,7 @@ from statsmodels.regression.mixed_linear_model import MixedLM
 from linearmodels.panel import PanelOLS, RandomEffects
 from stargazer.stargazer import Stargazer
 import numpy as np
+import time
 
 
 # --- Standard error mappings ---
@@ -125,7 +126,11 @@ if uploaded:
         def load_data(uploaded_file, file_encoding):
             return pd.read_csv(uploaded_file, encoding=file_encoding)
         data = load_data(uploaded, encoding)
-        st.success("✔︎ File successfully loaded!")
+        #st.success("✔︎ File successfully loaded!")
+        placeholder = st.empty()
+        placeholder.success("✔︎ File successfully loaded!")
+        time.sleep(1)
+        placeholder.empty()
         st.subheader("Data Preview"); st.dataframe(data.head(5))
     except Exception as e:
         st.error(f"Failed to read the CSV file: {e}")
