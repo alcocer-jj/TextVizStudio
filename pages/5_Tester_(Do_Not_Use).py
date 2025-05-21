@@ -245,14 +245,14 @@ for i in range(num_models):
         # Weights dropdown (conditional)
         weightable = any(e in WEIGHTABLE_MODELS for e in ests)
         if weightable:
-            weight_var = st.selectbox(
-                "Weights variable (optional)",
-                options=[None] + list(data.columns),
-                format_func=lambda x: x if x is not None else "(None)",
-                key=f"weights_{i}"
-            )
+            weight_options = [None] + list(data.columns)
+            weight_var = st.selectbox("Weights variable (optional)",
+            weight_options,
+            index=0,
+            format_func=lambda x: "Choose an option" if x is None else x,
+            key=f"weights_{i}")
         else:
-            weight_var = None
+            weight_var = None    
         # Additional fixed effects
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
