@@ -122,20 +122,20 @@ if uploaded:
     try:
         encoding = detect_encoding(uploaded)
         placeholder = st.empty()
-        placeholder.info(f"𝐢 ⊘ Detected file encoding: {encoding}")
-        time.sleep(1.6)
+        placeholder.info(f"𝐢 Detected file encoding: {encoding}")
+        time.sleep(1.5)
         placeholder.empty()
         @st.cache_data
         def load_data(uploaded_file, file_encoding):
             return pd.read_csv(uploaded_file, encoding=file_encoding)
         data = load_data(uploaded, encoding)
         placeholder2 = st.empty()
-        placeholder2.success("✔︎ File successfully loaded!")
+        placeholder2.success("✔︎ ⊗ File successfully loaded!")
         time.sleep(1.5)
         placeholder2.empty()
         st.subheader("Data Preview"); st.dataframe(data.head(5))
     except Exception as e:
-        st.error(f" Failed to read the CSV file: {e}")
+        st.error(f"⊗ Failed to read the CSV file: {e}")
 if 'data' not in locals():
     st.stop()
 
