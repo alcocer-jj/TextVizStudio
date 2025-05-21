@@ -123,7 +123,7 @@ if uploaded:
         encoding = detect_encoding(uploaded)
         placeholder = st.empty()
         placeholder.info(f"𝐢 Detected file encoding: `{encoding}`")
-        time.sleep(1.5)
+        time.sleep(2)
         placeholder.empty()
         @st.cache_data
         def load_data(uploaded_file, file_encoding):
