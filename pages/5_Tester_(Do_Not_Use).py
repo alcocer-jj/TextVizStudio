@@ -258,7 +258,7 @@ for i in range(num_models):
         # Additional fixed effects
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
-            st.info("📝 Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
+            st.warning("⚠︎ Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
         fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui)
         # ZINB-specific options
         zinb_infl_vars = []
@@ -286,14 +286,26 @@ for i in range(num_models):
         else:
             common_sets=[SUPPORTED_SE[e] for e in ests]
             se_opts=sorted(set.intersection(*common_sets)) if common_sets else []
-        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}")
-        with st.expander("About Standard Errors", expanded=False):
+        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}", help="**Note:** To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models.")
+        with st.expander("Which Standard Error Estimator should I use?", expanded=False):
             st.markdown("""
-            **Standard**: no adjustments; use when homoskedasticity is plausible.  
-            **White (HC0)**: heteroskedasticity‐consistent, but can understate SEs in small samples.  
-            **Robust (HC1)**: HC0 with a degrees‐of‐freedom correction—safer in moderate samples.  
-            **Clustered**: accounts for within‐cluster correlation; use when observations share group shocks.
-            """)
+                        **Standard**  
+                        - Assumes every observation is independent and has the same variability.  
+                        - Use when you believe your data errors are roughly “even” across all cases (e.g., no obvious outliers or groups).  
+
+                        **White (HC0)**  
+                        - Adjusts for situations where some points have more scatter than others (heteroskedasticity).  
+                        - Good first fix if you see “funnel-shaped” residuals in a scatterplot.  
+
+                        **Robust (HC1)**  
+                        - Builds on HC0 but corrects for small sample bias.  
+                        - Recommended when you have fewer observations (say, under a few hundred).  
+
+                        **Clustered**  
+                        - Accounts for “grouped” data (e.g., students within schools or repeated measures per person).  
+                        - Treats all observations in the same cluster as potentially correlated—so your error bars widen appropriately.  
+                        - Use when you suspect units within the same group share unmeasured shocks (like students all exposed to the same classroom).
+                        """)
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")        
         exp_output=False
