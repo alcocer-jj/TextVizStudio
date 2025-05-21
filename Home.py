@@ -164,7 +164,7 @@ st.markdown("### **About the Developer**")
 st.text("")
     
 st.markdown("""
-            TextViz Studio was developed by [José J. Alcocer, Ph.D., M.P.P.](https://alcocer-jj.github.io/), 
+            TextViz Studio was developed by [José J. Alcocer](https://alcocer-jj.github.io/), Ph.D., M.P.P., 
             an incoming Applied Research Statistician at Harvard Law School. He specializes in legislative institutions, 
             political methodology, and computational social science. His work bridges the gap between social science and 
             data science, leveraging statistical modeling, machine learning, natural language processing, and causal inference 
