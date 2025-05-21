@@ -1,4 +1,5 @@
 streamlit
+streamlit-nested-layout
 pandas==2.2.2
 numpy==1.26.4
 PyPDF2==3.0.1
