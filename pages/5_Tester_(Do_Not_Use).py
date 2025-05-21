@@ -146,7 +146,7 @@ num_models = st.number_input(
     min_value=1,
     max_value=4,
     value=1,
-    help="**𝐢** To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models."
+    help="**𝐢** - To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models."
 )
 configs = []
 for i in range(num_models):
