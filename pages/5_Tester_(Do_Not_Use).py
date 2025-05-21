@@ -265,7 +265,7 @@ for i in range(num_models):
         # Additional fixed effects
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
-            st.warning("**⚠︎** Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
+            st.warning("**⚠︎** `Fixed Effects` estimator handles unit/time effects using their dedicated parameters. As a result, the 'Fixed effects' parameter is disabled.")
         fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui, help="**𝐢** The `Fixed Effects` estimator is designed for panel data analysis, controlling for unobserved heterogeneity across entities. In contrast, this ‘Fixed effects’ parameter refers to explicitly controlling for categorical variables (e.g., via dummy variables) in a regression model.")
         # ZINB-specific options
         zinb_infl_vars = []
