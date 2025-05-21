@@ -130,7 +130,7 @@ if uploaded:
             return pd.read_csv(uploaded_file, encoding=file_encoding)
         data = load_data(uploaded, encoding)
         placeholder2 = st.empty()
-        placeholder2.success("**✔︎** File successfully loaded!", help="**𝐢** File loaded successfully. You can now configure your models.")
+        placeholder2.success("**✔︎** File successfully loaded!")
         time.sleep(1.5)
         placeholder2.empty()
         st.subheader("Data Preview"); st.dataframe(data.head(5))
@@ -265,8 +265,8 @@ for i in range(num_models):
         # Additional fixed effects
         disable_fe_ui = "Fixed Effects" in ests
         if disable_fe_ui:
-            st.warning("⚠︎ Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
-        fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui, help="**Note:** The `Fixed Effects` estimator is designed for panel data analysis, controlling for unobserved heterogeneity across entities. In contrast, this ‘Fixed effects’ parameter refers to explicitly controlling for categorical variables (e.g., via dummy variables) in a regression model.")
+            st.warning("**⚠︎** Fixed effects (within) estimator handles entity/time FE internally. FE dummies disabled.")
+        fe_vars = st.multiselect("Fixed effects (categorical variables) (optional)", options=[c for c in data.columns if c != dv and c not in ivs], key=f"fe_{i}", disabled=disable_fe_ui, help="**𝐢** The `Fixed Effects` estimator is designed for panel data analysis, controlling for unobserved heterogeneity across entities. In contrast, this ‘Fixed effects’ parameter refers to explicitly controlling for categorical variables (e.g., via dummy variables) in a regression model.")
         # ZINB-specific options
         zinb_infl_vars = []
         zinb_inflation = "logit"
@@ -293,7 +293,7 @@ for i in range(num_models):
         else:
             common_sets=[SUPPORTED_SE[e] for e in ests]
             se_opts=sorted(set.intersection(*common_sets)) if common_sets else []
-        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}", help="**Note:** Available standard error estimators are limited to those compatible with the selected estimation method.")
+        se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}", help="**𝐢** Available standard error estimators are limited to those compatible with the selected estimation method.")
         with st.expander("Which Standard Error Estimator should I use?", expanded=False):
             st.markdown("""
                         **Standard**  
@@ -349,7 +349,7 @@ if st.button("Run Models"):
                 dummies=pd.get_dummies(model_data[fe],prefix=fe,drop_first=True)
                 model_data=model_data.join(dummies)
                 fe_dummies.extend(dummies.columns)
-            if len(fe_dummies)>100: st.warning("⚠️ Large number of dummy variables may cause memory or convergence issues.")
+            if len(fe_dummies)>100: st.warning("**⚠︎** Large number of dummy variables may cause memory or convergence issues.")
         rhs=cfg["ivs"]+fe_dummies
         form=f"{cfg['dv']} ~ {' + '.join(rhs)}"
         stats_cov=COMMON_STATS_SE.get(cfg["se"],{})
@@ -416,7 +416,7 @@ if st.button("Run Models"):
                 })
                 st.dataframe(df)
             except Exception as e:
-                st.warning(f"Could not generate exponentiated output: {e}")
+                st.warning(f"**⚠︎** Could not generate exponentiated output: {e}")
                 summ = res.summary() if callable(res.summary) else res.summary
                 txt = summ.as_text() if hasattr(summ, "as_text") else str(summ)
                 st.code(txt)
