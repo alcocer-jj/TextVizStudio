@@ -7,6 +7,28 @@ TextViz Studio is an intuitive web-based platform designed to simplify text anal
 
 ## Application Tools
 
+### StatsDashboard: Statistical Data Exploration & Visualization
+
+StatsDashboard offers an accessible, all-in-one platform for statistical data analysis and visualization, tailored to meet the needs of researchers and social scientists. This module simplifies data subsetting, descriptive statistics, statistical testing, and visualization, making complex analysis more approachable for users without coding expertise.
+
+- Data Subsetting & Filtering: Refine datasets by selecting specific rows and columns for focused analysis.
+- Proportion Tables & Weighted Analysis: Generate proportion tables with optional weighted calculations, ideal for survey and demographic data.
+- Comprehensive Statistical Tests: Perform T-tests, Chi-Square, ANOVA, and more to uncover relationships within your data.
+- Descriptive Statistics & Correlation Analysis: Summarize data distributions and calculate correlations to understand variable interactions.
+- Flexible Visualization Tools: Create histograms, scatter plots, line plots, regression plots, bar charts, and box plots, each with customizable themes, grouping, and aggregation functions.
+- Export High-Quality Visualizations: Download plots in high-resolution PNG or interactive HTML formats for sharing and reporting.
+
+### StatsModeling: Interactive Statistical Modeling & Estimation
+
+StatsModeling is a flexible, browser-based application for building, estimating, and comparing a wide range of regression models. Designed for applied researchers, students, and analysts, this module streamlines model specification and diagnostics while offering robust customization options—all without the need for coding.
+
+- Multi-Model Configuration: Specify and compare up to four regression models in parallel using an intuitive, expandable interface.
+- Broad Estimator Support: Choose from 14 model types including OLS, logit/probit, Poisson, negative binomial (incl. zero-inflated), ordered logit/probit, and panel or mixed-effects models.
+- Custom Model Inputs: Define dependent variables, predictors, interaction terms, fixed effects, panel identifiers, and analytic weights.
+- Standard Error Controls: Select from homoskedastic, robust (HC0/HC1), or clustered standard errors to fit your research design.
+- Exportable Results: Generate clean LaTeX tables for use in reports or publications.
+- Built-In Guidance: Each model type and estimation option includes plain-language descriptions for accessible, informed use.
+
 ### Text2Keywords: Keyword & Phrase Visualization
 
 This tool helps uncover key themes and patterns in text files, such as PDFs or CSVs. Users can analyze word frequencies and visualize their results through word clouds and keyword summaries.
@@ -19,18 +41,6 @@ This tool helps uncover key themes and patterns in text files, such as PDFs or C
 - Batch Processing: Analyze multiple PDFs or CSV files at once.
 - Export Results: Download keyword counts, word clouds, and summaries for further use.
 
-### Text2Topics: Large Language Topic Modeling
-
-This advanced tool uses transformer-based models to perform topic modeling, revealing latent themes in text. It’s ideal for analyzing large corpora such as research papers, survey responses, or online discussions.
-
-- Advanced Topic Modeling: Leverages BERTopic for transformer-based topic discovery.
-- Interactive Visualization: Visualize topics and their relationships interactively.
-- OpenAI Integration: Employs OpenAI GPT-4o for enhanced topic representation as an option.
-- Customizable Parameters: Adjust the number of topics.
-- Multiple Representations: Compare different topic representations for clarity.
-- Text Summarization: Summarize topics and generate concise reports.
-- Exportable Results: Download topics, summaries, and visualizations for reporting.
-
 ### Text2Sentiment: Sentiment Discovery
 
 Key Features
@@ -42,16 +52,17 @@ Key Features
 - Customizable Models: Choose between dictionary methods or a large language model trained for sentiment.
 - Export Results: Download your analysis results for further exploration.
 
-### StatsDashboard: Statistical Data Exploration & Visualization
+### Text2Topics: Large Language Topic Modeling
 
-StatsDashboard offers an accessible, all-in-one platform for statistical data analysis and visualization, tailored to meet the needs of researchers and social scientists. This module simplifies data subsetting, descriptive statistics, statistical testing, and visualization, making complex analysis more approachable for users without coding expertise.
+This advanced tool uses transformer-based models to perform topic modeling, revealing latent themes in text. It’s ideal for analyzing large corpora such as research papers, survey responses, or online discussions.
 
-- Data Subsetting & Filtering: Refine datasets by selecting specific rows and columns for focused analysis.
-- Proportion Tables & Weighted Analysis: Generate proportion tables with optional weighted calculations, ideal for survey and demographic data.
-- Comprehensive Statistical Tests: Perform T-tests, Chi-Square, ANOVA, and more to uncover relationships within your data.
-- Descriptive Statistics & Correlation Analysis: Summarize data distributions and calculate correlations to understand variable interactions.
-- Flexible Visualization Tools: Create histograms, scatter plots, line plots, regression plots, bar charts, and box plots, each with customizable themes, grouping, and aggregation functions.
-- Export High-Quality Visualizations: Download plots in high-resolution PNG or interactive HTML formats for sharing and reporting.
+- Advanced Topic Modeling: Leverages BERTopic for unsupervised topic discoviery or zero-shot classification.
+- Interactive Visualization: Visualize topics and their relationships interactively.
+- OpenAI Integration: Employs OpenAI GPT-4o for enhanced topic representation as an option.
+- Customizable Parameters: Adjust the number of topics.
+- Multiple Representations: Compare different topic representations for clarity.
+- Text Summarization: Summarize topics and generate concise reports.
+- Exportable Results: Download topics, summaries, and visualizations for reporting.
 
 ## Updates and References
 
