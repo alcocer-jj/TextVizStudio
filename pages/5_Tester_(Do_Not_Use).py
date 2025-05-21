@@ -167,21 +167,11 @@ st.markdown("")
 st.markdown("")
 
 st.markdown("""
-**StatsModeling** is an interactive Streamlit application for end-to-end regression analysis across 
-a wide range of model types. Users begin by uploading a CSV dataset and previewing their data, then 
-configure up to four separate models via a clean, expandable UI. Parameters consist of: choosing a 
-dependent variable, multiple predictors (including optional interaction terms), fixed‐effects dummies
-or panel identifiers, and even analytic weights where supported. 
+**StatsModeling** is an interactive Streamlit application for end-to-end regression analysis across a wide range of model types. Users start by uploading a CSV dataset and previewing their data, then configure up to four separate models via a clean, expandable interface. Model setup includes selecting a dependent variable, choosing multiple predictors (with optional interaction terms), adding fixed-effects dummies or panel identifiers, and applying analytic weights where supported.
 
-The app provides 14 estimators, from OLS and LPM to logit/probit, Poisson and negative-binomial 
-(including zero-inflated variants), ordered outcomes, and both fixed- and random-effects panel and 
-mixed-effects models. Each with dynamic standard-error options (homoskedastic, robust/HC0–HC1, or 
-clustered) and a nested “About Standard Errors” expander for non-technical guidance. Advanced settings
-let you toggle exponentiated coefficients for interpretability, along with customizing zero-inflation links
-and solver methods. Once run, results are presented as formatted summaries and dataframes, with the option 
-to export consolidated LaTeX or interactive HTML tables via Stargazer. Designed for both seasoned practitioners 
-and newcomers, this module delivers a highly customizable, yet user-friendly, workflow for exploring and comparing 
-regression results on any tabular dataset.
+The app currently supports 14 estimators, including OLS, LPM, logit/probit, Poisson and negative binomial (with zero-inflated variants), ordered outcome models, and both fixed- and random-effects panel and mixed-effects models. Each estimator features dynamic standard error options—homoskedastic, robust (HC0–HC1), or clustered—as well as plain-language guidance for non-technical users. Advanced settings allow toggling exponentiated coefficients for easier interpretation, customizing zero-inflation link functions, and selecting solver methods.
+
+After estimation, results are displayed as formatted summaries, with the option to export a consolidated LaTeX table. Designed for both newcomers and experienced practitioners, the StatsModeling module delivers a highly customizable yet user-friendly workflow for exploring and comparing model estimators on any tabular dataset.
 """)
 
 st.markdown("")
