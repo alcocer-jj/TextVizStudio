@@ -141,94 +141,6 @@ num_models = st.number_input(
     value=1,
     help="**Note:** To maintain a clean user interface and limit cloud memory, selection is set to a maximum of four concurrent models."
 )
-with st.expander("About the Available Estimators", expanded=False):
-    st.markdown("""
-                #### Predicting Continuous Outcomes
-                - **OLS (Ordinary Least Squares)**  
-                    - **When to pick it:** You want to predict something like people’s height or test scores based on other factors, and most of your data points hover reasonably close to a line.  
-                    - **Why it helps:** Very quick to run and easy to explain (“a one-unit change in X adds β units to Y”).  
-                    - **Watch out:** If a few data points are way off the line (outliers) or the spread of errors varies wildly, your results can get skewed.  
-                    - **How to read the result:** The coefficient β means “for each one-unit increase in X, the average of Y goes up by β.”
-
-                - **LPM (Linear Probability Model)**  
-                    - **When to pick it:** You need a fast, first-cut estimate of a yes/no outcome (e.g., did someone vote or not?).  
-                    - **Why it helps:** Coefficients translate directly into percentage-point changes (e.g., “X increases the chance of voting by 5 points”).  
-                    - **Watch out:** Sometimes it predicts probabilities below 0% or above 100%.  
-                    - **How to read the result:** A coefficient of 0.05 means a one-unit rise in X boosts the probability of “yes” by 5 percentage points.
-                    
-                ---
-
-                #### Choosing Among Categories
-                - **Logit / Probit**  
-                    - **When to pick it:** Your outcome is yes/no and you want predictions that always stay between 0% and 100%.  
-                    - **Why it helps:** Keeps your predictions in bounds and handles uneven spread in the data.  
-                    - **Watch out:** The raw coefficients aren’t in “percentage points”—you’ll need a quick post-estimate step to get marginal effects.  
-                    - **How to read the result:** For Logit, β is a change in log-odds; exp(β) is the odds ratio. For Probit, β is a change in the underlying z-score; use average marginal effects to convert to probability changes.
-
-                - **Multinomial Logit**  
-                    - **When to pick it:** You have three or more options without any natural order (e.g., favorite ice-cream flavor).  
-                    - **Why it helps:** Models each choice against a baseline, letting you see how factors shift people toward option A vs. B vs. C.  
-                    - **Watch out:** Assumes every new option affects all choices equally (IIA).  
-                    - **How to read the result:** A coefficient β for choice j means a one-unit increase in X multiplies the odds of choosing j vs. the baseline by exp(β).
-
-                ---
-
-                #### Modeling Counts of Events
-                - **Poisson Regression**  
-                    - **When to pick it:** You’re counting events (e.g., doctor visits per year) and your counts cluster around an average.  
-                    - **Why it helps:** Fast, interpretable “rate” model (mean equals variance).  
-                    - **Watch out:** If you see a lot more spread (variance) than the average, your standard errors will be too small.  
-                    - **How to read the result:** β is the log change in the expected count; exp(β) is the multiplicative effect on the rate (e.g., exp(β)=1.2 means 20% more events).
-
-                - **Negative Binomial Regression**  
-                    - **When to pick it:** Like Poisson, but your data show extra “lumpiness” (variance > mean).  
-                    - **Why it helps:** Learns an extra dispersion parameter so the model can stretch to fit that extra spread.  
-                    - **Watch out:** You need enough data to estimate that extra parameter well.  
-                    - **How to read the result:** Same as Poisson: exp(β) gives the factor change in expected count per unit of X.
-
-                - **Zero-Inflated / Hurdle Models**  
-                    - **When to pick it:** You see more zeros than a standard count model expects (e.g., lots of people never visit the ER).  
-                    - **Why it helps:** Splits the process into “zero vs. non-zero” and “how many if non-zero,” giving you better fit.  
-                    - **Watch out:** They’re more complex—make sure you have good predictors for why zeros occur.  
-                    - **How to read the result:**  
-                        - **Zero part:** exp(β₀) is the odds ratio of being an “excess zero.”  
-                        - **Count part:** exp(β₁) is the rate ratio for non-zero counts.
-
-                ---
-
-                #### Ordering Things
-                - **Ordered Logit / Probit**  
-                    - **When to pick it:** Your outcome has a clear order but no exact spacing (e.g., ratings like “low,” “medium,” “high”).  
-                    - **Why it helps:** Respects the ranking without treating “high vs. medium” the same as “medium vs. low.”  
-                    - **Watch out:** Assumes the effect of X is the same across all thresholds.  
-                    - **How to read the result:** β shifts the log-odds (or z-score) of being at or above each threshold; use predicted probabilities to see category moves.
-
-                ---
-
-                #### Working with Panel Data
-                - **Fixed Effects**  
-                    - **When to pick it:** You have multiple observations per entity (e.g., states over time) and want to ignore anything that doesn’t change over time.  
-                    - **Why it helps:** Automatically removes unchanging traits (like a state’s geography).  
-                    - **Watch out:** You can’t estimate effects of variables that never change.  
-                    - **How to read the result:** Coefficients are the within-entity effect: a one-unit change in X for a given entity changes Y by β, holding that entity’s baseline constant.
-
-                - **Random Effects**  
-                    - **When to pick it:** Same panel setup but you believe the unobserved traits aren’t correlated with your predictors.  
-                    - **Why it helps:** Lets you include variables that don’t change over time.  
-                    - **Watch out:** If that uncorrelated assumption fails, results can be biased—run a Hausman test.  
-                    - **How to read the result:** Similar to OLS/GLM: β shows the average change in Y per unit X across entities, accounting for random intercept variation.
-
-                ---
-
-                #### Mixing It Up
-                - **Mixed Effects (Multilevel Models)**  
-                    - **When to pick it:** Your data is nested (e.g., students within schools) and you want to model both overall trends and group-specific deviations.  
-                    - **Why it helps:** Captures variation at each level (school vs. student).  
-                    - **Watch out:** Model setup and convergence can be tricky—start simple before adding random slopes.  
-                    - **How to read the result:**  
-                        - **Fixed part:** β is the average effect of X across all groups.  
-                        - **Random part:** The variance component tells you how much the intercepts (or slopes) vary from group to group.
-                """)   
 configs = []
 for i in range(num_models):
     with st.expander(f"Configure Model {i+1}", expanded=(i==0)):
@@ -244,6 +156,94 @@ for i in range(num_models):
                 if term not in ivs: ivs.append(term)
         # estimator selection
         ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
+        with st.expander("About the Available Estimators", expanded=False):
+            st.markdown("""
+                        #### Predicting Continuous Outcomes
+                        - **OLS (Ordinary Least Squares)**  
+                            - **When to pick it:** You want to predict something like people’s height or test scores based on other factors, and most of your data points hover reasonably close to a line.  
+                            - **Why it helps:** Very quick to run and easy to explain (“a one-unit change in X adds β units to Y”).  
+                            - **Watch out:** If a few data points are way off the line (outliers) or the spread of errors varies wildly, your results can get skewed.  
+                            - **How to read the result:** The coefficient β means “for each one-unit increase in X, the average of Y goes up by β.”
+
+                        - **LPM (Linear Probability Model)**  
+                            - **When to pick it:** You need a fast, first-cut estimate of a yes/no outcome (e.g., did someone vote or not?).  
+                            - **Why it helps:** Coefficients translate directly into percentage-point changes (e.g., “X increases the chance of voting by 5 points”).  
+                            - **Watch out:** Sometimes it predicts probabilities below 0% or above 100%.  
+                            - **How to read the result:** A coefficient of 0.05 means a one-unit rise in X boosts the probability of “yes” by 5 percentage points.
+                    
+                        ---
+
+                        #### Choosing Among Categories
+                        - **Logit / Probit**  
+                            - **When to pick it:** Your outcome is yes/no and you want predictions that always stay between 0% and 100%.  
+                            - **Why it helps:** Keeps your predictions in bounds and handles uneven spread in the data.  
+                            - **Watch out:** The raw coefficients aren’t in “percentage points”—you’ll need a quick post-estimate step to get marginal effects.  
+                            - **How to read the result:** For Logit, β is a change in log-odds; exp(β) is the odds ratio. For Probit, β is a change in the underlying z-score; use average marginal effects to convert to probability changes.
+
+                        - **Multinomial Logit**  
+                            - **When to pick it:** You have three or more options without any natural order (e.g., favorite ice-cream flavor).  
+                            - **Why it helps:** Models each choice against a baseline, letting you see how factors shift people toward option A vs. B vs. C.  
+                            - **Watch out:** Assumes every new option affects all choices equally (IIA).  
+                            - **How to read the result:** A coefficient β for choice j means a one-unit increase in X multiplies the odds of choosing j vs. the baseline by exp(β).
+
+                        ---
+
+                        #### Modeling Counts of Events
+                        - **Poisson Regression**  
+                            - **When to pick it:** You’re counting events (e.g., doctor visits per year) and your counts cluster around an average.  
+                            - **Why it helps:** Fast, interpretable “rate” model (mean equals variance).  
+                            - **Watch out:** If you see a lot more spread (variance) than the average, your standard errors will be too small.  
+                            - **How to read the result:** β is the log change in the expected count; exp(β) is the multiplicative effect on the rate (e.g., exp(β)=1.2 means 20% more events).
+
+                        - **Negative Binomial Regression**  
+                            - **When to pick it:** Like Poisson, but your data show extra “lumpiness” (variance > mean).  
+                            - **Why it helps:** Learns an extra dispersion parameter so the model can stretch to fit that extra spread.  
+                            - **Watch out:** You need enough data to estimate that extra parameter well.  
+                            - **How to read the result:** Same as Poisson: exp(β) gives the factor change in expected count per unit of X.
+
+                        - **Zero-Inflated / Hurdle Models**  
+                            - **When to pick it:** You see more zeros than a standard count model expects (e.g., lots of people never visit the ER).  
+                            - **Why it helps:** Splits the process into “zero vs. non-zero” and “how many if non-zero,” giving you better fit.  
+                            - **Watch out:** They’re more complex—make sure you have good predictors for why zeros occur.  
+                            - **How to read the result:**  
+                                - **Zero part:** exp(β₀) is the odds ratio of being an “excess zero.”  
+                                - **Count part:** exp(β₁) is the rate ratio for non-zero counts.
+
+                        ---
+
+                        #### Ordering Things
+                        - **Ordered Logit / Probit**  
+                            - **When to pick it:** Your outcome has a clear order but no exact spacing (e.g., ratings like “low,” “medium,” “high”).  
+                            - **Why it helps:** Respects the ranking without treating “high vs. medium” the same as “medium vs. low.”  
+                            - **Watch out:** Assumes the effect of X is the same across all thresholds.  
+                            - **How to read the result:** β shifts the log-odds (or z-score) of being at or above each threshold; use predicted probabilities to see category moves.
+
+                        ---
+
+                        #### Working with Panel Data
+                        - **Fixed Effects**  
+                            - **When to pick it:** You have multiple observations per entity (e.g., states over time) and want to ignore anything that doesn’t change over time.  
+                            - **Why it helps:** Automatically removes unchanging traits (like a state’s geography).  
+                            - **Watch out:** You can’t estimate effects of variables that never change.  
+                            - **How to read the result:** Coefficients are the within-entity effect: a one-unit change in X for a given entity changes Y by β, holding that entity’s baseline constant.
+
+                        - **Random Effects**  
+                            - **When to pick it:** Same panel setup but you believe the unobserved traits aren’t correlated with your predictors.  
+                            - **Why it helps:** Lets you include variables that don’t change over time.  
+                            - **Watch out:** If that uncorrelated assumption fails, results can be biased—run a Hausman test.  
+                            - **How to read the result:** Similar to OLS/GLM: β shows the average change in Y per unit X across entities, accounting for random intercept variation.
+
+                        ---
+
+                        #### Mixing It Up
+                        - **Mixed Effects (Multilevel Models)**  
+                            - **When to pick it:** Your data is nested (e.g., students within schools) and you want to model both overall trends and group-specific deviations.  
+                            - **Why it helps:** Captures variation at each level (school vs. student).  
+                            - **Watch out:** Model setup and convergence can be tricky—start simple before adding random slopes.  
+                            - **How to read the result:**  
+                                - **Fixed part:** β is the average effect of X across all groups.  
+                                - **Random part:** The variance component tells you how much the intercepts (or slopes) vary from group to group.
+                        """)   
         # Weights dropdown (conditional)
         weightable = any(e in WEIGHTABLE_MODELS for e in ests)
         if weightable:
