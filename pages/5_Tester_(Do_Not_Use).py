@@ -285,6 +285,36 @@ for i in range(num_models):
             common_sets=[SUPPORTED_SE[e] for e in ests]
             se_opts=sorted(set.intersection(*common_sets)) if common_sets else []
         se_type=st.selectbox("Standard errors", se_opts, key=f"se_{i}")
+        with st.expander("What Standard errors should I use?", expanded=False):
+            st.markdown("""
+                #### Predicting Continuous Outcomes
+                - **OLS (Ordinary Least Squares)**  
+                    - **When to pick it:** You want to predict something like people’s height or test scores based on other factors, and most of your data points hover reasonably close to a line.  
+                    - **Why it helps:** Very quick to run and easy to explain (“a one-unit change in X adds β units to Y”).  
+                    - **Watch out:** If a few data points are way off the line (outliers) or the spread of errors varies wildly, your results can get skewed.  
+                    - **How to read the result:** The coefficient β means “for each one-unit increase in X, the average of Y goes up by β.”
+
+                - **LPM (Linear Probability Model)**  
+                    - **When to pick it:** You need a fast, first-cut estimate of a yes/no outcome (e.g., did someone vote or not?).  
+                    - **Why it helps:** Coefficients translate directly into percentage-point changes (e.g., “X increases the chance of voting by 5 points”).  
+                    - **Watch out:** Sometimes it predicts probabilities below 0% or above 100%.  
+                    - **How to read the result:** A coefficient of 0.05 means a one-unit rise in X boosts the probability of “yes” by 5 percentage points.
+                    
+                ---
+
+                #### Choosing Among Categories
+                - **Logit / Probit**  
+                    - **When to pick it:** Your outcome is yes/no and you want predictions that always stay between 0% and 100%.  
+                    - **Why it helps:** Keeps your predictions in bounds and handles uneven spread in the data.  
+                    - **Watch out:** The raw coefficients aren’t in “percentage points”—you’ll need a quick post-estimate step to get marginal effects.  
+                    - **How to read the result:** For Logit, β is a change in log-odds; exp(β) is the odds ratio. For Probit, β is a change in the underlying z-score; use average marginal effects to convert to probability changes.
+
+                - **Multinomial Logit**  
+                    - **When to pick it:** You have three or more options without any natural order (e.g., favorite ice-cream flavor).  
+                    - **Why it helps:** Models each choice against a baseline, letting you see how factors shift people toward option A vs. B vs. C.  
+                    - **Watch out:** Assumes every new option affects all choices equally (IIA).  
+                    - **How to read the result:** A coefficient β for choice j means a one-unit increase in X multiplies the odds of choosing j vs. the baseline by exp(β).
+                """)   
         cl=None
         if se_type=="Clustered": cl=st.selectbox("Cluster variable", data.columns, key=f"cl_{i}")        
         exp_output=False
