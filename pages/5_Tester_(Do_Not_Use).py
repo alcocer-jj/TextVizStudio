@@ -130,7 +130,7 @@ if uploaded:
             return pd.read_csv(uploaded_file, encoding=file_encoding)
         data = load_data(uploaded, encoding)
         placeholder2 = st.empty()
-        placeholder2.success("**✔︎** File successfully loaded!")
+        placeholder2.success("**✔︎** File successfully loaded!", help="**𝐢** File loaded successfully. You can now configure your models.")
         time.sleep(1.5)
         placeholder2.empty()
         st.subheader("Data Preview"); st.dataframe(data.head(5))
