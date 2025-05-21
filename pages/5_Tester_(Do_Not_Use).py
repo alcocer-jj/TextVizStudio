@@ -157,8 +157,7 @@ st.sidebar.markdown("")
 
 
 # Sidebar: Title and description
-st.markdown("<h1 style='text-align: center'>StatsModeling</h1>", unsafe_allow_html=True)
-
+st.markdown("<h1 style='text-align: center'>StatsModeling: Interactive Statistical Modeling & Estimation</h1>", unsafe_allow_html=True)
 
 st.markdown("")
 st.markdown("")
