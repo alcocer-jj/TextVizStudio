@@ -164,16 +164,17 @@ st.markdown("### **About the Developer**")
 st.text("")
     
 st.markdown("""
-    
-    TextViz Studio was developed by [José J. Alcocer](https://alcocer-jj.github.io/), a fifth-year Ph.D. candidate in Political Science and International Relations at the 
-    University of Southern California. Specializing in computational social science and political methodology, they focus on leveraging 
-    machine learning and natural language processing to address complex questions in social science—particularly those related to 
-    race and ethnicity. As a graduate research associate at the Security and Political Economy Lab (SPEC), they contribute to projects 
-    that utilize advanced NLP models to analyze communication patterns and their impacts on communities. With experience working as 
-    a survey statistician at the U.S. Census Bureau and as a computational social scientist at The Center for Election Science, they bring 
-    a wealth of expertise in data analysis and research methods. Their passion for bridging the gap between data science and social science
-    drives their commitment to facilitating tools that empower researchers to explore and understand their data more effectively.
-    """)
+            TextViz Studio was developed by [José J. Alcocer, Ph.D., M.P.P.](https://alcocer-jj.github.io/), 
+            an incoming Applied Research Statistician at Harvard Law School. He specializes in legislative institutions, 
+            political methodology, and computational social science. His work bridges the gap between social science and 
+            data science, leveraging statistical modeling, machine learning, natural language processing, and causal inference 
+            to explore complex political and social questions—particularly those related to race and ethnicity.
+
+            With over seven years of research experience across academic, nonprofit, and government settings, 
+            José brings expertise in quantitative analysis, survey methodology, experimental design, and data visualization. 
+            His commitment to accessible and rigorous methods drives the development of tools that help researchers 
+            analyze and interpret their data with clarity and confidence.
+            """)
 
 
     
