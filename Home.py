@@ -67,7 +67,33 @@ expander.write('''
     - Aggregation Functions: Apply sum, mean, count, and other aggregation functions to streamline data summaries.
     - High-Quality Export Options: Download visualizations in high-resolution PNG or interactive HTML formats for reporting and sharing.
 ''')    
-    
+
+st.text("")
+
+st.markdown("#### StatsModeling: Interactive Statistical Modeling & Estimation")
+
+st.markdown("""
+StatsModeling provides a flexible, user-friendly interface for building, estimating, and comparing regression models across a wide range of statistical types. 
+Designed to simplify complex regression workflows, the app empowers users to specify multiple models side-by-side, control advanced settings, and obtain clear, 
+interpretable results—without writing code. Whether working with linear, binary, count, or panel data, StatsModeling supports a full suite of estimators and 
+diagnostic options, making it suitable for researchers, students, and applied analysts alike.
+
+From uploading data to exporting polished tables, every step is built around an interactive experience. Users can define their models with full control over 
+predictors, fixed effects, panel structures, weights, and interaction terms, while also customizing standard errors and output formats. With support for 
+LaTeX, StatsModeling helps streamline the path from data analysis to presentation, offering a complete regression environment in the browser.
+""")
+
+expander = st.expander("**Key Features**")
+expander.write('''
+- Parallel Model Estimation: Configure and estimate up to four models simultaneously for easy comparison.
+- Broad Estimator Support: Choose from 14 estimators, including OLS, logit/probit, Poisson, negative binomial, zero-inflated, ordered, and mixed-effects models.
+- Custom Model Inputs: Define dependent variables, predictors, interaction terms, fixed effects, panel IDs, and analytic weights with ease.
+- Dynamic Standard Errors: Select homoskedastic, robust (HC0/HC1), or clustered standard errors depending on your research design.
+- Advanced Controls: Customize solver methods, toggle exponentiated coefficients, and configure zero-inflation link functions.
+- Export-Ready Outputs: Download regression results as formatted LaTeX tables.
+- Guided Usability: Includes descriptions and tooltips for model types and error structures to assist users of all experience levels.
+''')    
+        
 st.text("")
     
 st.markdown(" #### Text2Keywords: Keyword & Phrase Visualization")
