@@ -180,7 +180,7 @@ clustered) and a nested “About Standard Errors” expander for non-technical g
 let you toggle exponentiated coefficients for interpretability, along with customizing zero-inflation links
 and solver methods. Once run, results are presented as formatted summaries and dataframes, with the option 
 to export consolidated LaTeX or interactive HTML tables via Stargazer. Designed for both seasoned practitioners 
-and newcomers, TBD delivers a highly customizable, yet user-friendly, workflow for exploring and comparing 
+and newcomers, this module delivers a highly customizable, yet user-friendly, workflow for exploring and comparing 
 regression results on any tabular dataset.
 """)
 
