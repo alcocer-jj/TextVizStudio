@@ -66,6 +66,23 @@ This advanced tool uses transformer-based models to perform topic modeling, reve
 
 ## Updates and References
 
+#### Update 1.3 (05/20/2025)
+
+- **StatsModeling**:
+  - Added new **StatsModeling** module for statistical estimation.
+  - Supports configuration of up to four models simultaneously, including OLS, logit/probit, Poisson, zero-inflated, ordered, and panel/mixed-effects models.
+  - Includes customizable options for predictors, interaction terms, fixed effects, panel IDs, analytic weights, and standard errors (robust/clustered).
+  - Provides exportable LaTeX regression tables.
+
+- **StatsDashboard**:
+  - Now accepts different csv encodings besides the default UTF-8, that was causing upload issues.
+  
+- **Text2Topics:**
+  - Added BERTopic's `Zero-Shot` model for topic classification.
+  - Added NLTK's stopwords parameter for `Unsupervised Topic Modeling` option containing about 15 languages.
+  - Added progress bars for both models.
+
+
 #### Update 1.2 (11/13/2024)
 
 - **StatsDashboard**:
