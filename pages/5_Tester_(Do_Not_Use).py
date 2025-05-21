@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit_nested_layout
 import pandas as pd
 import chardet
 import statsmodels.formula.api as smf
@@ -9,6 +10,7 @@ from statsmodels.regression.mixed_linear_model import MixedLM
 from linearmodels.panel import PanelOLS, RandomEffects
 from stargazer.stargazer import Stargazer
 import numpy as np
+
 
 # --- Standard error mappings ---
 COMMON_STATS_SE = {
