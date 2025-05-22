@@ -1,11 +1,16 @@
 import streamlit as st 
+import streamlit.components.v1 as components
+
+js_code = """
+<script src="https://cdn.usefathom.com/script.js" data-site="GHRDRGUW" defer></script>
+"""
 
 st.set_page_config(
     page_title="TextViz Studio",
     layout="wide"
 )
 
-
+components.html(js_code)
 
 st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
 
