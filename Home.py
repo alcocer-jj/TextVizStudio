@@ -180,13 +180,3 @@ st.markdown("""
             His commitment to accessible and rigorous methods drives the development of tools that help researchers 
             analyze and interpret their data with clarity and confidence.
             """)
-
-
-    
-    
-
-
-
-
-
-
