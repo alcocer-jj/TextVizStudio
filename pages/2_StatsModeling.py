@@ -184,9 +184,12 @@ def detect_encoding(file):
     file.seek(0)
     return encoding
 
+def quote(varname):
+    return f'Q("{varname}")'
+
 # Data upload
 st.subheader("Import Data")
-uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"])
+uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"],  help="Please use only letters, numbers, and underscores (`_`) for your CSV headers. Spaces or symbols (e.g., $ - /) can cause errors when running models.")
 if uploaded:
     try:
         encoding = detect_encoding(uploaded)
@@ -411,19 +414,26 @@ if st.button("Run Models"):
     results={}
     for idx,cfg in enumerate(configs,1):
         model_data=data.copy()
-        # fixed effects dummies
-        fe_dummies=[]
+        # fixed effects dummies        
+        fe_dummies = []
         if cfg.get("fe_vars") and "Fixed Effects" not in cfg["ests"]:
             for fe in cfg["fe_vars"]:
-                dummies=pd.get_dummies(model_data[fe],prefix=fe,drop_first=True)
-                model_data=model_data.join(dummies)
+                dummies = pd.get_dummies(model_data[fe], prefix=fe, drop_first=True)
+                model_data = model_data.join(dummies)
                 fe_dummies.extend(dummies.columns)
-            if len(fe_dummies)>100: st.warning("**⚠︎** Large number of dummy variables may cause memory or convergence issues.")
-        rhs=cfg["ivs"]+fe_dummies
-        form=f"{cfg['dv']} ~ {' + '.join(rhs)}"
-        stats_cov=COMMON_STATS_SE.get(cfg["se"],{})
-        panel_cov=PANEL_SE.get(cfg["se"],{})
-        mixed_cov=MIXED_SE.get(cfg["se"],{})
+            if len(fe_dummies) > 100:
+                st.warning("**⚠︎** Large number of dummy variables may cause memory or convergence issues.")
+
+        rhs = cfg["ivs"] + fe_dummies
+        if not rhs:
+            st.warning(f"**⚠︎** Cannot fit {cfg['dv']} because you didn’t select any predictors or fixed‐effect dummies.")
+            continue
+        quoted_dv  = quote(cfg["dv"])
+        rhs_quoted = [quote(v) for v in rhs]
+        form = f"{quoted_dv} ~ " + " + ".join(rhs_quoted)
+        stats_cov  = COMMON_STATS_SE.get(cfg["se"], {})
+        panel_cov  = PANEL_SE.get(cfg["se"], {})
+        mixed_cov  = MIXED_SE.get(cfg["se"], {})        
         # weights Series
         weights=model_data[cfg['weights']] if cfg.get('weights') else None
         for est in cfg['ests']:
