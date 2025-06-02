@@ -189,7 +189,7 @@ def quote(varname):
 
 # Data upload
 st.subheader("Import Data")
-uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"],  help="Please use only letters, numbers, and underscores (`_`) for your CSV headers. Spaces or symbols (e.g., $ - /) can cause errors when running models.")
+uploaded = st.file_uploader("Upload your dataset (CSV format)", type=["csv"],  help="**𝐢** Please use only letters, numbers, and underscores (`_`) for your CSV headers. Spaces or symbols (e.g., $ - /) can cause errors when running models.")
 if uploaded:
     try:
         encoding = detect_encoding(uploaded)
