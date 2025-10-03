@@ -1,3 +1,4 @@
+import io, hashlib
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -107,14 +108,6 @@ configuration = {
     }
 }
 
-# Function to detect file encoding
-def detect_encoding(file):
-    raw = file.read()
-    result = chardet.detect(raw)
-    encoding = result["encoding"]
-    file.seek(0)
-    return encoding
-
 # Create header for the app
 st.subheader("Import Data")
 
@@ -123,27 +116,85 @@ if "last_file_hash" not in st.session_state:
     st.session_state.last_file_hash = None
 
 # File uploader for CSV files
+
+st.subheader("Import Data")
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-if uploaded_file:
+if not uploaded_file:
+    st.stop()
+
+# Read raw bytes once
+raw_bytes = uploaded_file.read()
+uploaded_file.seek(0)
+
+# Hash for caching
+file_hash = hashlib.md5(raw_bytes).hexdigest()
+
+@st.cache_data(show_spinner=False)
+def load_csv_from_bytes(raw_bytes: bytes, file_hash: str):
+    # 1) Detect (best-effort)
+    det = chardet.detect(raw_bytes) or {}
+    detected = (det.get("encoding") or "").lower()
+
+    # 2) Try candidates in order
+    candidates = [
+        "utf-8",          # common default
+        "utf-8-sig",      # handles BOM
+        detected if detected else None,
+        "cp1252",         # Windows Western
+        "latin1",         # ISO-8859-1
+        "utf-16", "utf-16le", "utf-16be"
+    ]
+    tried = set()
+    last_err = None
+
+    for enc in [c for c in candidates if c and c not in tried]:
+        tried.add(enc)
+        try:
+            # Use StringIO when passing text; but let pandas handle bytes + encoding directly
+            with io.BytesIO(raw_bytes) as bio:
+                df = pd.read_csv(
+                    bio,
+                    encoding=enc,
+                    sep=None,           # sniff delimiter
+                    engine="python",    # needed for sep=None
+                )
+            return df, enc, False  # False => no replacement
+        except UnicodeDecodeError as e:
+            last_err = e
+            continue
+        except Exception as e:
+            # Non-encoding issues still bubble up later
+            last_err = e
+            continue
+
+    # 3) Last-resort: decode with replacement to avoid crashing
     try:
-        encoding = detect_encoding(uploaded_file)
-        placeholder = st.empty()
-        placeholder.info(f"**𝐢** Detected file encoding: {encoding}")
-        time.sleep(1.5)
-        placeholder.empty()
-        @st.cache_data
-        def load_data(uploaded_file, file_encoding):
-            return pd.read_csv(uploaded_file, encoding=file_encoding)
-        data = load_data(uploaded_file, encoding)
-        placeholder2 = st.empty()
-        placeholder2.success("**✔︎** File successfully loaded!")
-        time.sleep(1.5)
-        placeholder2.empty()
-        st.subheader("Data Preview"); st.dataframe(data.head(5))
+        text = raw_bytes.decode("latin1", errors="replace")
+        df = pd.read_csv(io.StringIO(text), sep=None, engine="python")
+        return df, "latin1 (errors=replace)", True
+    except Exception as e:
+        # If we get here, surface the most informative error
+        raise last_err or e
+
+with st.spinner("Reading CSV..."):
+    try:
+        df, used_encoding, used_replacement = load_csv_from_bytes(raw_bytes, file_hash)
+        info = st.empty()
+        msg = f"**Detected/used encoding:** `{used_encoding}`"
+        if used_replacement:
+            msg += "  — encountered undecodable bytes; replaced invalid characters."
+        info.info(msg)
+        time.sleep(1.2)
+        info.empty()
+
+        st.subheader("Data Preview")
+        st.dataframe(df.head(5))
+
     except Exception as e:
         st.error(f"**☹︎** Failed to read the CSV file: {e}")
-if 'data' not in locals():
-    st.stop()
+
+# Make df available below
+data = df
 
 # Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
