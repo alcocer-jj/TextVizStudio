@@ -193,9 +193,6 @@ with st.spinner("Reading CSV..."):
     except Exception as e:
         st.error(f"**☹︎** Failed to read the CSV file: {e}")
 
-# Make df available below
-data = df
-
 # Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
     st.session_state.last_file_hash = None
@@ -211,7 +208,7 @@ if uploaded_file:
             st.session_state.pop(key, None)
 
     # Load the CSV file
-    data = pd.read_csv(uploaded_file)
+    data = df
     st.subheader("Topic Modeling Configuration")
 
     # Load proper text column
