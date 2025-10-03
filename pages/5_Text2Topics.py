@@ -14,6 +14,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
 import time
 import datetime
+import chardet
 
 st.set_page_config(
     page_title="Text2Topics",
@@ -106,6 +107,14 @@ configuration = {
     }
 }
 
+# Function to detect file encoding
+def detect_encoding(file):
+    raw = file.read()
+    result = chardet.detect(raw)
+    encoding = result["encoding"]
+    file.seek(0)
+    return encoding
+
 # Create header for the app
 st.subheader("Import Data")
 
@@ -115,6 +124,26 @@ if "last_file_hash" not in st.session_state:
 
 # File uploader for CSV files
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+if uploaded_file:
+    try:
+        encoding = detect_encoding(uploaded)
+        placeholder = st.empty()
+        placeholder.info(f"**𝐢** Detected file encoding: {encoding}")
+        time.sleep(1.5)
+        placeholder.empty()
+        @st.cache_data
+        def load_data(uploaded_file, file_encoding):
+            return pd.read_csv(uploaded_file, encoding=file_encoding)
+        data = load_data(uploaded, encoding)
+        placeholder2 = st.empty()
+        placeholder2.success("**✔︎** File successfully loaded!")
+        time.sleep(1.5)
+        placeholder2.empty()
+        st.subheader("Data Preview"); st.dataframe(data.head(5))
+    except Exception as e:
+        st.error(f"**☹︎** Failed to read the CSV file: {e}")
+if 'data' not in locals():
+    st.stop()
 
 # Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
