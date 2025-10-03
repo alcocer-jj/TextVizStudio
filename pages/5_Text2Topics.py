@@ -126,7 +126,7 @@ if "last_file_hash" not in st.session_state:
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 if uploaded_file:
     try:
-        encoding = detect_encoding(uploaded)
+        encoding = detect_encoding(uploaded_file)
         placeholder = st.empty()
         placeholder.info(f"**𝐢** Detected file encoding: {encoding}")
         time.sleep(1.5)
@@ -134,7 +134,7 @@ if uploaded_file:
         @st.cache_data
         def load_data(uploaded_file, file_encoding):
             return pd.read_csv(uploaded_file, encoding=file_encoding)
-        data = load_data(uploaded, encoding)
+        data = load_data(uploaded_file, encoding)
         placeholder2 = st.empty()
         placeholder2.success("**✔︎** File successfully loaded!")
         time.sleep(1.5)
