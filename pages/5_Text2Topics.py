@@ -345,51 +345,86 @@ if uploaded_file:
             def display_unsupervised_outputs(BERTmodel, text_data):
                 topic_info_df = BERTmodel.get_topic_info()
                 columns_to_remove = ['Name', 'Representation']
-                topic_info_df = topic_info_df.drop(columns=[col for col in columns_to_remove if col in topic_info_df.columns], errors='ignore')
+                topic_info_df = topic_info_df.drop(
+                    columns=[col for col in columns_to_remove if col in topic_info_df.columns],
+                    errors='ignore'
+                    )
 
-                # Generate hierarchical topics from the model
-                hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
-    
-                # Visualize hierarchy and intertopic distance in a two-column layout
-                hierarchy_col, map_col = st.columns([1, 1])
-    
-                with hierarchy_col:
-                    st.write("**Topic Hierarchy:**")
-                    hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
-                    hierarchy_fig.update_layout(width=1200, height=800, margin=dict(l=80, r=80, t=100, b=80))
-                    st.plotly_chart(hierarchy_fig, config = configuration)
-        
-                with map_col:
-                    st.write("**Intertopic Distance Map:**")
-                    intertopic_map = BERTmodel.visualize_topics()
-                    intertopic_map.update_layout(width=1200, height=800, margin=dict(l=80, r=80, t=100, b=80))
-                    st.plotly_chart(intertopic_map, config = configuration)
-
-                # Display topic info and document-topic probabilities in another two-column layout below
-                topic_info_col, doc_prob_col = st.columns([1, 1])
-    
-                with topic_info_col:
-                    st.write("**Identified Topics:**")
-                    # Create two new columns from 'GPT Topic Label'
-                    if 'GPT Topic Label' in topic_info_df.columns:
+                # --- Parse GPT labels if present ---
+                if 'GPT Topic Label' in topic_info_df.columns:
                         topic_info_df['GPT Topic Label'] = topic_info_df['GPT Topic Label'].astype(str)
                         topic_info_df['GPT Label'] = topic_info_df['GPT Topic Label'].str.split(';').str[0].str.strip()
                         topic_info_df['GPT Description'] = topic_info_df['GPT Topic Label'].str.split(';').str[1].str.strip()
-                        # Remove unwanted characters from 'GPT Label' and 'GPT Description'
                         topic_info_df['GPT Label'] = topic_info_df['GPT Label'].str.replace(r"[\"'\[\]]", "", regex=True)
                         topic_info_df['GPT Description'] = topic_info_df['GPT Description'].str.replace(r"'\]$", "", regex=True)
-                        topic_info_df = topic_info_df.drop(columns=['GPT Topic Label'])        
-                    st.dataframe(topic_info_df)
+                        topic_info_df = topic_info_df.drop(columns=['GPT Topic Label'])
+
+                # --- Count valid (non-outlier) topics with documents ---
+                non_outlier_topics = topic_info_df[
+                        (topic_info_df['Topic'] >= 0) & (topic_info_df.get('Count', 0) > 0)
+                        ]
+                n_valid_topics = len(non_outlier_topics)
+
+                # Layout for plots
+                hierarchy_col, map_col = st.columns([1, 1])
+
+                if n_valid_topics < 1:
+                        st.warning(
+                            "No non-outlier topics with assigned documents were found. "
+                            "Skipping hierarchy and intertopic distance map."
+                            )
+                elif n_valid_topics == 1:
+                        st.info(
+                            "Only one non-outlier topic was found. "
+                            "A topic hierarchy and intertopic distance map require at least two topics, "
+                            "so those visualizations are skipped."
+                            )
+                else:
+                        # --- Only safe to call these when we have ≥ 2 topics ---
+                        with hierarchy_col:
+                            st.write("**Topic Hierarchy:**")
+                            try:
+                                hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
+                                hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
+                                hierarchy_fig.update_layout(
+                                    width=1200, height=800,
+                                    margin=dict(l=80, r=80, t=100, b=80)
+                                )
+                                st.plotly_chart(hierarchy_fig, config=configuration)
+                            except Exception as e:
+                                st.warning(f"Could not generate topic hierarchy: {e}")
+
+                        with map_col:
+                            st.write("**Intertopic Distance Map:**")
+                            try:
+                                intertopic_map = BERTmodel.visualize_topics()
+                                intertopic_map.update_layout(
+                                    width=1200, height=800,
+                                    margin=dict(l=80, r=80, t=100, b=80)
+                                )
+                                st.plotly_chart(intertopic_map, config=configuration)
+                            except Exception as e:
+                                st.warning(f"Could not generate intertopic distance map: {e}")
+
+                # --- Tables (these are safe even with 0–1 topics) ---
+                topic_info_col, doc_prob_col = st.columns([1, 1])
+
+                with topic_info_col:
+                        st.write("**Identified Topics:**")
+                        st.dataframe(topic_info_df)
 
                 with doc_prob_col:
-                    st.write("**Document-Topic Probabilities:**")
-                    doc_info_df = BERTmodel.get_document_info(text_data)
-        
-                    # Drop unnecessary columns
-                    columns_to_remove = ['Name', 'Top_n_words', 'Representative Docs', 'Representative_document',
-                                         'Representation', 'Unique Keywords', 'GPT Topic Label', 'Representative_Docs']
-                    doc_info_df = doc_info_df.drop(columns=[col for col in columns_to_remove if col in doc_info_df.columns], errors='ignore')
-                    st.dataframe(doc_info_df)
+                        st.write("**Document-Topic Probabilities:**")
+                        doc_info_df = BERTmodel.get_document_info(text_data)
+                        cols_to_remove = [
+                            'Name', 'Top_n_words', 'Representative Docs', 'Representative_document',
+                            'Representation', 'Unique Keywords', 'GPT Topic Label', 'Representative_Docs'
+                        ]
+                        doc_info_df = doc_info_df.drop(
+                            columns=[c for c in cols_to_remove if c in doc_info_df.columns],
+                            errors='ignore'
+                        )
+                        st.dataframe(doc_info_df)
 
             # Begin logic for running the model
             if run_model_btn:
