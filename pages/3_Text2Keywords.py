@@ -8,7 +8,7 @@ from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from io import BytesIO
 import zipfile
-import datetime
+from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 

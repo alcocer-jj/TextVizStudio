@@ -9,7 +9,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import plotly.express as px
 from collections import defaultdict
 import re
-import datetime
+from datetime import datetime
 from pathlib import Path
 from io import BytesIO, StringIO
 from scipy.special import softmax

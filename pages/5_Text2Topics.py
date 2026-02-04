@@ -14,7 +14,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
 import time
-import datetime
+from datetime import datetime
 import chardet
 
 st.set_page_config(
