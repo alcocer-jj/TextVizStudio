@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import random
-from bertopic.representation import KeyBERTInspired, OpenAI, TextGeneration, LiteLLM
+from bertopic.representation import KeyBERTInspired, OpenAI, TextGeneration
 import openai
 from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
@@ -323,61 +323,20 @@ if uploaded_file:
                                 - Can be computationally expensive; each reduction step requires a new c-TF-IDF calculation.
                                 """)
                     
-                          # Option for LLM provider
-                llm_provider = st.selectbox(
-                    "Use an LLM for Enhanced Topic Labels?",
-                    ["None", "OpenAI (GPT)", "Claude (Anthropic)"],
-                    help=(
-                        "**OpenAI (GPT)** — Uses OpenAI’s Chat Completions API. "
-                        "Requires an OpenAI API key.\n\n"
-                        "**Claude (Anthropic)** — Uses Anthropic’s Claude models via LiteLLM. "
-                        "Requires an Anthropic API key from console.anthropic.com.\n\n"
-                        "**None** — Skip LLM labeling. Topics labeled by c-TF-IDF keywords only."
-                    )
-                )
-
+                # Option for OpenAI API use
+                use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
+            
+                # Ask for OpenAI API key if user chooses to use OpenAI
                 api_key = None
-                openai_model_choice = "gpt-5.4-mini"
-                claude_model_choice = "claude-sonnet-4-6"
-
-                if llm_provider == "OpenAI (GPT)":
+                if use_openai_option:
                     api_key = st.text_input("Enter your OpenAI API Key", type="password")
-                    openai_model_choice = st.selectbox(
-                        "Select OpenAI model for topic labeling:",
-                        options=["gpt-5.4-mini", "gpt-5.4", "gpt-5.5", "gpt-5.4-nano"],
-                        index=0,
-                        help=(
-                            "**gpt-5.5** — Flagship. Highest capability, highest cost ($5/1M input · $30/1M output).\n\n"
-                            "**gpt-5.4** — Previous flagship. Strong capability at lower cost.\n\n"
-                            "**gpt-5.4-mini** — Fast and affordable. Best balance for most labeling tasks.\n\n"
-                            "**gpt-5.4-nano** — Fastest and cheapest. Good for high-volume, simpler labels."
-                        )
-                    )
-                elif llm_provider == "Claude (Anthropic)":
-                    api_key = st.text_input("Enter your Anthropic API Key", type="password")
-                    claude_model_choice = st.selectbox(
-                        "Select Claude model for topic labeling:",
-                        options=["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-20250514"],
-                        index=1,
-                        help=(
-                            "**claude-opus-4** — Most capable Claude model. Best for nuanced labels. Highest cost.\n\n"
-                            "**claude-sonnet-4** — Balanced capability and cost. Recommended for most use cases.\n\n"
-                            "**claude-haiku-4** — Fastest and most economical. Good for straightforward topic labels."
-                        )
-                    )
-
-                with st.expander("A Note on using an LLM for Topic Labels"):
+                with st.expander("A Note on using OpenAI for Topic Labels"):
                     st.markdown("""
-                                This option passes each topic’s representative keywords and documents to a large language model,
-                                which generates a concise label and description for that topic.
+                                This parameter controls whether you want to use an LLM to generate topic labels.
+
+                                OpenAI's GPT-4o can be used to generate clearer and more descriptive topic labels using representative keywords and sample documents.
                                 
-                                **OpenAI (GPT)** requires an API key from [platform.openai.com](https://platform.openai.com).
-                                
-                                **Claude (Anthropic)** requires an API key from [console.anthropic.com](https://console.anthropic.com).
-                                Claude is integrated via BERTopic’s built-in LiteLLM backend — no extra setup needed.
-                                
-                                Higher-tier models produce more interpretable labels but consume more API credits.
-                                Delays may occur due to rate limits or API latency.
+                                You’ll need a valid OpenAI API key to use this feature. Delays may occur due to rate limits or API latency.
                                 """)
                     
             run_model_btn = st.button("Run Unsupervised Topic Model")
@@ -392,13 +351,13 @@ if uploaded_file:
                     )
 
                 # --- Parse GPT labels if present ---
-                if 'LLM Topic Label' in topic_info_df.columns:
-                        topic_info_df['LLM Topic Label'] = topic_info_df['LLM Topic Label'].astype(str)
-                        topic_info_df['LLM Label'] = topic_info_df['LLM Topic Label'].str.split(';').str[0].str.strip()
-                        topic_info_df['LLM Description'] = topic_info_df['LLM Topic Label'].str.split(';').str[1].str.strip()
-                        topic_info_df['LLM Label'] = topic_info_df['LLM Label'].str.replace(r"[\"'\[\]]", "", regex=True)
-                        topic_info_df['LLM Description'] = topic_info_df['LLM Description'].str.replace(r"'\]$", "", regex=True)
-                        topic_info_df = topic_info_df.drop(columns=['LLM Topic Label'])
+                if 'GPT Topic Label' in topic_info_df.columns:
+                        topic_info_df['GPT Topic Label'] = topic_info_df['GPT Topic Label'].astype(str)
+                        topic_info_df['GPT Label'] = topic_info_df['GPT Topic Label'].str.split(';').str[0].str.strip()
+                        topic_info_df['GPT Description'] = topic_info_df['GPT Topic Label'].str.split(';').str[1].str.strip()
+                        topic_info_df['GPT Label'] = topic_info_df['GPT Label'].str.replace(r"[\"'\[\]]", "", regex=True)
+                        topic_info_df['GPT Description'] = topic_info_df['GPT Description'].str.replace(r"'\]$", "", regex=True)
+                        topic_info_df = topic_info_df.drop(columns=['GPT Topic Label'])
 
                 # --- Count valid (non-outlier) topics with documents ---
                 non_outlier_topics = topic_info_df[
@@ -459,7 +418,7 @@ if uploaded_file:
                         doc_info_df = BERTmodel.get_document_info(text_data)
                         cols_to_remove = [
                             'Name', 'Top_n_words', 'Representative Docs', 'Representative_document',
-                            'Representation', 'Unique Keywords', 'LLM Topic Label', 'Representative_Docs'
+                            'Representation', 'Unique Keywords', 'GPT Topic Label', 'Representative_Docs'
                         ]
                         doc_info_df = doc_info_df.drop(
                             columns=[c for c in cols_to_remove if c in doc_info_df.columns],
@@ -528,45 +487,35 @@ if uploaded_file:
                     progress.progress(55, text="Preparing topic representations...")
                     representation_model = {"Unique Keywords": KeyBERTInspired()}
                         
-                    # LLM topic labeling: OpenAI or Claude
-                    label_prompt = """
-                        I have a topic that is described by the following keywords: [KEYWORDS]
-                        In this topic, the following documents are a small but representative subset of all documents in the topic:
-                        [DOCUMENTS]
-
-                        Based on the information above, please give a short label and an informative description of this topic in the following format:
-                        <label>; <description>
-                        """
-
-                    if llm_provider == "OpenAI (GPT)" and api_key:
+                    # Check if user wants to use OpenAI for topic labels    
+                    if use_openai_option and api_key:
                         try:
+                            # Set up OpenAI API client
                             client = openai.OpenAI(api_key=api_key)
-                            openai_model = OpenAI(
-                                client=client,
-                                model=openai_model_choice,
-                                prompt=label_prompt,
-                                chat=True,
-                                nr_docs=10,
-                                delay_in_seconds=3
-                            )
-                            representation_model["LLM Topic Label"] = openai_model
+
+                            label_prompt = """
+                                I have a topic that is described by the following keywords: [KEYWORDS]
+                                In this topic, the following documents are a small but representative subset of all documents in the topic:
+                                [DOCUMENTS]
+
+                                Based on the information above, please give a short label and an informative description of this topic in the following format:
+                                <label>; <description>
+                                """
+                        
+                            # Create OpenAI representation model
+                            openai_model = OpenAI(client=client, 
+                                                    model="gpt-4o",
+                                                    prompt=label_prompt,
+                                                    chat=True,
+                                                    nr_docs=10,
+                                                    delay_in_seconds=3,
+                                                    generator_kwargs={"stop": None})
+                        
+                            # Add OpenAI to the representation model
+                            representation_model["GPT Topic Label"] = openai_model
                         except Exception as e:
                             st.error(f"Failed to initialize OpenAI API: {e}")
-                            representation_model = {"Unique Keywords": KeyBERTInspired()}
-
-                    elif llm_provider == "Claude (Anthropic)" and api_key:
-                        try:
-                            import os as _os
-                            _os.environ["ANTHROPIC_API_KEY"] = api_key
-                            claude_model = LiteLLM(
-                                model=f"anthropic/{claude_model_choice}",
-                                prompt=label_prompt,
-                                delay_in_seconds=2
-                            )
-                            representation_model["LLM Topic Label"] = claude_model
-                        except Exception as e:
-                            st.error(f"Failed to initialize Claude (Anthropic) API: {e}")
-                            representation_model = {"Unique Keywords": KeyBERTInspired()}
+                            representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback to KeyBERT only
                         
                     # Initialize BERTopic model with the selected representation models
                     progress.progress(70, text="Building BERTopic model...")
@@ -690,51 +639,11 @@ if uploaded_file:
                 st.info("📝 This parameter sets the minimum number of documents required to form a topic Lower values create more (and smaller) topics, while higher values reduce topic count. If set too high, no topics may be formed at all.")
                 st.success("💡 For larger datasets (e.g., hundreds of thousands to millions of documents), increase min_topic_size well beyond the default of 10 — try values like 100 or 500 to avoid excessive micro-clustering. Experimentation is key.")
                 
-                # Option for LLM provider
-                llm_provider = st.selectbox(
-                    "Use an LLM for Enhanced Topic Labels?",
-                    ["None", "OpenAI (GPT)", "Claude (Anthropic)"],
-                    key="zs_llm_provider",
-                    help=(
-                        "**OpenAI (GPT)** — Uses OpenAI’s Chat Completions API. "
-                        "Requires an OpenAI API key.\n\n"
-                        "**Claude (Anthropic)** — Uses Anthropic’s Claude models via LiteLLM. "
-                        "Requires an Anthropic API key from console.anthropic.com.\n\n"
-                        "**None** — Skip LLM labeling. Topics labeled by c-TF-IDF keywords only."
-                    )
-                )
-
+                # Option for OpenAI API use
+                use_openai_option = st.checkbox("Use OpenAI's GPT-4o API for Topic Labels?")
                 api_key = None
-                openai_model_choice = "gpt-5.4-mini"
-                claude_model_choice = "claude-sonnet-4-6"
-
-                if llm_provider == "OpenAI (GPT)":
-                    api_key = st.text_input("Enter your OpenAI API Key", type="password", key="zs_oai_key")
-                    openai_model_choice = st.selectbox(
-                        "Select OpenAI model for topic labeling:",
-                        options=["gpt-5.4-mini", "gpt-5.4", "gpt-5.5", "gpt-5.4-nano"],
-                        index=0,
-                        key="zs_oai_model",
-                        help=(
-                            "**gpt-5.5** — Flagship. Highest capability, highest cost ($5/1M input · $30/1M output).\n\n"
-                            "**gpt-5.4** — Previous flagship. Strong capability at lower cost.\n\n"
-                            "**gpt-5.4-mini** — Fast and affordable. Best balance for most labeling tasks.\n\n"
-                            "**gpt-5.4-nano** — Fastest and cheapest. Good for high-volume, simpler labels."
-                        )
-                    )
-                elif llm_provider == "Claude (Anthropic)":
-                    api_key = st.text_input("Enter your Anthropic API Key", type="password", key="zs_ant_key")
-                    claude_model_choice = st.selectbox(
-                        "Select Claude model for topic labeling:",
-                        options=["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-20250514"],
-                        index=1,
-                        key="zs_claude_model",
-                        help=(
-                            "**claude-opus-4** — Most capable Claude model. Best for nuanced labels. Highest cost.\n\n"
-                            "**claude-sonnet-4** — Balanced capability and cost. Recommended for most use cases.\n\n"
-                            "**claude-haiku-4** — Fastest and most economical. Good for straightforward topic labels."
-                        )
-                    )
+                if use_openai_option:
+                    api_key = st.text_input("Enter your OpenAI API Key", type="password")
                     
                 run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
                 
@@ -761,43 +670,31 @@ if uploaded_file:
                         progress.progress(55, text="Preparing topic representations...")
                         representation_model = {"Unique Keywords": KeyBERTInspired()}
 
-                        # LLM topic labeling: OpenAI or Claude
-                        label_prompt = """
-                            Given the topic described by the following keywords: [KEYWORDS],
-                            and the following representative documents: [DOCUMENTS],
-                            provide a short label and a concise description in the format:
-                            <label>; <description>
-                            """
-
-                        if llm_provider == "OpenAI (GPT)" and api_key:
+                        # OpenAI topic labeling integration
+                        if use_openai_option and api_key:
                             try:
-                                client = openai.OpenAI(api_key=api_key)
+                                # Set up OpenAI client
+                                client = openai.OpenAI(api_key=api_key)                    
+                                label_prompt = """
+                                    Given the topic described by the following keywords: [KEYWORDS],
+                                    and the following representative documents: [DOCUMENTS],
+                                    provide a short label and a concise description in the format:
+                                    <label>; <description>
+                                    """
+                                # OpenAI initialization
                                 openai_model = OpenAI(
                                     client=client,
-                                    model=openai_model_choice,
+                                    model="gpt-4o",
                                     prompt=label_prompt,
                                     chat=True,
                                     nr_docs=10,
-                                    delay_in_seconds=3
-                                )
-                                representation_model["LLM Topic Label"] = openai_model
+                                    delay_in_seconds=3,
+                                    generator_kwargs={"stop": None})
+                                                
+                                representation_model["GPT Topic Label"] = openai_model
                             except Exception as e:
                                 st.error(f"Error: Failed to initialize OpenAI API: {e}")
-                                representation_model = {"Unique Keywords": KeyBERTInspired()}
-
-                        elif llm_provider == "Claude (Anthropic)" and api_key:
-                            try:
-                                import os as _os
-                                _os.environ["ANTHROPIC_API_KEY"] = api_key
-                                claude_model = LiteLLM(
-                                    model=f"anthropic/{claude_model_choice}",
-                                    prompt=label_prompt,
-                                    delay_in_seconds=2
-                                )
-                                representation_model["LLM Topic Label"] = claude_model
-                            except Exception as e:
-                                st.error(f"Error: Failed to initialize Claude (Anthropic) API: {e}")
-                                representation_model = {"Unique Keywords": KeyBERTInspired()}
+                                representation_model = {"Unique Keywords": KeyBERTInspired()}  # Fallback
 
                         # Initialize BERTopic model with zero-shot topic list
                         progress.progress(70, text="Building BERTopic model...")
@@ -816,15 +713,15 @@ if uploaded_file:
                         topic_info = BERTmodel.get_topic_info()
                         topic_info = pd.DataFrame(topic_info)
 
-                        # Create two new columns from 'LLM Topic Label'
-                        if 'LLM Topic Label' in topic_info.columns:
-                            topic_info['LLM Topic Label'] = topic_info['LLM Topic Label'].astype(str)
-                            topic_info['LLM Label'] = topic_info['LLM Topic Label'].str.split(';').str[0].str.strip()
-                            topic_info['LLM Description'] = topic_info['LLM Topic Label'].str.split(';').str[1].str.strip()
+                        # Create two new columns from 'GPT Topic Label'
+                        if 'GPT Topic Label' in topic_info.columns:
+                            topic_info['GPT Topic Label'] = topic_info['GPT Topic Label'].astype(str)
+                            topic_info['GPT Label'] = topic_info['GPT Topic Label'].str.split(';').str[0].str.strip()
+                            topic_info['GPT Description'] = topic_info['GPT Topic Label'].str.split(';').str[1].str.strip()
                             # Remove unwanted characters from 'GPT Label' and 'GPT Description'
-                            topic_info['LLM Label'] = topic_info['LLM Label'].str.replace(r"[\"'\[\]]", "", regex=True)
-                            topic_info['LLM Description'] = topic_info['LLM Description'].str.replace(r"'\]$", "", regex=True)
-                            topic_info = topic_info.drop(columns=['LLM Topic Label'])
+                            topic_info['GPT Label'] = topic_info['GPT Label'].str.replace(r"[\"'\[\]]", "", regex=True)
+                            topic_info['GPT Description'] = topic_info['GPT Description'].str.replace(r"'\]$", "", regex=True)
+                            topic_info = topic_info.drop(columns=['GPT Topic Label'])
                             
                         # Check if topics exist before running transform()
                         unique_topics = set(topics) - {-1}
