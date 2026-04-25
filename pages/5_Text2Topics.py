@@ -104,12 +104,9 @@ configuration = {
         'filename': 'plotly_image',
         'height': 600,
         'width': 1000,
-        'scale': 2  # Higher resolution image
+        'scale': 2
     }
 }
-
-# Create header for the app
-st.subheader("Import Data")
 
 # Track file uploads and session state
 if "last_file_hash" not in st.session_state:
@@ -214,10 +211,10 @@ if uploaded_file:
     # Load proper text column
     column_options = [""] + list(data.columns)
     text_column = st.selectbox("Select the text column", options=column_options, key="text_column")
-    st.info("📝 Rows with missing or empty text values will be automatically excluded.")
+    st.info("**NOTE:** Rows with missing or empty text values will be automatically excluded.")
     
     if text_column == "":
-        st.warning("⚠️ Please select a valid text column to continue.")
+        st.warning("**WARNING:** Please select a valid text column to continue.")
         st.stop()
     
     data = data.dropna(subset=[text_column])
@@ -228,7 +225,7 @@ if uploaded_file:
 
     # Guard clause: stop early if no valid data
     if st.session_state.text_data is None or st.session_state.text_data.empty:
-        st.error("Error: No valid text data found. Please check your file.")
+        st.error("**ERROR:** No valid text data found. Please check your file.")
         st.stop()
 
     else:
@@ -249,7 +246,7 @@ if uploaded_file:
             """)        
         
         if method_selection == "":
-            st.warning("⚠️ Please select a topic modeling method to continue.")
+            st.warning("**⚠︎** Please select a topic modeling method to continue.")
             st.stop()
         elif method_selection == "Unsupervised":
             method = "Unsupervised"
@@ -262,7 +259,7 @@ if uploaded_file:
             
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            st.success("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+            st.success("**𝐢** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
             
             # generate two columns for the layout
             param1, param2 = st.columns([1, 1])
@@ -274,15 +271,15 @@ if uploaded_file:
                     st.markdown("""
                                 Text2Topics supports two main language options, each powered by a specialized sentence transformer:
 
-                                [**English (`all-MiniLM-L6-v2`)**](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)  
+                                [**English (`bge-small-en-v1.5`)**](https://huggingface.co/BAAI/bge-small-en-v1.5)  
                                 - **Best for**: High-performance topic modeling on English-only datasets.  
-                                - **Strengths**: Lightweight and fast; trained on 1 billion sentence pairs using contrastive learning. Excels at semantic clustering, sentence similarity, and short-text embedding.  
-                                - **Limitations**: Only supports English. Input texts longer than 256 tokens are truncated.
+                                - **Strengths**: State-of-the-art performance for its size class on the MTEB benchmark; trained with contrastive learning and hard negative mining for sharper semantic clustering. Significantly outperforms older MiniLM-based models on clustering and retrieval tasks while remaining lightweight (~127MB).  
+                                - **Limitations**: Only supports English. Input texts longer than 512 tokens are truncated.
 
-                                [**Multilingual (`paraphrase-multilingual-MiniLM-L12-v2`)**](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2)  
-                                - **Best for**: Working with non-English or mixed-language datasets (supports 50+ languages).  
-                                - **Strengths**: Adapted for semantic understanding across diverse languages. Maintains strong performance across multilingual corpora.  
-                                - **Limitations**: Slightly larger and slower than the English model; performance may vary depending on language and domain.
+                                [**Multilingual (`multilingual-e5-small`)**](https://huggingface.co/intfloat/multilingual-e5-small)  
+                                - **Best for**: Working with non-English or mixed-language datasets (supports 100+ languages).  
+                                - **Strengths**: Continuously trained on a diverse mixture of multilingual datasets using contrastive learning. Delivers strong and consistent performance across retrieval, clustering, and semantic similarity tasks in both high- and low-resource languages. Also used as the embedding model in the Zero-Shot pipeline, ensuring consistency across both modeling approaches.  
+                                - **Limitations**: Larger than the English model (~470MB) due to its broad multilingual vocabulary; performance may degrade on very low-resource languages.
                                 """)
                 if language == "multilingual":
                     stop_word_language = st.selectbox("Select the stop word language for CountVectorizer via NLTK:",
@@ -475,9 +472,9 @@ if uploaded_file:
                     # Initialize Sentence Transformer model
                     progress.progress(10, text="Initializing and Loading Sentence Transformer model...")
                     if language == "english":
-                        model = SentenceTransformer("all-MiniLM-L6-v2")
+                        model = SentenceTransformer("BAAI/bge-small-en-v1.5")
                     else:
-                        model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+                        model = SentenceTransformer("intfloat/multilingual-e5-small")
                         
                     # Initialize UMAP model
                     progress.progress(25, text="Setting up dimensionality reduction...")
