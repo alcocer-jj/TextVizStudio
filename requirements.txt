@@ -29,3 +29,4 @@ datetime
 statsmodels
 stargazer
 linearmodels
+litellm
