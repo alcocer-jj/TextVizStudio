@@ -540,17 +540,14 @@ if uploaded_file:
 
                     if llm_provider == "OpenAI (GPT)" and api_key:
                         try:
-                            client = openai.OpenAI(api_key=api_key)
-                            openai_model = OpenAI(
-                                client=client,
-                                model=openai_model_choice,
+                            import os as _os
+                            _os.environ["OPENAI_API_KEY"] = api_key
+                            openai_llm = LiteLLM(
+                                model=f"openai/{openai_model_choice}",
                                 prompt=label_prompt,
-                                chat=True,
-                                nr_docs=10,
-                                delay_in_seconds=3,
-                                generator_kwargs={"stop": None}
+                                delay_in_seconds=3
                             )
-                            representation_model["LLM Topic Label"] = openai_model
+                            representation_model["LLM Topic Label"] = openai_llm
                         except Exception as e:
                             st.error(f"Failed to initialize OpenAI API: {e}")
                             representation_model = {"Unique Keywords": KeyBERTInspired()}
@@ -772,17 +769,14 @@ if uploaded_file:
 
                         if llm_provider == "OpenAI (GPT)" and api_key:
                             try:
-                                client = openai.OpenAI(api_key=api_key)
-                                openai_model = OpenAI(
-                                    client=client,
-                                    model=openai_model_choice,
+                                import os as _os
+                                _os.environ["OPENAI_API_KEY"] = api_key
+                                openai_llm = LiteLLM(
+                                    model=f"openai/{openai_model_choice}",
                                     prompt=label_prompt,
-                                    chat=True,
-                                    nr_docs=10,
-                                    delay_in_seconds=3,
-                                    generator_kwargs={"stop": None}
+                                    delay_in_seconds=3
                                 )
-                                representation_model["LLM Topic Label"] = openai_model
+                                representation_model["LLM Topic Label"] = openai_llm
                             except Exception as e:
                                 st.error(f"Error: Failed to initialize OpenAI API: {e}")
                                 representation_model = {"Unique Keywords": KeyBERTInspired()}
