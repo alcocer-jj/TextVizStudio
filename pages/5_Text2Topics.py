@@ -95,6 +95,12 @@ if "BERTmodel" not in st.session_state:
     st.session_state.BERTmodel = None
     st.session_state.topics = None
     st.session_state.text_data = None
+if "hierarchy_fig" not in st.session_state:
+    st.session_state.hierarchy_fig = None
+if "intertopic_fig" not in st.session_state:
+    st.session_state.intertopic_fig = None
+if "umap_random_state" not in st.session_state:
+    st.session_state.umap_random_state = None
 
 # Configuration for Plotly chart download
 configuration = {
@@ -188,7 +194,7 @@ with st.spinner("Reading CSV..."):
         st.dataframe(df.head(5))
 
     except Exception as e:
-        st.error(f"**☹︎** Failed to read the CSV file: {e}")
+        st.error(f"**ERROR:** Failed to read the CSV file: {e}")
 
 # Clear session state if file is removed
 if uploaded_file is None and st.session_state.last_file_hash is not None:
@@ -246,7 +252,7 @@ if uploaded_file:
             """)        
         
         if method_selection == "":
-            st.warning("**⚠︎** Please select a topic modeling method to continue.")
+            st.warning("**WARNING:** Please select a topic modeling method to continue.")
             st.stop()
         elif method_selection == "Unsupervised":
             method = "Unsupervised"
@@ -259,7 +265,7 @@ if uploaded_file:
             
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            st.success("**𝐢** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+            st.success("**TIP:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
             
             # generate two columns for the layout
             param1, param2 = st.columns([1, 1])
@@ -286,7 +292,7 @@ if uploaded_file:
                         ("none", "czech", "danish", "dutch", "estonian", "finnish", "french", "german", "greek",
                         "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
                         "swedish", "turkish"))
-                    st.info("📝 The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
+                    st.info("**NOTE:** The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
                 
                 # Option to apply outlier reduction
                 reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=False)
@@ -300,7 +306,7 @@ if uploaded_file:
                                 """)
                 if reduce_outliers_option:
                     c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.3)
-                    st.success("💡 A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
+                    st.success("**TIP:** A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
                 
             with param2:
                 # Select topic generation mode
@@ -380,7 +386,7 @@ if uploaded_file:
             run_model_btn = st.button("Run Unsupervised Topic Model")
             
             # Define function to display outputs (reused after both model fitting and topic merging)
-            def display_unsupervised_outputs(BERTmodel, text_data):
+            def display_unsupervised_outputs(BERTmodel, text_data, umap_random_state=None):
                 topic_info_df = BERTmodel.get_topic_info()
                 columns_to_remove = ['Name', 'Representation']
                 topic_info_df = topic_info_df.drop(
@@ -422,25 +428,55 @@ if uploaded_file:
                         with hierarchy_col:
                             st.write("**Topic Hierarchy:**")
                             try:
-                                hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
-                                hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
-                                hierarchy_fig.update_layout(
-                                    width=1200, height=800,
-                                    margin=dict(l=80, r=80, t=100, b=80)
-                                )
+                                if st.session_state.hierarchy_fig is None:
+                                    hierarchical_topics = BERTmodel.hierarchical_topics(text_data)
+                                    hierarchy_fig = BERTmodel.visualize_hierarchy(hierarchical_topics=hierarchical_topics)
+                                    hierarchy_fig.update_layout(
+                                        width=1200, height=800,
+                                        margin=dict(l=80, r=80, t=100, b=80)
+                                    )
+                                    st.session_state.hierarchy_fig = hierarchy_fig
+                                else:
+                                    hierarchy_fig = st.session_state.hierarchy_fig
                                 st.plotly_chart(hierarchy_fig, config=configuration)
+                                hierarchy_html = hierarchy_fig.to_html(
+                                    full_html=True, include_plotlyjs="cdn"
+                                ).encode("utf-8")
+                                st.download_button(
+                                    label="Download Hierarchy Plot (HTML)",
+                                    data=hierarchy_html,
+                                    file_name="topic_hierarchy.html",
+                                    mime="text/html",
+                                    key="download_hierarchy"
+                                )
                             except Exception as e:
                                 st.warning(f"Could not generate topic hierarchy: {e}")
 
                         with map_col:
                             st.write("**Intertopic Distance Map:**")
                             try:
-                                intertopic_map = BERTmodel.visualize_topics()
-                                intertopic_map.update_layout(
-                                    width=1200, height=800,
-                                    margin=dict(l=80, r=80, t=100, b=80)
-                                )
+                                if st.session_state.intertopic_fig is None:
+                                    if umap_random_state is not None:
+                                        np.random.seed(umap_random_state)
+                                    intertopic_map = BERTmodel.visualize_topics()
+                                    intertopic_map.update_layout(
+                                        width=1200, height=800,
+                                        margin=dict(l=80, r=80, t=100, b=80)
+                                    )
+                                    st.session_state.intertopic_fig = intertopic_map
+                                else:
+                                    intertopic_map = st.session_state.intertopic_fig
                                 st.plotly_chart(intertopic_map, config=configuration)
+                                intertopic_html = intertopic_map.to_html(
+                                    full_html=True, include_plotlyjs="cdn"
+                                ).encode("utf-8")
+                                st.download_button(
+                                    label="Download Intertopic Distance Map (HTML)",
+                                    data=intertopic_html,
+                                    file_name="intertopic_distance_map.html",
+                                    mime="text/html",
+                                    key="download_intertopic"
+                                )
                             except Exception as e:
                                 st.warning(f"Could not generate intertopic distance map: {e}")
 
@@ -463,6 +499,48 @@ if uploaded_file:
                             errors='ignore'
                         )
                         st.dataframe(doc_info_df)
+
+                # --- Model download (pickle) ---
+                st.write("**Download Topic Model:**")
+                try:
+                    import pickle as _pickle
+                    _model_buffer = io.BytesIO()
+                    _pickle.dump(BERTmodel, _model_buffer)
+                    _model_buffer.seek(0)
+                    st.download_button(
+                        label="Download Topic Model (.pkl)",
+                        data=_model_buffer,
+                        file_name="bertopic_model.pkl",
+                        mime="application/octet-stream",
+                        key="download_model_pkl"
+                    )
+                    st.info(
+                        "The .pkl file contains the full BERTopic model object including topic assignments, "
+                        "embeddings, and cluster structure. "
+                        "Load it in Python with: `import pickle; model = pickle.load(open('bertopic_model.pkl', 'rb'))`. "
+                        "You can then call `model.transform(new_docs)` to apply it to new data."
+                    )
+                except Exception as _pkl_err:
+                    try:
+                        import pickle as _pickle, copy as _copy
+                        _model_copy = _copy.copy(BERTmodel)
+                        _model_copy.representation_model = None
+                        _model_buffer = io.BytesIO()
+                        _pickle.dump(_model_copy, _model_buffer)
+                        _model_buffer.seek(0)
+                        st.download_button(
+                            label="Download Topic Model - Core Only (.pkl)",
+                            data=_model_buffer,
+                            file_name="bertopic_model_core.pkl",
+                            mime="application/octet-stream",
+                            key="download_model_pkl_core"
+                        )
+                        st.warning(
+                            "The LLM representation model could not be pickled and was excluded. "
+                            "The core topic structure, cluster assignments, and embeddings are fully intact."
+                        )
+                    except Exception as _pkl_err2:
+                        st.warning(f"Could not generate model download: {_pkl_err2}")
 
             # Begin logic for running the model
             if run_model_btn:
@@ -502,7 +580,7 @@ if uploaded_file:
                                 st.write(f"Using stopwords for: {stop_word_language}")
                                 stop_word_list = stopwords.words(stop_word_language)
                             else:
-                                st.warning(f"⚠️ NLTK does not support stopwords for '{stop_word_language}'. Proceeding without stopwords.")
+                                st.warning(f"**WARNING:** NLTK does not support stopwords for '{stop_word_language}'. Proceeding without stopwords.")
                                 stop_word_list = None
                         else:
                             stop_word_list = None
@@ -582,6 +660,9 @@ if uploaded_file:
                     topics, probs = BERTmodel.fit_transform(text_data)
                     st.session_state.BERTmodel = BERTmodel
                     st.session_state.topics = topics
+                    st.session_state.umap_random_state = umap_random_state
+                    st.session_state.hierarchy_fig = None
+                    st.session_state.intertopic_fig = None
 
                     unique_topics = set(topics) - {-1}  # Remove outliers from unique topics
 
@@ -607,7 +688,8 @@ if uploaded_file:
                         time.sleep(3)
                         progress.empty()
                         st.subheader("Output")
-                        display_unsupervised_outputs(BERTmodel, text_data)
+                        display_unsupervised_outputs(BERTmodel, text_data,
+                            umap_random_state=st.session_state.get("umap_random_state"))
                                 
                 except Exception as e:
                         st.error(f"Error: An error occurred: {e}")   
@@ -621,7 +703,7 @@ if uploaded_file:
                 # Use a form to capture both the input and the submit button
                 topics_to_merge_input = st.text_input("Enter topic pairs to merge (e.g. [[1, 2], [3, 4]]):",
                                                       "[]", key="merge_input")
-                st.success("📝 If you want to further combine topics that may be similar based on the model's output, you can specify the topic pairs to merge in the format [[1, 2], [3, 4]]. The first number in each pair is the topic to be merged into, and the second number is the topic to be merged.")
+                st.success("**TIP:** If you want to further combine topics that may be similar based on the model's output, you can specify the topic pairs to merge in the format [[1, 2], [3, 4]]. The first number in each pair is the topic to be merged into, and the second number is the topic to be merged.")
                 merge_topics_btn = st.button("Merge Topics")
 
                 # Begin logic for merging topics
@@ -634,13 +716,28 @@ if uploaded_file:
                         
                             st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
                             st.session_state.topics = merged_topics
+                            st.session_state.hierarchy_fig = None
+                            st.session_state.intertopic_fig = None
     
                             st.subheader("Output")
-                            display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data)
+                            display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data,
+                                umap_random_state=st.session_state.get("umap_random_state"))
                         else:
                             st.error("Input must be a list of topic pairs, e.g., [[1, 2], [3, 4]]")
                     except Exception as e:
                         st.error(f"Merge failed: {e}")
+
+            # --- Persistent output: re-render on download button reruns ---
+            if (st.session_state.get("BERTmodel") is not None
+                    and st.session_state.get("text_data") is not None
+                    and not run_model_btn
+                    and not merge_topics_btn):
+                st.subheader("Output")
+                display_unsupervised_outputs(
+                    st.session_state.BERTmodel,
+                    st.session_state.text_data,
+                    umap_random_state=st.session_state.get("umap_random_state")
+                )
                 
         # Begin logic for Zero-Shot topic modeling                    
         elif method == "Zero-Shot":
@@ -648,7 +745,7 @@ if uploaded_file:
             
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
-            st.success("💡 Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
+            st.success("**TIP:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
             
             # Language selection dropdown
             language_option = st.selectbox(
@@ -680,10 +777,10 @@ if uploaded_file:
             else:    
                 # Parameters for Zero-Shot modeling
                 zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.85)
-                st.info("📝 This parameter controls how many documents are matched to zero-shot topics.")
+                st.info("**NOTE:** This parameter controls how many documents are matched to zero-shot topics.")
                 min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, max_value=100, value=5, step=1)
-                st.info("📝 This parameter sets the minimum number of documents required to form a topic Lower values create more (and smaller) topics, while higher values reduce topic count. If set too high, no topics may be formed at all.")
-                st.success("💡 For larger datasets (e.g., hundreds of thousands to millions of documents), increase min_topic_size well beyond the default of 10 — try values like 100 or 500 to avoid excessive micro-clustering. Experimentation is key.")
+                st.info("**NOTE:** This parameter sets the minimum number of documents required to form a topic Lower values create more (and smaller) topics, while higher values reduce topic count. If set too high, no topics may be formed at all.")
+                st.success("**TIP:** For larger datasets (e.g., hundreds of thousands to millions of documents), increase min_topic_size well beyond the default of 10 — try values like 100 or 500 to avoid excessive micro-clustering. Experimentation is key.")
                 
                 # Option for LLM provider
                 llm_provider = st.selectbox(
@@ -827,7 +924,7 @@ if uploaded_file:
                             probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
                             topic_docs = pd.concat([topic_docs[['Document']], probabilities], axis=1)
                         else:
-                            st.warning("Warning: No valid topics were found. Skipping probability calculation.")
+                            st.warning("**Warning:** No valid topics were found. Skipping probability calculation.")
                             topic_docs = pd.DataFrame()
 
                         # Display topic info and document-topic probabilities
@@ -846,4 +943,4 @@ if uploaded_file:
                                 st.dataframe(topic_docs)
 
                     except Exception as e:
-                        st.error(f"Error: An error occurred: {e}")        
+                        st.error(f"**ERROR:** An error occurred: {e}")        
