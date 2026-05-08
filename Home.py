@@ -170,12 +170,12 @@ st.text("")
     
 st.markdown("""
             TextViz Studio was developed by [José J. Alcocer](https://alcocer-jj.github.io/), Ph.D., M.P.P., 
-            an incoming Applied Research Statistician at Harvard Law School. He specializes in legislative institutions, 
+            an Applied Research Statistician at Harvard Law School. He specializes in legislative institutions, 
             political methodology, and computational social science. His work bridges the gap between social science and 
             data science, leveraging statistical modeling, machine learning, natural language processing, and causal inference 
             to explore complex political and social questions—particularly those related to race and ethnicity.
 
-            With over seven years of research experience across academic, nonprofit, and government settings, 
+            With over eight years of research experience across academic, nonprofit, and government settings, 
             José brings expertise in quantitative analysis, survey methodology, experimental design, and data visualization. 
             His commitment to accessible and rigorous methods drives the development of tools that help researchers 
             analyze and interpret their data with clarity and confidence.
