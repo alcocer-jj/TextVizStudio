@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import torch
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from transformers import pipeline, AutoModelForSequenceClassification, XLMRobertaTokenizer, AutoConfig
 import hashlib
@@ -23,18 +24,81 @@ st.set_page_config(
     layout="wide"
 )
 
-# Authenticate with Google Sheets API using Streamlit Secrets
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["gcp_service_account"], scope
-)
-client = gspread.authorize(creds)
+# ---------------------------------------------------------------------------
+# Size caps per method
+# ---------------------------------------------------------------------------
+SIZE_LIMITS = {
+    "Dictionary - VADER": 50000,
+    "Dictionary - NRC Lexicon (Default)": 25000,
+    "LLM - XLM-RoBERTa-Twitter-Sentiment": 5000,
+}
 
-# Try to open the Google Sheet safely
+# ---------------------------------------------------------------------------
+# Cached resource loaders
+# ---------------------------------------------------------------------------
+
+@st.cache_resource
+def get_gsheets_client():
+    """Authenticate and return a gspread client. Cached for the life of the app."""
+    scope = ["https://spreadsheets.google.com/feeds",
+             "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"], scope
+    )
+    return gspread.authorize(creds)
+
+
+@st.cache_resource
+def load_xlm_model():
+    """Load XLM-RoBERTa-Twitter-Sentiment once, share across all sessions."""
+    MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+    tokenizer = XLMRobertaTokenizer.from_pretrained(MODEL)
+    config = AutoConfig.from_pretrained(MODEL)
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL)
+    if not hasattr(config, 'id2label') or not config.id2label:
+        config.id2label = {0: 'negative', 1: 'neutral', 2: 'positive'}
+    model.eval()  # Disable dropout etc. for inference
+    return tokenizer, config, model
+
+
+@st.cache_resource
+def initialize_stanza_pipeline(language_code):
+    """Initialize Stanza pipeline. Cached per language across all users."""
+    stanza.download(language_code, processors='tokenize,lemma', verbose=False)
+    return stanza.Pipeline(lang=language_code, processors='tokenize,lemma')
+
+
+@st.cache_data
+def load_nrc_lexicon(language_filename):
+    """
+    Load NRC lexicon CSV and build the word -> {emotion: condition} dict.
+    Cached per language CSV across all users.
+
+    Replaces the previous iterrows() loop with pivot_table for speed.
+    aggfunc='last' preserves the original last-write-wins semantics in case
+    of duplicate (word, emotion) pairs in the source data.
+    """
+    nrc_data = pd.read_csv(
+        Path(__file__).resolve().parent.parent / "data" / language_filename
+    )
+    nrc_data = nrc_data.dropna(subset=['word'])
+    pivoted = nrc_data.pivot_table(
+        index='word',
+        columns='emotion',
+        values='condition',
+        fill_value=0,
+        aggfunc='last',
+    )
+    return pivoted.to_dict(orient='index')
+
+
+# ---------------------------------------------------------------------------
+# Feedback sidebar
+# ---------------------------------------------------------------------------
 try:
+    client = get_gsheets_client()
     sheet = client.open("TextViz Studio Feedback").sheet1
 
-    # Feedback form in the sidebar
     st.sidebar.markdown("### **Feedback**")
     feedback = st.sidebar.text_area(
         "Experiencing bugs/issues? Have ideas to better the application tool?",
@@ -58,7 +122,7 @@ except Exception as e:
     st.sidebar.caption(f"Details: {e}")
 
 st.sidebar.markdown("")
-        
+
 st.sidebar.markdown(
     "For full documentation and updates, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)"
 )
@@ -87,11 +151,15 @@ download the results for further analysis.
 st.markdown("")
 st.markdown("")
 
-# Create unique IDs for each text entry
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def create_unique_id(text):
     return hashlib.md5(text.encode()).hexdigest()
 
-# Function to extract text from CSV file and add unique identifiers (doc_id)
+
 def extract_text_from_csv(file):
     try:
         df = pd.read_csv(file)
@@ -110,22 +178,16 @@ def extract_text_from_csv(file):
         st.error("⚠️ The uploaded CSV file must contain a column named 'text'.")
         return None, None
 
-    
 
-# Function to preprocess text for VADER
 def preprocess_text_VADER(text, lowercase=False, remove_urls=True):
-    # Lowercase the text if needed
     if lowercase:
         text = text.lower()
-    
-    # Remove URLs and special characters
     if remove_urls:
         text = re.sub(r"http\S+|www\S+|https\S+", '', text, flags=re.MULTILINE)
-        text = re.sub(r'[^A-Za-z0-9\s]+', '', text)  # Remove special characters, keeping only alphanumerics and spaces
-    
+        text = re.sub(r'[^A-Za-z0-9\s]+', '', text)
     return text
 
-# VADER Sentiment Analysis Function
+
 def analyze_vader(text):
     scores = vader.polarity_scores(text)
     compound = scores['compound']
@@ -136,7 +198,7 @@ def analyze_vader(text):
     )
     return compound, label, scores['neg'], scores['neu'], scores['pos']
 
-# Preprocess function to clean text for XLM
+
 def preprocess_text_xlm(text):
     new_text = []
     for t in text.split(" "):
@@ -145,80 +207,92 @@ def preprocess_text_xlm(text):
         new_text.append(t)
     return " ".join(new_text)
 
-# Function to analyze sentiment with XLM-RoBERTa
-def analyze_xlm(text):
-    # Preprocess and encode text
-    text = preprocess_text_xlm(text)
-    encoded_input = tokenizer(
-    text,
-    return_tensors='pt',
-    truncation=True,
-    max_length=512,
-    padding="max_length")
-    output = model(**encoded_input)
-    
-    # Get scores and apply softmax
-    scores = output[0][0].detach().numpy()
-    scores = softmax(scores)
-    
-    # Assign scores to specific columns
-    negative, neutral, positive = scores[0], scores[1], scores[2]
-    
-    # Determine label based on highest probability
-    score_diff = abs(max(scores) - sorted(scores)[-2])
-    if score_diff < 0.05:
-        sentiment = "neutral"
-    else:
-        sentiment = config.id2label[np.argmax(scores)]
-    
-    return negative, neutral, positive, sentiment
 
-# Function to analyze class labels with mDeBERTa
-def analyze_mdeberta(text):
-    output = classifier(text, candidate_labels, multi_label=multi_label)
-    # Keep scores as decimals to three decimal places
-    scores = {label: round(score, 3) for label, score in zip(output["labels"], output["scores"])}
-    # Determine the top label(s) based on the highest probability
-    top_label = output["labels"][0] if not multi_label else ", ".join([label for label in scores if scores[label] >= 0.5])
-    return scores, top_label
+def analyze_xlm_batch(texts, tokenizer, model, config, batch_size=32):
+    """
+    Batched replacement for the per-row .apply() pattern.
 
-def initialize_stanza_pipeline(language_code):
-    stanza.download(language_code, processors='tokenize,lemma', verbose=False)
-    return stanza.Pipeline(lang=language_code, processors='tokenize,lemma')
+    Methodology preserved:
+      - softmax over the 3 class logits per example
+      - score_diff < 0.05 -> "neutral" rule applied identically per row
+      - returns (negative, neutral, positive, sentiment) tuples in input order
+    """
+    total = len(texts)
+    if total == 0:
+        return []
 
-# Preprocess text with Stanza for tokenization and lemmatization
+    results = []
+    progress = st.progress(0.0, text="Running XLM-RoBERTa sentiment analysis...")
+
+    for i in range(0, total, batch_size):
+        batch = [preprocess_text_xlm(t) for t in texts[i:i + batch_size]]
+        encoded = tokenizer(
+            batch,
+            return_tensors='pt',
+            truncation=True,
+            max_length=512,
+            padding=True,
+        )
+        with torch.no_grad():
+            output = model(**encoded)
+        scores_batch = softmax(output[0].detach().numpy(), axis=1)
+
+        for scores in scores_batch:
+            negative, neutral, positive = scores[0], scores[1], scores[2]
+
+            # --- Preserved methodology: neutral-if-top-two-are-close rule ---
+            score_diff = abs(max(scores) - sorted(scores)[-2])
+            if score_diff < 0.05:
+                sentiment = "neutral"
+            else:
+                sentiment = config.id2label[int(np.argmax(scores))]
+            # ----------------------------------------------------------------
+
+            results.append((negative, neutral, positive, sentiment))
+
+        progress.progress(min((i + batch_size) / total, 1.0))
+
+    progress.empty()
+    return results
+
 def preprocess_text_stanza(text, nlp_pipeline):
     doc = nlp_pipeline(text)
-    # Lemmatize each word token in the text
     lemmatized_text = " ".join([word.lemma for sentence in doc.sentences for word in sentence.words])
     return lemmatized_text
 
+
 def analyze_nrc(text, emotion_dict):
-    emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation', 
+    emotions = ['anger', 'fear', 'trust', 'joy', 'anticipation',
                 'disgust', 'surprise', 'sadness', 'negative', 'positive']
     emotion_counts = defaultdict(int)
 
-    # Preprocess the input text
     words = re.findall(r'\b\w+\b', text.lower())
 
-    # Match words with NRC data and accumulate counts
     for word in words:
         if word in emotion_dict:
+            word_emotions = emotion_dict[word]
             for emotion in emotions:
-                emotion_counts[emotion] += emotion_dict[word][emotion]
+                # .get() handles the case where pivot_table didn't include
+                # this emotion column for this word
+                emotion_counts[emotion] += word_emotions.get(emotion, 0)
 
-    # Calculate positive and negative scores
     positive_score = emotion_counts['positive']
     negative_score = emotion_counts['negative']
+    sentiment = (
+        'positive' if positive_score > negative_score
+        else 'negative' if negative_score > positive_score
+        else 'neutral'
+    )
 
-    # Determine sentiment label
-    sentiment = 'positive' if positive_score > negative_score else 'negative' if negative_score > positive_score else 'neutral'
+    return pd.Series([
+        emotion_counts['anger'], emotion_counts['fear'], emotion_counts['trust'],
+        emotion_counts['joy'], emotion_counts['anticipation'], emotion_counts['disgust'],
+        emotion_counts['surprise'], emotion_counts['sadness'],
+        negative_score, positive_score, sentiment
+    ])
 
-    return pd.Series([emotion_counts['anger'], emotion_counts['fear'], emotion_counts['trust'], 
-                      emotion_counts['joy'], emotion_counts['anticipation'], emotion_counts['disgust'], 
-                      emotion_counts['surprise'], emotion_counts['sadness'], negative_score, positive_score, sentiment])
 
-# Set Plotly configuration for high-resolution and theme
+# Plotly configuration
 configuration = {
     'toImageButtonOptions': {
         'format': 'png',
@@ -229,6 +303,11 @@ configuration = {
     }
 }
 
+
+# ---------------------------------------------------------------------------
+# Main page flow
+# ---------------------------------------------------------------------------
+
 st.subheader("Import Data", divider=True)
 
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
@@ -236,21 +315,30 @@ st.warning("**Instructions:** For CSV files, ensure that the text data is in a c
 
 df, original_csv = None, None
 
-# Process the uploaded CSV file
 if uploaded_file is not None:
     df, original_csv = extract_text_from_csv(uploaded_file)
 
     if df is not None:
-        st.write("CSV file successfully processed.")
+        st.write(f"CSV file successfully processed. ({len(df):,} rows)")
 
-        # Model selection for sentiment analysis
         st.subheader("Set Model Parameters")
-        
+
         sentiment_method = st.selectbox(
             "Choose Sentiment Analysis Method",
             ["Dictionary - NRC Lexicon (Default)", "Dictionary - VADER", "LLM - XLM-RoBERTa-Twitter-Sentiment"]
         )
-            # Information about model selection
+
+        # Size-cap check based on selected method. Halts the page if exceeded.
+        max_rows = SIZE_LIMITS.get(sentiment_method, 10000)
+        if len(df) > max_rows:
+            st.error(
+                f"⚠️ Your file has {len(df):,} rows, which exceeds the limit of "
+                f"{max_rows:,} for the **{sentiment_method}** method. "
+                f"Please reduce the file size or choose a lighter method "
+                f"(VADER allows up to {SIZE_LIMITS['Dictionary - VADER']:,} rows)."
+            )
+            st.stop()
+
         with st.expander("Which model is right for me?"):
             st.markdown("""
             [**NRC Emotion Lexicon**](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm):
@@ -269,49 +357,45 @@ if uploaded_file is not None:
             - Strengths: Can handle lexical diversity, nuances, and semantic context from tweets and short text across 65 languages (see [paper](https://arxiv.org/pdf/2104.12250) for more info)
             - Limitations: Slower processing time than dictionary methods; not good for long text entries unless broken down into chunks. 
             """)
-        
-        # Only allow language selection if NRC Lexicon is chosen
+
+        # Language selection (only for NRC).
+        language = None
+        selected_language_code = None
+        language_codes = {
+            "English": "english.csv",
+            "French": "french.csv",
+            "Spanish": "spanish.csv",
+            "Italian": "italian.csv",
+            "Portuguese": "portuguese.csv",
+            "Chinese (Traditional)": "chinese_traditional.csv",
+            "Chinese (Simplified)": "chinese_simplified.csv",
+            "Arabic": "arabic.csv",
+            "Turkish": "turkish.csv",
+            "Korean": "korean.csv"
+        }
         if sentiment_method == "Dictionary - NRC Lexicon (Default)":
             language = st.selectbox(
                 "Select Language for NRC Lexicon Analysis",
-                ["English", "French", "Spanish", "Italian", "Portuguese", "Chinese (Traditional)",
-                 "Chinese (Simplified)", "Arabic", "Turkish", "Korean"]
+                list(language_codes.keys())
             )
-            language_codes = {
-                "English": "english.csv",
-                "French": "french.csv",
-                "Spanish": "spanish.csv",
-                "Italian": "italian.csv",
-                "Portuguese": "portuguese.csv",
-                "Chinese (Traditional)": "chinese_traditional.csv",
-                "Chinese (Simplified)": "chinese_simplified.csv",
-                "Arabic": "arabic.csv",
-                "Turkish": "turkish.csv",
-                "Korean": "korean.csv"
-            }
             selected_language_code = language_codes[language]
-            nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / selected_language_code)
-            emotion_dict = defaultdict(lambda: defaultdict(int))
-            for _, row in nrc_data.iterrows():
-                word = row['word']
-                if pd.notna(word):  # Skip NaN values
-                    emotion = row['emotion']
-                    emotion_dict[word][emotion] = row['condition']
-        
+
         st.subheader("Analyze", divider=True)
-        
+
         # Analyze sentiment on button click
         if st.button("Analyze Sentiment"):
             try:
                 with st.spinner("Running sentiment analysis..."):
+
                     if sentiment_method == "Dictionary - VADER":
-                        # Initialize VADER sentiment analyzer
                         vader = SentimentIntensityAnalyzer()
-                        df['text'] = df['text'].apply(preprocess_text_VADER)
-                        df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text'].apply(
+                        # Write cleaned text to a SEPARATE column so the
+                        # original 'text' is preserved for re-runs
+                        df['text_clean'] = df['text'].apply(preprocess_text_VADER)
+                        df[['compound', 'sentiment', 'neg', 'neu', 'pos']] = df['text_clean'].apply(
                             lambda x: pd.Series(analyze_vader(x))
                         )
-                        
+
                         col1, col2 = st.columns([0.2, 0.8])
                         with col1:
                             st.write("Sentiment Counts Dataframe:")
@@ -320,117 +404,101 @@ if uploaded_file is not None:
                         with col2:
                             sentiment_counts = df['sentiment'].value_counts().reset_index()
                             sentiment_counts.columns = ['Sentiment', 'Count']
-                            fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count',
-                                                   title='Sentiment Count Distribution', text='Count', color='Sentiment')
+                            fig_sentiment = px.bar(
+                                sentiment_counts, x='Sentiment', y='Count',
+                                title='Sentiment Count Distribution', text='Count', color='Sentiment'
+                            )
                             st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
 
                     elif sentiment_method == "Dictionary - NRC Lexicon (Default)":
                         stanza_language_codes = {
-                                "English": "en",
-                                "French": "fr",
-                                "Spanish": "es",
-                                "Italian": "it",
-                                "Portuguese": "pt",
-                                "Chinese (Traditional)": "zh",
-                                "Chinese (Simplified)": "zh",
-                                "Arabic": "ar",
-                                "Turkish": "tr",
-                                "Korean": "ko"
-                            }
-                        
-                        # Load NRC data
-                        selected_language_code = language_codes[language]
-                        nrc_data = pd.read_csv(Path(__file__).resolve().parent.parent / "data" / selected_language_code)
-                        emotion_dict = defaultdict(lambda: defaultdict(int))
-                        for _, row in nrc_data.iterrows():
-                            word = row['word']
-                            if pd.notna(word):
-                                emotion = row['emotion']
-                                emotion_dict[word][emotion] = row['condition']
+                            "English": "en",
+                            "French": "fr",
+                            "Spanish": "es",
+                            "Italian": "it",
+                            "Portuguese": "pt",
+                            "Chinese (Traditional)": "zh",
+                            "Chinese (Simplified)": "zh",
+                            "Arabic": "ar",
+                            "Turkish": "tr",
+                            "Korean": "ko"
+                        }
 
-                        # Initialize Stanza pipeline for the selected language
+                        # CACHED: loads once per language across all users
+                        emotion_dict = load_nrc_lexicon(selected_language_code)
+
+                        # CACHED: loads once per language across all users
                         stanza_lang_code = stanza_language_codes.get(language)
                         nlp_pipeline = initialize_stanza_pipeline(stanza_lang_code)
 
-                        df['text'] = df['text'].apply(lambda x: preprocess_text_stanza(x, nlp_pipeline))
-                        df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 
-                            'sadness', 'negative', 'positive', 'sentiment']] = df['text'].apply(lambda x: analyze_nrc(x, emotion_dict))
+                        # Lemmatize into a SEPARATE column to preserve original text
+                        df['text_clean'] = df['text'].apply(
+                            lambda x: preprocess_text_stanza(x, nlp_pipeline)
+                        )
+                        df[['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise',
+                            'sadness', 'negative', 'positive', 'sentiment']] = df['text_clean'].apply(
+                            lambda x: analyze_nrc(x, emotion_dict)
+                        )
 
-                        # Calculate emotion counts
                         emotion_cols = ['anger', 'fear', 'trust', 'joy', 'anticipation', 'disgust', 'surprise', 'sadness']
                         emotion_counts = df[emotion_cols].sum().reset_index()
                         emotion_counts.columns = ['Emotion', 'Count']
 
-                        # Display emotion counts DataFrame and plot
                         st.subheader("Emotion Counts (NRC Lexicon)")
-    
                         col1, col2 = st.columns([0.3, 0.7])
                         with col1:
                             st.write("Emotion Counts Dataframe:")
                             st.dataframe(emotion_counts)
-
                         with col2:
-                            # Create and display the emotion distribution bar plot
                             fig_emotions = px.bar(
-                                emotion_counts,
-                                x='Emotion',
-                                y='Count',
-                                title='Emotion Counts Distribution',
-                                text='Count',
-                                color='Emotion'
+                                emotion_counts, x='Emotion', y='Count',
+                                title='Emotion Counts Distribution', text='Count', color='Emotion'
                             )
                             st.plotly_chart(fig_emotions, use_container_width=True, config=configuration)
 
-                        # Calculate sentiment counts
                         sentiment_counts = df['sentiment'].value_counts().reset_index()
                         sentiment_counts.columns = ['Sentiment', 'Count']
 
-                        # Display sentiment counts DataFrame and plot
                         st.subheader("Sentiment Counts (NRC Lexicon)")
                         col1, col2 = st.columns([0.3, 0.7])
                         with col1:
                             st.write("Sentiment Counts Dataframe:")
                             st.dataframe(sentiment_counts)
-
                         with col2:
-                            # Create and display the sentiment distribution bar plot
                             fig_sentiment = px.bar(
-                            sentiment_counts,
-                            x='Sentiment',
-                            y='Count',
-                            title='Sentiment Count Distribution',
-                            text='Count',
-                            color='Sentiment')
+                                sentiment_counts, x='Sentiment', y='Count',
+                                title='Sentiment Count Distribution', text='Count', color='Sentiment'
+                            )
                             st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
 
                     elif sentiment_method == "LLM - XLM-RoBERTa-Twitter-Sentiment":
-                        # Initialize the model
-                        MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
-                        tokenizer = XLMRobertaTokenizer.from_pretrained(MODEL)
-                        config = AutoConfig.from_pretrained(MODEL)
-                        model = AutoModelForSequenceClassification.from_pretrained(MODEL)
+                        # CACHED: model loads ONCE per app process
+                        tokenizer, config, model = load_xlm_model()
 
-                        # Set up id2label if not defined in the config
-                        if not hasattr(config, 'id2label'):
-                            config.id2label = {0: 'negative', 1: 'neutral', 2: 'positive'}
-
-                        # Apply the XLM-R sentiment analysis function to each row in 'text' column
-                        df[['negative', 'neutral', 'positive', 'sentiment']] = df['text'].apply(
-                                lambda x: pd.Series(analyze_xlm(x))
-                            )
+                        # Batched inference replaces the per-row .apply()
+                        # score_diff rule preserved inside analyze_xlm_batch
+                        results = analyze_xlm_batch(
+                            df['text'].tolist(), tokenizer, model, config
+                        )
+                        df[['negative', 'neutral', 'positive', 'sentiment']] = pd.DataFrame(
+                            results,
+                            columns=['negative', 'neutral', 'positive', 'sentiment'],
+                            index=df.index,
+                        )
 
                         col1, col2 = st.columns([0.2, 0.8])
                         with col1:
                             st.write("Sentiment Counts Dataframe:")
                             st.dataframe(df['sentiment'].value_counts().reset_index())
-
                         with col2:
                             sentiment_counts = df['sentiment'].value_counts().reset_index()
                             sentiment_counts.columns = ['Sentiment', 'Count']
-                            fig_sentiment = px.bar(sentiment_counts, x='Sentiment', y='Count',
-                                                   title='Sentiment Count Distribution', text='Count', color='Sentiment')
+                            fig_sentiment = px.bar(
+                                sentiment_counts, x='Sentiment', y='Count',
+                                title='Sentiment Count Distribution', text='Count', color='Sentiment'
+                            )
                             st.plotly_chart(fig_sentiment, use_container_width=True, config=configuration)
-                    
+
                     st.write("Dataframe Results:")
                     st.dataframe(df)
 
@@ -438,5 +506,3 @@ if uploaded_file is not None:
                 st.error(f"Error during analysis: {e}")
     else:
         st.error("Failed to process the uploaded CSV file.")
-
-    

@@ -30,3 +30,4 @@ statsmodels
 stargazer
 linearmodels
 litellm
+torch
