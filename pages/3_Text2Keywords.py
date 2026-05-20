@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import hashlib  # To create unique identifiers
+import hashlib
 from PyPDF2 import PdfReader
 import re
 from sklearn.feature_extraction.text import CountVectorizer
@@ -11,24 +11,336 @@ import zipfile
 from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import nltk
+
 
 st.set_page_config(
     page_title="Text2Keywords",
     layout="wide"
 )
 
-# Authenticate with Google Sheets API using Streamlit Secrets
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["gcp_service_account"], scope
-)
-client = gspread.authorize(creds)
 
-# Try to open the Google Sheet safely
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+MAX_FILE_SIZE_MB = 20
+
+
+# ---------------------------------------------------------------------------
+# Cached loaders
+# Run ONCE per app process / per unique input, shared across all sessions
+# ---------------------------------------------------------------------------
+
+@st.cache_resource
+def get_gsheets_client():
+    """Authenticate and return a gspread client. Cached for life of the app."""
+    scope = ["https://spreadsheets.google.com/feeds",
+             "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"], scope
+    )
+    return gspread.authorize(creds)
+
+
+@st.cache_resource
+def get_stopwords(language: str):
+    """
+    Return a stopword list for the given UI language.
+
+    Uses NLTK's curated stopword lists. NLTK ships lists for English, French,
+    Spanish, Italian, Portuguese, and Arabic — these all map cleanly here.
+
+    Chinese is NOT supported by NLTK and would require word segmentation
+    (e.g., jieba) for stopword removal to be meaningful, since our current
+    Chinese text cleaning produces character-level tokens. Returns None for
+    Chinese, meaning no stopword removal (the same as the previous behavior
+    for non-English languages — except previously it was unintentional).
+
+    Cached per language across all users; the NLTK corpus is downloaded
+    once per app process if not already present.
+    """
+    nltk_mapping = {
+        "English":    "english",
+        "French":     "french",
+        "Spanish":    "spanish",
+        "Italian":    "italian",
+        "Portuguese": "portuguese",
+        "Arabic":     "arabic",
+    }
+    if language not in nltk_mapping:
+        return None
+
+    try:
+        from nltk.corpus import stopwords
+        return stopwords.words(nltk_mapping[language])
+    except LookupError:
+        # Corpus not downloaded yet; do it now (one-time, ~5 MB)
+        nltk.download('stopwords', quiet=True)
+        from nltk.corpus import stopwords
+        return stopwords.words(nltk_mapping[language])
+
+
+@st.cache_data(show_spinner=False)
+def extract_pdf_text_cached(file_bytes: bytes, file_name: str):
+    """
+    Extract text from a single PDF. Cached on (file_bytes, file_name) so the
+    same file uploaded twice in a session only parses once.
+
+    Uses list+join (O(n) vs O(n^2) for repeated +=) and guards against
+    pages that return None (scanned/image-only pages).
+    """
+    reader = PdfReader(BytesIO(file_bytes))
+    pages = [(page.extract_text() or "") for page in reader.pages]
+    return file_name, " ".join(pages)
+
+
+@st.cache_data(show_spinner=False)
+def extract_csv_text_cached(file_bytes: bytes, file_name: str):
+    """Extract text from a single CSV file. Cached on (file_bytes, file_name)."""
+    df = pd.read_csv(BytesIO(file_bytes))
+    columns_lower = [col.lower() for col in df.columns]
+    if 'text' not in columns_lower:
+        return file_name, None  # signal missing column to caller
+    actual_column_name = df.columns[columns_lower.index('text')]
+    text = " ".join(df[actual_column_name].dropna().astype(str).tolist())
+    return file_name, text
+
+
+# ---------------------------------------------------------------------------
+# Text cleaning (unchanged - methodology preserved exactly)
+# ---------------------------------------------------------------------------
+
+def clean_text(text, selected_language="English"):
+    if selected_language == "English":
+        return clean_text_english(text)
+    elif selected_language == "French":
+        return clean_text_french(text)
+    elif selected_language == "Spanish":
+        return clean_text_spanish(text)
+    elif selected_language == "Italian":
+        return clean_text_italian(text)
+    elif selected_language == "Portuguese":
+        return clean_text_portuguese(text)
+    elif selected_language == "Arabic":
+        return clean_text_arabic(text)
+    else:
+        return text
+
+
+def clean_text_english(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def clean_text_french(text):
+    text = text.lower()
+    text = re.sub(r"[^a-zàâäéèêëîïôùûüç\s]", " ", text).strip()
+    return text
+
+
+def clean_text_spanish(text):
+    text = text.lower()
+    text = re.sub(r"[^a-záéíóúüñ\s]", " ", text).strip()
+    return text
+
+
+def clean_text_italian(text):
+    text = text.lower()
+    text = re.sub(r"[^a-zàèéìòù\s]", " ", text).strip()
+    return text
+
+
+def clean_text_portuguese(text):
+    text = text.lower()
+    text = re.sub(r"[^a-záàâãéêíóôõúç\s]", " ", text).strip()
+    return text
+
+
+def clean_text_arabic(text):
+    text = re.sub(r"[^\u0600-\u06FF\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def create_unique_id(text):
+    return hashlib.md5(text.encode()).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Analysis functions (methodology unchanged)
+# ---------------------------------------------------------------------------
+
+def analyze_custom_keywords(text_data, keywords):
+    keyword_freq = {"Features": keywords}
+    for file_name, text in text_data:
+        keyword_counts = []
+        for keyword in keywords:
+            matches = re.findall(keyword.lower(), text.lower())
+            keyword_counts.append(len(matches))
+        keyword_freq[file_name] = keyword_counts
+    return pd.DataFrame(keyword_freq)
+
+
+def discover_ngrams(text_data, top_n, language="English"):
+    """
+    Discover top-n unigrams, bigrams, and trigrams per document.
+
+    Stopword removal now uses an NLTK list matched to `language`. Previously
+    this function hardcoded stop_words='english' regardless of the user's
+    language selection, which silently broke stopword removal for all
+    non-English text. See get_stopwords() for language coverage.
+    """
+    stopword_list = get_stopwords(language)
+
+    ngram_results = []
+    ngram_ranges = [(1, 1), (2, 2), (3, 3)]
+    ngram_labels = ['Unigrams', 'Bigrams', 'Trigrams']
+
+    for file_name, text in text_data:
+        for ngram_range, label in zip(ngram_ranges, ngram_labels):
+            vectorizer = CountVectorizer(ngram_range=ngram_range, stop_words=stopword_list)
+            ngram_counts = vectorizer.fit_transform([text])
+            ngram_sum = ngram_counts.sum(axis=0).A1
+            ngram_names = vectorizer.get_feature_names_out()
+            ngram_freq = pd.DataFrame({'N-gram': ngram_names, 'Frequency': ngram_sum})
+            ngram_freq = ngram_freq.sort_values(by='Frequency', ascending=False).head(top_n)
+            ngram_freq['Document'] = file_name
+            ngram_freq['Ngram_Type'] = label
+            ngram_results.append(ngram_freq)
+
+    combined_df = pd.concat(ngram_results, ignore_index=True)
+    return combined_df
+
+
+def generate_wordcloud(df, colormap, term_column='N-gram', frequency_column='Frequency'):
+    if df.empty:
+        return None
+    freq_dict = dict(zip(df[term_column], df[frequency_column]))
+    if not freq_dict:
+        return None
+    kwargs = dict(width=3840, height=2160, background_color="white")
+    if colormap:
+        kwargs["colormap"] = colormap
+    return WordCloud(**kwargs).generate_from_frequencies(freq_dict)
+
+
+# ---------------------------------------------------------------------------
+# Display + ZIP helpers
+# ---------------------------------------------------------------------------
+
+def _render_wordcloud_to_buffer(wordcloud_obj):
+    """
+    Render a WordCloud to a Streamlit display AND a BytesIO PNG buffer.
+    Uses explicit fig/ax pattern + plt.close(fig) for safe cleanup.
+    """
+    fig, ax = plt.subplots(figsize=(16, 9), dpi=300)
+    ax.imshow(wordcloud_obj, interpolation="bilinear")
+    ax.axis("off")
+    st.pyplot(fig)
+
+    buf = BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
+    buf.seek(0)
+    plt.close(fig)
+    return buf
+
+
+def display_custom_keyword_results(keyword_df, color_scheme, colormap_options):
+    tab1, tab2 = st.tabs(["DataFrame", "Custom Keyword Word Cloud"])
+
+    with tab1:
+        st.subheader("Custom Keywords Analysis Results")
+        st.dataframe(keyword_df)
+
+    image_buffer = None
+    with tab2:
+        st.subheader("Custom Keyword Word Cloud")
+        wordcloud_image = generate_wordcloud(
+            keyword_df,
+            colormap_options[color_scheme],
+            term_column='Features',
+            frequency_column=keyword_df.columns[1],
+        )
+        if wordcloud_image:
+            image_buffer = _render_wordcloud_to_buffer(wordcloud_image)
+
+    # Bundle results into a ZIP
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr(
+            'keyword_analysis_results.csv',
+            keyword_df.to_csv(index=False).encode('utf-8'),
+        )
+        if image_buffer is not None:
+            zip_file.writestr('custom_keyword_wordcloud.png', image_buffer.read())
+    zip_buffer.seek(0)
+
+    st.download_button(
+        label="Download All Outputs (ZIP)",
+        data=zip_buffer,
+        file_name="custom_keyword_analysis.zip",
+        mime="application/zip",
+    )
+
+
+def display_combined_ngram_results(combined_df, color_scheme, colormap_options):
+    wordcloud_images = {}
+
+    tab_labels = ["DataFrame", "Unigram Word Cloud", "Bigram Word Cloud", "Trigram Word Cloud"]
+    tabs = st.tabs(tab_labels)
+
+    with tabs[0]:
+        st.subheader("Combined N-gram Analysis Results")
+        st.dataframe(combined_df)
+        st.download_button(
+            label="Download Combined N-gram Data (CSV)",
+            data=combined_df.to_csv(index=False).encode('utf-8'),
+            file_name="combined_ngram_analysis.csv",
+            mime="text/csv",
+        )
+
+    ngram_types = combined_df['Ngram_Type'].unique()
+    for ngram_type in ngram_types:
+        with tabs[list(ngram_types).index(ngram_type) + 1]:
+            df = combined_df[combined_df['Ngram_Type'] == ngram_type]
+            st.subheader(f"{ngram_type} Word Cloud")
+            wordcloud = generate_wordcloud(
+                df,
+                colormap_options[color_scheme],
+                term_column='N-gram',
+                frequency_column='Frequency',
+            )
+            if wordcloud:
+                wordcloud_images[ngram_type] = _render_wordcloud_to_buffer(wordcloud)
+
+    if wordcloud_images:
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr(
+                'combined_ngram_analysis.csv',
+                combined_df.to_csv(index=False).encode('utf-8'),
+            )
+            for ngram_type, image_data in wordcloud_images.items():
+                zip_file.writestr(f'{ngram_type.lower()}_wordcloud.png', image_data.read())
+        zip_buffer.seek(0)
+
+        st.download_button(
+            label="Download All Outputs (ZIP)",
+            data=zip_buffer,
+            file_name="ngram_analysis_outputs.zip",
+            mime="application/zip",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Sidebar feedback form (uses cached gsheets client)
+# ---------------------------------------------------------------------------
 try:
+    client = get_gsheets_client()
     sheet = client.open("TextViz Studio Feedback").sheet1
 
-    # Feedback form in the sidebar
     st.sidebar.markdown("### **Feedback**")
     feedback = st.sidebar.text_area(
         "Experiencing bugs/issues? Have ideas to better the application tool?",
@@ -39,7 +351,7 @@ try:
         if feedback:
             try:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                sheet.append_row(["Text2Topics:", feedback, timestamp])
+                sheet.append_row(["Text2Keywords:", feedback, timestamp])
                 st.sidebar.success("✅ Thank you for your feedback!")
             except Exception as e:
                 st.sidebar.error("⚠️ Failed to submit feedback.")
@@ -52,16 +364,20 @@ except Exception as e:
     st.sidebar.caption(f"Details: {e}")
 
 st.sidebar.markdown("")
-
-st.sidebar.markdown("For full documentation and future updates to the appliction, check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)")
-
+st.sidebar.markdown(
+    "For full documentation and future updates to the appliction, "
+    "check the [GitHub Repository](https://github.com/alcocer-jj/TextVizStudio)"
+)
 st.sidebar.markdown("")
 
 
-# Sidebar: Title and description
-#st.title("Text2Keywords: Keyword & Phrase Visualization")
-st.markdown("<h1 style='text-align: center'>Text2Keywords: Keyword & Phrase Visualization</h1>", unsafe_allow_html=True)
-
+# ---------------------------------------------------------------------------
+# Page header
+# ---------------------------------------------------------------------------
+st.markdown(
+    "<h1 style='text-align: center'>Text2Keywords: Keyword & Phrase Visualization</h1>",
+    unsafe_allow_html=True
+)
 
 st.markdown("")
 st.markdown("")
@@ -73,7 +389,7 @@ st.markdown("""
 **Text2Keywords** is an interactive tool designed for keyword frequency and n-gram discovery from text data. 
 Upload your CSV or PDF files for analysis and choose between custom keyword input or automatic discovery of the 
 most frequent unigrams, bigrams, and trigrams. The tool supports text cleaning in multiple languages, including 
-English, French, Spanish, Italian, Portuguese, Chinese, and Arabic. Visualize your results with keyword frequency 
+English, French, Spanish, Italian, Portuguese, and Arabic. Visualize your results with keyword frequency 
 data, generate word clouds, and download all outputs, including the analysis data and visualizations, in a convenient 
 ZIP format. Tailor your analysis to suit your needs, whether for custom keyword extraction or automatic n-gram 
 analysis.
@@ -82,382 +398,187 @@ analysis.
 st.markdown("")
 st.markdown("")
 
-# Initialize session state to keep track of uploaded data
+
+# ---------------------------------------------------------------------------
+# Wizard state initialization
+# ---------------------------------------------------------------------------
+if "wizard_step" not in st.session_state:
+    st.session_state.wizard_step = 1
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = None
-    st.session_state.analysis_data = None
-
-# Function to create unique identifiers for each document
-def create_unique_id(text):
-    return hashlib.md5(text.encode()).hexdigest()
-
-# Extract text from PDF files
-def extract_text_from_pdfs(files):
-    all_texts = []
-    for file in files:
-        reader = PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-        all_texts.append((file.name, text))  # Store file name and text as a tuple
-    return all_texts
-
-# Extract text from CSV files
-def extract_text_from_csvs(files):
-    all_texts = []
-    for file in files:
-        df = pd.read_csv(file)
-        # Make the check case-insensitive by converting column names to lowercase
-        columns_lower = [col.lower() for col in df.columns]
-        if 'text' in columns_lower:
-            # Get the actual column name from the original dataframe (preserve case)
-            actual_column_name = df.columns[columns_lower.index('text')]
-            text = " ".join(df[actual_column_name].dropna().tolist())
-            all_texts.append((file.name, text))  # Store file name and text as a tuple
-        else:
-            st.error(f"CSV file {file.name} must contain a 'text' column.")
-    return all_texts
 
 
-# Preprocessing functions for different languages
-def clean_text(text, selected_language="English"):
-    if selected_language == "English":
-        return clean_text_english(text)
-    elif selected_language == "French":
-        return clean_text_french(text)
-    elif selected_language == "Spanish":
-        return clean_text_spanish(text)
-    elif selected_language == "Italian":
-        return clean_text_italian(text)
-    elif selected_language == "Portuguese":
-        return clean_text_portuguese(text)
-    elif selected_language == "Chinese":
-        return clean_text_chinese(text)
-    elif selected_language == "Arabic":
-        return clean_text_arabic(text)
-    else:
-        return text
+def advance_to(step: int):
+    """Advance the wizard. Idempotent — never goes backward on its own."""
+    st.session_state.wizard_step = max(st.session_state.wizard_step, step)
 
-# Function to clean English text
-def clean_text_english(text):
-    text = text.lower()
-    text = re.sub(r"[^a-z\s]", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
 
-# Function to clean French text
-def clean_text_french(text):
-    text = text.lower()
-    text = re.sub(r"[^a-zàâäéèêëîïôùûüç\s]", " ", text).strip()
-    return text
+# ---------------------------------------------------------------------------
+# Progress indicator
+# ---------------------------------------------------------------------------
+step = st.session_state.wizard_step
+checkmark = lambda n: "✅" if step > n else ("🔵" if step == n else "⬜")
+st.markdown(
+    f"**Progress:** &nbsp; {checkmark(1)} Upload &nbsp;·&nbsp; "
+    f"{checkmark(2)} Preprocessing &nbsp;·&nbsp; "
+    f"{checkmark(3)} Method &nbsp;·&nbsp; "
+    f"{checkmark(4)} Visualization & Run"
+)
+st.markdown("")
 
-# Function to clean Spanish text
-def clean_text_spanish(text):
-    text = text.lower()
-    text = re.sub(r"[^a-záéíóúüñ\s]", " ", text).strip()
-    return text
 
-# Function to clean Italian text
-def clean_text_italian(text):
-    text = text.lower()
-    text = re.sub(r"[^a-zàèéìòù\s]", " ", text).strip()
-    return text
+# ---------------------------------------------------------------------------
+# STEP 1 · Import Data
+# ---------------------------------------------------------------------------
+st.subheader("Step 1 · Import Data", divider=True)
 
-# Function to clean Portuguese text
-def clean_text_portuguese(text):
-    text = text.lower()
-    text = re.sub(r"[^a-záàâãéêíóôõúç\s]", " ", text).strip()
-    return text
-
-# Function to clean Chinese text
-def clean_text_chinese(text):
-    text = re.sub(r"[^\u4e00-\u9fff\s]", " ", text)  # Remove non-Chinese characters
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
-# Function to clean Arabic text
-def clean_text_arabic(text):
-    text = re.sub(r"[^\u0600-\u06FF\s]", " ", text)  # Remove non-Arabic characters
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
-st.subheader("Import Data", divider=True)
-
-# File uploader to handle CSV or PDF files
-uploaded_files = st.file_uploader("Upload CSV or PDF files", type=["csv", "pdf"], accept_multiple_files=True)
-if uploaded_files:
-    st.session_state.uploaded_files = uploaded_files
-
+uploaded_files = st.file_uploader(
+    "Upload CSV or PDF files",
+    type=["csv", "pdf"],
+    accept_multiple_files=True,
+    key="file_uploader",
+)
 st.warning("For CSV files, ensure that the text data is in a column named 'text'.")
 
-# Move language selection to the main page
-language_option = st.selectbox(
-    "Select the language of your text:",
-    ("English", "French", "Spanish", "Italian", "Portuguese", "Chinese", "Arabic")
-)
-
-# Instructions for custom keyword input, with examples
-st.subheader("Setting Parameters", divider=True)
-
-# Give users a choice between inputting custom keywords or automatic discovery
-analysis_option = st.radio("How would you like to perform the analysis?", ("Input Custom Keywords", "Discover Automatically"))
-
-# If user selects custom keywords, show the input box for entering keywords
-custom_keywords = None
-if analysis_option == "Input Custom Keywords":
-    st.warning("**Instructions:** Enter one keyword or regular expression per line. For example: \n - **word** finds exact matches of the word 'word'. \n - **word(s|ing|ed)**: Finds 'word', 'words', 'wording', and 'worded'. \n - **\\d+** finds any sequence of digits (e.g., 123).")   
-    custom_keywords = st.text_area("Enter your custom keywords (one per line)", height=150)
-else:
-    top_n = st.number_input("Select how many top terms to discover for each n-gram type", min_value=1, max_value=100, value=10)
-
-# Restrict colormap options for the word cloud
-colormap_options = {
-    "Default": None,
-    "Monochromatic Blue": "Blues",
-    "Monochromatic Green": "Greens",
-    "Warm Tones": "autumn",
-    "Cool Tones": "cool",
-    "Pastel Colors": "Pastel1",
-    "Grayscale": "gray",
-    "Earth Tones": "terrain",
-    "High Contrast": "Set1",
-    "Colorblind-Friendly": "tab10"
-}
-
-# WordCloud color scheme selection
-color_scheme = st.selectbox("Select WordCloud Color Scheme", options=list(colormap_options.keys()))
-
-st.header("Analysis", divider=True)
-
-# Analysis button
-analyze_button = st.button("Run Analysis")
-
-# Function to generate word clouds and return as a WordCloud object (no BytesIO handling in this part)
-def generate_wordcloud(df, colormap, term_column='N-gram', frequency_column='Frequency'):
-    # Create the word cloud from the N-gram and Frequency columns
-    if colormap:
-        wordcloud = WordCloud(width=3840, height=2160, background_color="white", colormap=colormap).generate_from_frequencies(dict(zip(df[term_column], df[frequency_column])))
+if uploaded_files:
+    # Size cap check
+    oversized = [f for f in uploaded_files if f.size > MAX_FILE_SIZE_MB * 1024 * 1024]
+    if oversized:
+        names = ", ".join(f"{f.name} ({f.size / 1024 / 1024:.1f} MB)" for f in oversized)
+        st.error(
+            f"⚠️ The following files exceed the {MAX_FILE_SIZE_MB} MB per-file limit "
+            f"and must be reduced before analysis: {names}"
+        )
     else:
-        wordcloud = WordCloud(width=3840, height=2160, background_color="white").generate_from_frequencies(dict(zip(df[term_column], df[frequency_column])))
-    
-    return wordcloud
+        st.session_state.uploaded_files = uploaded_files
+        st.success(f"{len(uploaded_files)} file(s) ready.")
+        if st.button("Continue → Preprocessing", key="continue_1"):
+            advance_to(2)
 
-# Function to display and download the results with custom keywords and word clouds
-def display_custom_keyword_results(keyword_df):
-    # Create tabs for DataFrame and WordClouds
-    tab1, tab2 = st.tabs(["DataFrame", "Custom Keyword Word Cloud"])
-    
-    # Display DataFrame in the first tab
-    with tab1:
-        st.subheader("Custom Keywords Analysis Results")
-        st.dataframe(keyword_df)
 
-    # Display Custom Keyword Word Cloud in the second tab
-    with tab2:
-        st.subheader("Custom Keyword Word Cloud")
-        wordcloud_image = generate_wordcloud(keyword_df, colormap_options[color_scheme], term_column='Features', frequency_column=keyword_df.columns[1])
-        
-        # Display the word cloud using matplotlib
-        plt.figure(figsize=(16, 9), dpi=300)
-        plt.imshow(wordcloud_image, interpolation="bilinear")
-        plt.axis("off")
-        st.pyplot(plt)  # Display in Streamlit
+# ---------------------------------------------------------------------------
+# STEP 2 · Preprocessing
+# ---------------------------------------------------------------------------
+if st.session_state.wizard_step >= 2:
+    st.subheader("Step 2 · Preprocessing", divider=True)
+    language_option = st.selectbox(
+        "Select the language of your text:",
+        ("English", "French", "Spanish", "Italian", "Portuguese", "Arabic"),
+        key="language_option",
+    )
+    if st.button("Continue → Analysis Method", key="continue_2"):
+        advance_to(3)
 
-        # Save the word cloud image to a BytesIO buffer for ZIP download
-        image_buffer = BytesIO()
-        plt.savefig(image_buffer, format='png', bbox_inches='tight', pad_inches=0)
-        image_buffer.seek(0)
-        plt.close()
 
-    # Create ZIP file with DataFrame and word cloud image
-    zip_buffer = BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        # Add DataFrame CSV to the ZIP
-        csv_data = keyword_df.to_csv(index=False).encode('utf-8')
-        zip_file.writestr('keyword_analysis_results.csv', csv_data)
-        
-        # Add WordCloud PNG to the ZIP
-        zip_file.writestr('custom_keyword_wordcloud.png', image_buffer.read())
+# ---------------------------------------------------------------------------
+# STEP 3 · Analysis Method
+# ---------------------------------------------------------------------------
+if st.session_state.wizard_step >= 3:
+    st.subheader("Step 3 · Analysis Method", divider=True)
 
-    zip_buffer.seek(0)
-    
-    # Provide download button for the ZIP file
-    st.download_button(
-        label="Download All Outputs (ZIP)",
-        data=zip_buffer,
-        file_name="custom_keyword_analysis.zip",
-        mime="application/zip"
+    analysis_option = st.radio(
+        "How would you like to perform the analysis?",
+        ("Input Custom Keywords", "Discover Automatically"),
+        key="analysis_option",
     )
 
-# Function to create a ZIP file containing the combined DataFrame and word cloud images
-def create_zip_with_outputs(combined_df, wordcloud_images):
-    zip_buffer = BytesIO()
-
-    # Create the ZIP file
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        # Add the combined DataFrame as a CSV file
-        csv_data = combined_df.to_csv(index=False).encode('utf-8')
-        zip_file.writestr('combined_ngram_analysis.csv', csv_data)
-
-        # Add each word cloud image to the ZIP
-        for ngram_type, image_data in wordcloud_images.items():
-            zip_file.writestr(f'{ngram_type.lower()}_wordcloud.png', image_data.read())
-
-    # Ensure the buffer is ready for download
-    zip_buffer.seek(0)
-    return zip_buffer
-
-# Function to analyze custom keywords and generate the required DataFrame
-def analyze_custom_keywords(text_data, keywords):
-    keyword_freq = { "Features": keywords }
-    # Collect the frequency of each keyword in each document
-    for file_name, text in text_data:
-        keyword_counts = []
-        for keyword in keywords:
-            matches = re.findall(keyword.lower(), text.lower())  # Case-insensitive matching
-            count = len(matches)
-            keyword_counts.append(count)
-        keyword_freq[file_name] = keyword_counts
-    keyword_df = pd.DataFrame(keyword_freq)
-    return keyword_df
-
-# Modified display_combined_ngram_results function to handle ZIP creation and download
-def display_combined_ngram_results(combined_df):
-    # Create a dictionary to store the word cloud images for ZIP download
-    wordcloud_images = {}
-
-    # Create tabs for displaying the combined DataFrame and individual word clouds
-    tab_labels = ["DataFrame", "Unigram Word Cloud", "Bigram Word Cloud", "Trigram Word Cloud"]
-    tabs = st.tabs(tab_labels)
-
-    # Display the combined DataFrame in the first tab
-    with tabs[0]:
-        st.subheader("Combined N-gram Analysis Results")
-        st.dataframe(combined_df)
-
-        # Optionally, provide a download button for the combined DataFrame
-        csv_data = combined_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download Combined N-gram Data (CSV)",
-            data=csv_data,
-            file_name="combined_ngram_analysis.csv",
-            mime="text/csv"
+    if analysis_option == "Input Custom Keywords":
+        st.warning(
+            "**Instructions:** Enter one keyword or regular expression per line. For example: \n"
+            "- **word** finds exact matches of the word 'word'. \n"
+            "- **word(s|ing|ed)**: Finds 'word', 'words', 'wording', and 'worded'. \n"
+            "- **\\d+** finds any sequence of digits (e.g., 123)."
         )
-
-    # Display word clouds for unigrams, bigrams, and trigrams in separate tabs and save the images
-    ngram_types = combined_df['Ngram_Type'].unique()
-    for ngram_type in ngram_types:
-        with tabs[list(ngram_types).index(ngram_type) + 1]:
-            df = combined_df[combined_df['Ngram_Type'] == ngram_type]
-            st.subheader(f"{ngram_type} Word Cloud")
-
-            # Generate the word cloud object
-            wordcloud = generate_wordcloud(df, colormap_options[color_scheme], term_column='N-gram', frequency_column='Frequency')
-            
-            if wordcloud:
-                # Display the word cloud using Matplotlib
-                plt.figure(figsize=(16, 9), dpi=300)
-                plt.imshow(wordcloud, interpolation="bilinear")
-                plt.axis("off")
-                st.pyplot(plt)  # Display the plot in Streamlit
-
-                # Save the word cloud image to a BytesIO buffer for ZIP download
-                image_buffer = BytesIO()
-                plt.savefig(image_buffer, format='png', bbox_inches='tight', pad_inches=0)
-                image_buffer.seek(0)
-                plt.close()
-
-                # Store the image in the dictionary for ZIP download
-                wordcloud_images[ngram_type] = image_buffer
-
-    # Create a ZIP file containing the combined DataFrame and the word cloud images
-    if wordcloud_images:
-        zip_file = create_zip_with_outputs(combined_df, wordcloud_images)
-
-        # Provide a download button for the ZIP file
-        st.download_button(
-            label="Download All Outputs (ZIP)",
-            data=zip_file,
-            file_name="ngram_analysis_outputs.zip",
-            mime="application/zip"
+        custom_keywords = st.text_area(
+            "Enter your custom keywords (one per line)",
+            height=150,
+            key="custom_keywords",
         )
-        
-# Function to automatically discover top n terms for unigrams, bigrams, and trigrams
-def discover_ngrams(text_data, top_n):
-    # Dictionary to store the top n results for unigrams, bigrams, and trigrams per document
-    ngram_results = []
-
-    # Define n-gram ranges (1 for unigrams, 2 for bigrams, 3 for trigrams)
-    ngram_ranges = [(1, 1), (2, 2), (3, 3)]
-    ngram_labels = ['Unigrams', 'Bigrams', 'Trigrams']
-
-    for file_name, text in text_data:
-        for ngram_range, label in zip(ngram_ranges, ngram_labels):
-            vectorizer = CountVectorizer(ngram_range=ngram_range, stop_words='english')
-            ngram_counts = vectorizer.fit_transform([text])
-            
-            # Sum the counts of each n-gram
-            ngram_sum = ngram_counts.sum(axis=0).A1
-            ngram_names = vectorizer.get_feature_names_out()
-
-            # Create a DataFrame with n-gram names and their respective counts, sorted by frequency
-            ngram_freq = pd.DataFrame({'N-gram': ngram_names, 'Frequency': ngram_sum})
-            ngram_freq = ngram_freq.sort_values(by='Frequency', ascending=False).head(top_n)
-
-            # Add document name and n-gram type to the DataFrame
-            ngram_freq['Document'] = file_name
-            ngram_freq['Ngram_Type'] = label
-
-            # Append the result to the list
-            ngram_results.append(ngram_freq)
-
-    # Combine all results into a single DataFrame
-    combined_df = pd.concat(ngram_results, ignore_index=True)
-    return combined_df
-
-
-# Run the analysis when the user clicks the button
-if analyze_button:
-    if not st.session_state.uploaded_files:
-        st.error("Please upload at least one CSV or PDF file before running the analysis.")
     else:
-        with st.spinner("Analyzing data..."):
-            text_data = []
+        top_n = st.number_input(
+            "Select how many top terms to discover for each n-gram type",
+            min_value=1, max_value=100, value=10,
+            key="top_n",
+        )
 
-            # Separate PDFs and CSVs
-            pdf_files = [file for file in st.session_state.uploaded_files if file.type == "application/pdf"]
-            csv_files = [file for file in st.session_state.uploaded_files if file.type == "text/csv"]
+    if st.button("Continue → Visualization", key="continue_3"):
+        advance_to(4)
 
-            # Extract text from files
-            if pdf_files:
-                try:
-                    pdf_texts = extract_text_from_pdfs(pdf_files)
-                    text_data.extend(pdf_texts)
-                except Exception as e:
-                    st.error(f"Error processing PDF files: {str(e)}")
 
-            if csv_files:
-                try:
-                    csv_texts = extract_text_from_csvs(csv_files)
-                    text_data.extend(csv_texts)
-                except Exception as e:
-                    st.error(f"Error processing CSV files: {str(e)}")
+# ---------------------------------------------------------------------------
+# STEP 4 · Visualization & Run
+# ---------------------------------------------------------------------------
+if st.session_state.wizard_step >= 4:
+    st.subheader("Step 4 · Visualization & Run", divider=True)
 
-            # Clean text based on language option
-            text_data = [(file_name, clean_text(text, selected_language=language_option)) for file_name, text in text_data]
+    colormap_options = {
+        "Default": None,
+        "Monochromatic Blue": "Blues",
+        "Monochromatic Green": "Greens",
+        "Warm Tones": "autumn",
+        "Cool Tones": "cool",
+        "Pastel Colors": "Pastel1",
+        "Grayscale": "gray",
+        "Earth Tones": "terrain",
+        "High Contrast": "Set1",
+        "Colorblind-Friendly": "tab10",
+    }
+    color_scheme = st.selectbox(
+        "Select WordCloud Color Scheme",
+        options=list(colormap_options.keys()),
+        key="color_scheme",
+    )
 
-            if analysis_option == "Input Custom Keywords":
-                if not custom_keywords:
-                    st.error("Please input custom keywords to perform the analysis.")
+    analyze_button = st.button("Run Analysis", type="primary", key="run_analysis")
+
+    # ------------------------------------------------------------------
+    # Analysis execution
+    # ------------------------------------------------------------------
+    if analyze_button:
+        if not st.session_state.uploaded_files:
+            st.error("Please upload at least one CSV or PDF file before running the analysis.")
+        else:
+            with st.spinner("Analyzing data..."):
+                text_data = []
+
+                pdf_files = [f for f in st.session_state.uploaded_files
+                             if f.type == "application/pdf"]
+                csv_files = [f for f in st.session_state.uploaded_files
+                             if f.type == "text/csv"]
+
+                # Extract PDFs (cached per file)
+                for f in pdf_files:
+                    try:
+                        name, text = extract_pdf_text_cached(f.getvalue(), f.name)
+                        text_data.append((name, text))
+                    except Exception as e:
+                        st.error(f"Error processing PDF {f.name}: {e}")
+
+                # Extract CSVs (cached per file)
+                for f in csv_files:
+                    try:
+                        name, text = extract_csv_text_cached(f.getvalue(), f.name)
+                        if text is None:
+                            st.error(f"CSV file {name} must contain a 'text' column.")
+                        else:
+                            text_data.append((name, text))
+                    except Exception as e:
+                        st.error(f"Error processing CSV {f.name}: {e}")
+
+                # Clean text per selected language
+                text_data = [
+                    (name, clean_text(text, selected_language=language_option))
+                    for name, text in text_data
+                ]
+
+                # Branch on analysis method
+                if analysis_option == "Input Custom Keywords":
+                    if not custom_keywords:
+                        st.error("Please input custom keywords to perform the analysis.")
+                    else:
+                        keywords = custom_keywords.splitlines()
+                        keyword_df = analyze_custom_keywords(text_data, keywords)
+                        display_custom_keyword_results(keyword_df, color_scheme, colormap_options)
                 else:
-                    keywords = custom_keywords.splitlines()
-                    keyword_df = analyze_custom_keywords(text_data, keywords)
-                    display_custom_keyword_results(keyword_df)
-            else:
-                # Automatic discovery of unigrams, bigrams, and trigrams
-                ngram_results = discover_ngrams(text_data, top_n)
-                display_combined_ngram_results(ngram_results)
-
-
-
-
+                    ngram_results = discover_ngrams(text_data, top_n, language=language_option)
+                    display_combined_ngram_results(ngram_results, color_scheme, colormap_options)
