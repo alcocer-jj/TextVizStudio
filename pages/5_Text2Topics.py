@@ -222,16 +222,45 @@ if uploaded_file:
     if text_column == "":
         st.warning("**WARNING:** Please select a valid text column to continue.")
         st.stop()
-    
+
+    # Warn if the selected column is numeric rather than free text. Topic
+    # modeling expects documents; numeric values can be stringified and fed in,
+    # but that almost always yields meaningless topics. Surface this explicitly
+    # and require opt-in instead of doing it silently.
+    if pd.api.types.is_numeric_dtype(data[text_column]):
+        st.warning(
+            f"**WARNING:** The column **'{text_column}'** looks numeric, not text. "
+            "Topic modeling expects free-text documents. If you continue, the values "
+            "will be treated as plain strings, which usually produces meaningless topics."
+        )
+        proceed_numeric = st.checkbox(
+            "I understand — use this numeric column as text anyway",
+            key="allow_numeric_text"
+        )
+        if not proceed_numeric:
+            st.stop()
+
     data = data.dropna(subset=[text_column])
-    text_data = data[text_column]
+
+    # Normalize the text column ONCE into a clean list of Python strings.
+    # BERTopic requires a list[str]; coercing here guarantees that every
+    # downstream call (fit_transform, get_document_info, transform,
+    # reduce_outliers, update_topics, hierarchical_topics, merge_topics)
+    # receives valid input, on the first run and on every passive rerun.
+    text_series = (
+        data[text_column]
+        .astype(str)        # force to str (NaN rows already dropped above)
+        .str.strip()
+    )
+    text_series = text_series[text_series.str.len() > 0]  # drop blank / whitespace-only rows
+    text_data = text_series.tolist()
 
     # Save to session state for persistence
     st.session_state.text_data = text_data
 
-    # Guard clause: stop early if no valid data
-    if st.session_state.text_data is None or st.session_state.text_data.empty:
-        st.error("**ERROR:** No valid text data found. Please check your file.")
+    # Guard clause: stop early if no usable text remains
+    if not st.session_state.text_data:
+        st.error("**ERROR:** No valid text found in that column. Please select a text column.")
         st.stop()
 
     else:
