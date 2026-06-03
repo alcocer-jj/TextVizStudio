@@ -1,4 +1,5 @@
 import io, hashlib
+import gc
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -9,7 +10,7 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from sklearn.feature_extraction.text import CountVectorizer
-import ast 
+import ast
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import plotly.io as pio
@@ -101,6 +102,16 @@ if "intertopic_fig" not in st.session_state:
     st.session_state.intertopic_fig = None
 if "umap_random_state" not in st.session_state:
     st.session_state.umap_random_state = None
+
+
+# Load embedding models once per process and reuse across reruns. Without this,
+# a new SentenceTransformer is allocated on every run, which accumulates memory
+# and is a primary cause of exceeding Streamlit Community Cloud's 1 GB limit.
+# Keyed on the model name, so each distinct model is cached separately.
+@st.cache_resource(show_spinner=False)
+def load_sentence_transformer(model_name: str):
+    return SentenceTransformer(model_name)
+
 
 # Configuration for Plotly chart download
 configuration = {
@@ -218,7 +229,7 @@ if uploaded_file:
     column_options = [""] + list(data.columns)
     text_column = st.selectbox("Select the text column", options=column_options, key="text_column")
     st.info("**NOTE:** Rows with missing or empty text values will be automatically excluded.")
-    
+
     if text_column == "":
         st.warning("**WARNING:** Please select a valid text column to continue.")
         st.stop()
@@ -271,15 +282,15 @@ if uploaded_file:
             st.markdown("""
             [**Unsupervised**](https://maartengr.github.io/BERTopic/algorithm/algorithm.html):
             - **Best for:** Exploring unknown or unstructured data where no labels exist.
-            - **Strengths:** Automatically discovers latent topic structures; great for insight discovery and exploratory analysis.  
+            - **Strengths:** Automatically discovers latent topic structures; great for insight discovery and exploratory analysis.
             - **Limitations:** Topics may be harder to interpret or control; results depend on data quality and clustering.
 
             [**Zero-Shot**](https://maartengr.github.io/BERTopic/getting_started/zeroshot/zeroshot.html):
             - **Best for:** Classifying documents into predefined topics, especially when domain expertise or prior knowledge is available.
             - **Strengths:** No training needed; matches documents to known topics and can generate new topics for unmatched content — flexible across domains.
             - **Limitations:** If all documents match predefined topics, no new ones are created. If none match, it defaults to unsupervised topic modeling. Performance depends on how well the predefined topics cover the data.
-            """)        
-        
+            """)
+
         if method_selection == "":
             st.warning("**WARNING:** Please select a topic modeling method to continue.")
             st.stop()
@@ -287,15 +298,15 @@ if uploaded_file:
             method = "Unsupervised"
         elif method_selection == "Zero-Shot":
             method = "Zero-Shot"
-        
+
         # Begin logic for unsupervised topic modeling
         if method == "Unsupervised":
             st.subheader("Unsupervised Topic Modeling")
-            
+
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
             st.success("**TIP:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
-            
+
             # generate two columns for the layout
             param1, param2 = st.columns([1, 1])
             with param1:
@@ -306,14 +317,14 @@ if uploaded_file:
                     st.markdown("""
                                 Text2Topics supports two main language options, each powered by a specialized sentence transformer:
 
-                                [**English (`bge-small-en-v1.5`)**](https://huggingface.co/BAAI/bge-small-en-v1.5)  
-                                - **Best for**: High-performance topic modeling on English-only datasets.  
-                                - **Strengths**: State-of-the-art performance for its size class on the MTEB benchmark; trained with contrastive learning and hard negative mining for sharper semantic clustering. Significantly outperforms older MiniLM-based models on clustering and retrieval tasks while remaining lightweight (~127MB).  
+                                [**English (`bge-small-en-v1.5`)**](https://huggingface.co/BAAI/bge-small-en-v1.5)
+                                - **Best for**: High-performance topic modeling on English-only datasets.
+                                - **Strengths**: State-of-the-art performance for its size class on the MTEB benchmark; trained with contrastive learning and hard negative mining for sharper semantic clustering. Significantly outperforms older MiniLM-based models on clustering and retrieval tasks while remaining lightweight (~127MB).
                                 - **Limitations**: Only supports English. Input texts longer than 512 tokens are truncated.
 
-                                [**Multilingual (`multilingual-e5-small`)**](https://huggingface.co/intfloat/multilingual-e5-small)  
-                                - **Best for**: Working with non-English or mixed-language datasets (supports 100+ languages).  
-                                - **Strengths**: Continuously trained on a diverse mixture of multilingual datasets using contrastive learning. Delivers strong and consistent performance across retrieval, clustering, and semantic similarity tasks in both high- and low-resource languages. Also used as the embedding model in the Zero-Shot pipeline, ensuring consistency across both modeling approaches.  
+                                [**Multilingual (`multilingual-e5-small`)**](https://huggingface.co/intfloat/multilingual-e5-small)
+                                - **Best for**: Working with non-English or mixed-language datasets (supports 100+ languages).
+                                - **Strengths**: Continuously trained on a diverse mixture of multilingual datasets using contrastive learning. Delivers strong and consistent performance across retrieval, clustering, and semantic similarity tasks in both high- and low-resource languages. Also used as the embedding model in the Zero-Shot pipeline, ensuring consistency across both modeling approaches.
                                 - **Limitations**: Larger than the English model (~470MB) due to its broad multilingual vocabulary; performance may degrade on very low-resource languages.
                                 """)
                 if language == "multilingual":
@@ -322,21 +333,21 @@ if uploaded_file:
                         "italian", "porwegian", "polish", "portuguese", "russian", "slovene", "spanish",
                         "swedish", "turkish"))
                     st.info("**NOTE:** The stop words for CountVectorizer are set to the selected language. The embedding model handles more languages than these but the stop words are limited to the languages supported by NLTK.")
-                
+
                 # Option to apply outlier reduction
                 reduce_outliers_option = st.checkbox("Apply Outlier Reduction?", value=False)
                 with st.expander("A Note on Outlier Reduction"):
                     st.markdown("""
                                 This parameter controls whether the model assigns documents that were initially classified as outliers (i.e., assigned to the topic -1), to more suitable existing topics.
-                                
+
                                 Reducing outliers can help improve the overall quality of the topics generated. However, it may also lead to the merging of topics that are semantically distinct, thus creating noise.
-                                
+
                                 Experiment with and without this option to see what works best for your case.
                                 """)
                 if reduce_outliers_option:
                     c_tf_idf_threshold = st.slider("Set c-TF-IDF Threshold for Outlier Reduction", 0.0, 1.0, 0.3)
                     st.success("**TIP:** A lower threshold (closer to 0.0) will reassign more outliers to topics, while a higher threshold (closer to 1.0) will reassign fewer documents.")
-                
+
             with param2:
                 # Select topic generation mode
                 topic_option = st.selectbox("Select how you want the number of topics to be handled:", ("Auto", "Specific Number"))
@@ -346,15 +357,15 @@ if uploaded_file:
                     st.markdown("""
                                 This parameter controls how many topics you want after the model is trained.
 
-                                **Use `"auto"`**:  
-                                - Automatically reduces topics based on topic similarity. Internally, BERTopic uses clustering techniques like **HDBSCAN** to find a natural number of coherent topics.  
+                                **Use `"auto"`**:
+                                - Automatically reduces topics based on topic similarity. Internally, BERTopic uses clustering techniques like **HDBSCAN** to find a natural number of coherent topics.
                                 - Best for exploratory analysis when you're unsure how many topics to expect.
 
                                 **Set a number (e.g., `20`)**:
-                                - Reduces the number of discovered topics to that exact value. This is useful when you want a fixed number of topics for interpretability or downstream tasks.  
+                                - Reduces the number of discovered topics to that exact value. This is useful when you want a fixed number of topics for interpretability or downstream tasks.
                                 - Can be computationally expensive; each reduction step requires a new c-TF-IDF calculation.
                                 """)
-                    
+
                           # Option for LLM provider
                 llm_provider = st.selectbox(
                     "Use an LLM for Enhanced Topic Labels?",
@@ -402,18 +413,18 @@ if uploaded_file:
                     st.markdown("""
                                 This option passes each topic’s representative keywords and documents to a large language model,
                                 which generates a concise label and description for that topic.
-                                
+
                                 **OpenAI (GPT)** requires an API key from [platform.openai.com](https://platform.openai.com).
-                                
+
                                 **Claude (Anthropic)** requires an API key from [console.anthropic.com](https://console.anthropic.com).
                                 Claude is integrated via BERTopic’s built-in LiteLLM backend — no extra setup needed.
-                                
+
                                 Higher-tier models produce more interpretable labels but consume more API credits.
                                 Delays may occur due to rate limits or API latency.
                                 """)
-                    
+
             run_model_btn = st.button("Run Unsupervised Topic Model")
-            
+
             # Define function to display outputs (reused after both model fitting and topic merging)
             def display_unsupervised_outputs(BERTmodel, text_data, umap_random_state=None):
                 topic_info_df = BERTmodel.get_topic_info()
@@ -573,16 +584,16 @@ if uploaded_file:
 
             # Begin logic for running the model
             if run_model_btn:
-                from transformers import pipeline
+                gc.collect()  # reclaim memory from any previous run before allocating
                 progress = st.progress(0, text="Starting topic modeling...")
                 try:
                     # Initialize Sentence Transformer model
                     progress.progress(10, text="Initializing and Loading Sentence Transformer model...")
                     if language == "english":
-                        model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+                        model = load_sentence_transformer("BAAI/bge-small-en-v1.5")
                     else:
-                        model = SentenceTransformer("intfloat/multilingual-e5-small")
-                        
+                        model = load_sentence_transformer("intfloat/multilingual-e5-small")
+
                     # Initialize UMAP model
                     progress.progress(25, text="Setting up dimensionality reduction...")
                     if umap_random_state is None:
@@ -590,9 +601,9 @@ if uploaded_file:
                         st.write(f"No seed provided, using random seed: {umap_random_state}")
                     else:
                         st.write(f"Using user-provided seed: {umap_random_state}")
-                        
+
                     umap_model = UMAP(n_neighbors=10, n_components=5, min_dist=0.0, metric='cosine', random_state=umap_random_state)
-                            
+
                     # Initialize CountVectorizer
                     progress.progress(40, text="Vectorizing documents...")
                     if language == "multilingual":
@@ -626,12 +637,12 @@ if uploaded_file:
                             min_df=1,
                             max_df=0.9,
                             ngram_range=(1, 3)
-                            )   
-    
+                            )
+
                     # Initialize representation model
                     progress.progress(55, text="Preparing topic representations...")
                     representation_model = {"Unique Keywords": KeyBERTInspired()}
-                        
+
                     # LLM topic labeling: OpenAI or Claude
                     label_prompt = """
                         I have a topic that is described by the following keywords: [KEYWORDS]
@@ -669,7 +680,7 @@ if uploaded_file:
                         except Exception as e:
                             st.error(f"Failed to initialize Claude (Anthropic) API: {e}")
                             representation_model = {"Unique Keywords": KeyBERTInspired()}
-                        
+
                     # Initialize BERTopic model with the selected representation models
                     progress.progress(70, text="Building BERTopic model...")
                     BERTmodel = BERTopic(
@@ -719,11 +730,11 @@ if uploaded_file:
                         st.subheader("Output")
                         display_unsupervised_outputs(BERTmodel, text_data,
                             umap_random_state=st.session_state.get("umap_random_state"))
-                                
+
                 except Exception as e:
-                        st.error(f"Error: An error occurred: {e}")   
-                       
-            # Post hoc topic merging                            
+                        st.error(f"Error: An error occurred: {e}")
+
+            # Post hoc topic merging
             if ("BERTmodel" in st.session_state and
                 "topics" in st.session_state and
                 "text_data" in st.session_state):
@@ -742,12 +753,12 @@ if uploaded_file:
                         if isinstance(topics_to_merge, list) and all(isinstance(pair, list) for pair in topics_to_merge):
                             merged_topics = st.session_state.BERTmodel.merge_topics(st.session_state.text_data, topics_to_merge)
                             st.success("Topics successfully merged!")
-                        
+
                             st.session_state.BERTmodel.update_topics(st.session_state.text_data, topics=merged_topics)
                             st.session_state.topics = merged_topics
                             st.session_state.hierarchy_fig = None
                             st.session_state.intertopic_fig = None
-    
+
                             st.subheader("Output")
                             display_unsupervised_outputs(st.session_state.BERTmodel, st.session_state.text_data,
                                 umap_random_state=st.session_state.get("umap_random_state"))
@@ -767,15 +778,15 @@ if uploaded_file:
                     st.session_state.text_data,
                     umap_random_state=st.session_state.get("umap_random_state")
                 )
-                
-        # Begin logic for Zero-Shot topic modeling                    
+
+        # Begin logic for Zero-Shot topic modeling
         elif method == "Zero-Shot":
             st.subheader("Zero-Shot Topic Modeling")
-            
+
             # Input field for UMAP random_state (user seed)
             umap_random_state = st.number_input("Enter a seed number for pseudorandomization (optional)", min_value=0, value=None, step=1)
             st.success("**TIP:** Using a seed number ensures that the results can be reproduced. Not providing a seed number results in a random one being generated.")
-            
+
             # Language selection dropdown
             language_option = st.selectbox(
                 "Select the language model to use for topic modeling:",
@@ -785,32 +796,32 @@ if uploaded_file:
                 st.markdown("""
                                 Text2Topics supports two main language options, each powered by a specialized sentence transformer:
 
-                                [**English (`gte-small`)**](https://huggingface.co/thenlper/gte-small)  
-                                - **Best for**: High-performance zero-shot and unsupervised topic modeling on English datasets.  
+                                [**English (`gte-small`)**](https://huggingface.co/thenlper/gte-small)
+                                - **Best for**: High-performance zero-shot and unsupervised topic modeling on English datasets.
                                 - **Strengths**: Trained on 800M+ web-sourced text pairs and fine-tuned on multi-task annotated datasets using multi-stage contrastive learning. Despite being lightweight (30M parameters), it outperforms larger models like E5 and OpenAI embeddings on several benchmarks (e.g., BEIR, MTEB).
                                 - **Limitations**: Only supports English. Texts longer than 512 tokens are truncated due to its BERT-based architecture.
-                                        	
-                                [**Multilingual (`multilingual-e5-small`)**](https://huggingface.co/intfloat/multilingual-e5-small)  
-                                - **Best for**: High-quality semantic search, topic modeling, and clustering across diverse languages.  
+
+                                [**Multilingual (`multilingual-e5-small`)**](https://huggingface.co/intfloat/multilingual-e5-small)
+                                - **Best for**: High-quality semantic search, topic modeling, and clustering across diverse languages.
                                 - **Strengths**: Trained on ~1 billion multilingual text pairs with contrastive learning and fine-tuned on supervised multilingual tasks. Supports over 100 languages. Competitive performance on MTEB and MIRACL benchmarks.
                                 - **Limitations**: Slightly lower performance on English-only tasks compared to large English-specialized models, but provides robust multilingual generalization. Larger and slower than the English model.
                                 """)
-                                    
+
             predefined_topics_input = st.text_area("Enter predefined topics (comma-separated):", "")
             predefined_topics = [topic.strip() for topic in predefined_topics_input.split(',') if topic.strip()]
             zeroshot_topic_list = predefined_topics if predefined_topics else []
-            
+
             if not zeroshot_topic_list:
                 st.error("Error: No predefined topics entered. Please enter at least one topic.")
                 st.stop()
-            else:    
+            else:
                 # Parameters for Zero-Shot modeling
                 zeroshot_min_similarity = st.slider("Set Minimum Similarity for Zero-Shot Topic Matching", 0.0, 1.0, 0.85)
                 st.info("**NOTE:** This parameter controls how many documents are matched to zero-shot topics.")
                 min_topic_size = st.number_input("Set Minimum Number of Topics", min_value=1, max_value=100, value=5, step=1)
                 st.info("**NOTE:** This parameter sets the minimum number of documents required to form a topic Lower values create more (and smaller) topics, while higher values reduce topic count. If set too high, no topics may be formed at all.")
                 st.success("**TIP:** For larger datasets (e.g., hundreds of thousands to millions of documents), increase min_topic_size well beyond the default of 10 — try values like 100 or 500 to avoid excessive micro-clustering. Experimentation is key.")
-                
+
                 # Option for LLM provider
                 llm_provider = st.selectbox(
                     "Use an LLM for Enhanced Topic Labels?",
@@ -856,20 +867,20 @@ if uploaded_file:
                             "**claude-haiku-4** — Fastest and most economical. Good for straightforward topic labels."
                         )
                     )
-                    
+
                 run_zero_shot_btn = st.button("Run Zero-Shot Topic Model")
-                
+
                 # Begin logic for running the Zero-Shot model
                 if run_zero_shot_btn:
-                    from transformers import pipeline
+                    gc.collect()  # reclaim memory from any previous run before allocating
                     progress = st.progress(0, text="Starting topic modeling...")
                     try:
                         progress.progress(10, text="Initializing and Loading Sentence Transformer model...")
                         if language == "english":
-                            model = SentenceTransformer("thenlper/gte-small")
+                            model = load_sentence_transformer("thenlper/gte-small")
                         else:
-                            model = SentenceTransformer("intfloat/multilingual-e5-small")
-                            
+                            model = load_sentence_transformer("intfloat/multilingual-e5-small")
+
                         progress.progress(25, text="Setting up dimensionality reduction...")
                         if umap_random_state is None:
                             umap_random_state = random.randint(1, 10000)  # Random seed between 1 and 10000
@@ -944,7 +955,7 @@ if uploaded_file:
                             topic_info['LLM Label'] = topic_info['LLM Label'].str.replace(r"[\"'\[\]]", "", regex=True)
                             topic_info['LLM Description'] = topic_info['LLM Description'].str.replace(r"'\]$", "", regex=True)
                             topic_info = topic_info.drop(columns=['LLM Topic Label'])
-                            
+
                         # Check if topics exist before running transform()
                         unique_topics = set(topics) - {-1}
                         if len(unique_topics) > 0:
@@ -972,4 +983,4 @@ if uploaded_file:
                                 st.dataframe(topic_docs)
 
                     except Exception as e:
-                        st.error(f"**ERROR:** An error occurred: {e}")        
+                        st.error(f"**ERROR:** An error occurred: {e}")

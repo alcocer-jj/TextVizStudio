@@ -7,3 +7,6 @@ font = "serif"
 codeFont = "monospace"
 headingFont = "serif"
 showSidebarBorder = true
+
+[server]
+fileWatcherType = "none"
