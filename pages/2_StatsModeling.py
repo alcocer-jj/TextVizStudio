@@ -230,8 +230,17 @@ for i in range(num_models):
             opts=[f"{x}_x_{y}" for x,y in pairs]
             sel=st.multiselect("Interaction terms (optional)", opts, key=f"ints_{i}")
             for term in sel:
-                x,y=term.split("_x_"); data[term]=data[x]*data[y]
-                if term not in ivs: ivs.append(term)
+                x, y = term.split("_x_")
+                if not (pd.api.types.is_numeric_dtype(data[x]) and pd.api.types.is_numeric_dtype(data[y])):
+                    st.warning(
+                        f"Skipping interaction '{term}': interaction terms built this way "
+                        "require two numeric variables. For an interaction involving a "
+                        "categorical variable, add its categories as fixed effects/dummies instead."
+                    )
+                    continue
+                data[term] = data[x] * data[y]
+                if term not in ivs:
+                    ivs.append(term)
         # estimator selection
         ests = st.multiselect("Estimators", list(ESTIMATOR_MAP.keys()), default=["OLS"], key=f"ests_{i}")
         with st.expander("**𝐢** About the Available Estimators", expanded=False):
