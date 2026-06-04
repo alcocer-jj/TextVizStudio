@@ -218,6 +218,15 @@ def generate_wordcloud(df, colormap, term_column='N-gram', frequency_column='Fre
     if df.empty:
         return None
     freq_dict = dict(zip(df[term_column], df[frequency_column]))
+    # WordCloud normalizes by the maximum frequency, so a dict whose values are
+    # all zero (e.g. custom keywords that never appear in the text) triggers a
+    # ZeroDivisionError. Keep only finite, strictly-positive weights and bail
+    # out cleanly if nothing remains, letting the caller show a message.
+    freq_dict = {
+        term: float(freq)
+        for term, freq in freq_dict.items()
+        if pd.notna(freq) and float(freq) > 0
+    }
     if not freq_dict:
         return None
     kwargs = dict(width=3840, height=2160, background_color="white")
@@ -257,14 +266,25 @@ def display_custom_keyword_results(keyword_df, color_scheme, colormap_options):
     image_buffer = None
     with tab2:
         st.subheader("Custom Keyword Word Cloud")
+        # Sum each keyword's counts across every document column (all columns
+        # except "Features") so the cloud reflects the whole corpus rather than
+        # only the first uploaded file.
+        doc_cols = [c for c in keyword_df.columns if c != 'Features']
+        wc_df = keyword_df[['Features']].copy()
+        wc_df['Total'] = keyword_df[doc_cols].sum(axis=1)
         wordcloud_image = generate_wordcloud(
-            keyword_df,
+            wc_df,
             colormap_options[color_scheme],
             term_column='Features',
-            frequency_column=keyword_df.columns[1],
+            frequency_column='Total',
         )
         if wordcloud_image:
             image_buffer = _render_wordcloud_to_buffer(wordcloud_image)
+        else:
+            st.info(
+                "No word cloud to display: none of your custom keywords were "
+                "found in any of the documents, so every frequency is zero."
+            )
 
     # Bundle results into a ZIP
     zip_buffer = BytesIO()
@@ -314,6 +334,8 @@ def display_combined_ngram_results(combined_df, color_scheme, colormap_options):
             )
             if wordcloud:
                 wordcloud_images[ngram_type] = _render_wordcloud_to_buffer(wordcloud)
+            else:
+                st.info(f"No {ngram_type.lower()} word cloud to display for this selection.")
 
     if wordcloud_images:
         zip_buffer = BytesIO()
