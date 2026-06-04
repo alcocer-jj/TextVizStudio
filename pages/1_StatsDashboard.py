@@ -230,22 +230,22 @@ if uploaded_file:
             st.write("### Summary Statistics")
             #st.write(selected_data.describe().T)
             described_data = selected_data.describe().T
-            st.dataframe(described_data, height=200, use_container_width=True)
+            st.dataframe(described_data, height=200, width='stretch')
 
         with colType:
             # Display Data Type Information below Summary Statistics
             st.write("### Data Types")
             data_info = pd.DataFrame({
                 "Column Name": selected_data.columns,
-                "Data Type": selected_data.dtypes,
+                "Data Type": selected_data.dtypes.astype(str),
                 "NA Count": selected_data.isna().sum()
             }).reset_index(drop=True)
             #st.write(data_info)
-            st.dataframe(data_info, height=200, use_container_width=True)
+            st.dataframe(data_info, height=200, width='stretch')
 
         # Display the DataFrame (filtered if subset enabled, otherwise full data)
         st.write("### Data Preview")
-        st.dataframe(selected_data, use_container_width=True)
+        st.dataframe(selected_data, width='stretch')
 
  
         # Proportion Tables Section
@@ -254,8 +254,8 @@ if uploaded_file:
         colProp, colPropTable = st.columns(2)
         with colProp:
             # User selects categorical variables for the proportion table
-            cat_var1 = st.selectbox("Select first categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
-            cat_var2 = st.selectbox("Select second categorical variable", ["None"] + [col for col in selected_data.select_dtypes(include=['object', 'category']).columns if col != cat_var1])
+            cat_var1 = st.selectbox("Select first categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
+            cat_var2 = st.selectbox("Select second categorical variable", ["None"] + [col for col in selected_data.select_dtypes(include=['object', 'str', 'category']).columns if col != cat_var1])
 
             # Weight selection (only numeric columns are shown)
             weight_column = st.selectbox("Choose a weight column (optional)", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
@@ -382,7 +382,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
 
             # Option for one-tailed or two-tailed test
             tail_option = st.selectbox("Select test type", ["Two-Tailed", "One-Tailed"])
@@ -426,7 +426,7 @@ if uploaded_file:
             st.write("Select two or more categorical variables to perform pairwise Chi-Square Tests.")
 
             # Select multiple categorical variables from `selected_data`
-            cat_vars = selected_data.select_dtypes(include=['object', 'category']).columns
+            cat_vars = selected_data.select_dtypes(include=['object', 'str', 'category']).columns
             selected_vars = st.multiselect("Select categorical variables for Chi-Square Test", cat_vars)
 
             # Run Chi-Square Test for each pair of selected variables
@@ -467,7 +467,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable for ANOVA", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable for ANOVA", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable for ANOVA", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
 
             # Check if a valid numeric and categorical variable are selected
             if numeric_var != "None" and categorical_var != "None":
@@ -499,7 +499,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable for Mann-Whitney", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable for Mann-Whitney", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable for Mann-Whitney", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
 
             # Check if valid variables are selected
             if numeric_var != "None" and categorical_var != "None":
@@ -532,7 +532,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable for Kruskal-Wallis", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable for Kruskal-Wallis", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable for Kruskal-Wallis", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
 
             # Check if a valid numeric and categorical variable are selected
             if numeric_var != "None" and categorical_var != "None":
@@ -646,7 +646,7 @@ if uploaded_file:
                              template=theme, title=plot_title)
 
             # Display the plot only if it was successfully created
-            st.plotly_chart(fig, use_container_width=True, key=f"plot_{i}")
+            st.plotly_chart(fig, width='stretch', key=f"plot_{i}")
             
             
             # Download buttons for high-quality PNG and HTML
