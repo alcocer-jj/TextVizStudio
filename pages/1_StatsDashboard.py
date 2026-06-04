@@ -229,8 +229,11 @@ if uploaded_file:
             # Display Summary Statistics below Data Preview
             st.write("### Summary Statistics")
             #st.write(selected_data.describe().T)
-            described_data = selected_data.describe().T
-            st.dataframe(described_data, height=200, width='stretch')
+            if selected_data.shape[1] == 0:
+                st.info("No columns selected — choose at least one column to see summary statistics.")
+            else:
+                described_data = selected_data.describe().T
+                st.dataframe(described_data, height=200, width='stretch')
 
         with colType:
             # Display Data Type Information below Summary Statistics
