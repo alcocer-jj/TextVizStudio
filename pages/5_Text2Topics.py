@@ -113,6 +113,20 @@ def load_sentence_transformer(model_name: str):
     return SentenceTransformer(model_name)
 
 
+# Embed documents once and cache by (documents, model_name, prefix). Re-running
+# on the same data and model skips the expensive embedding pass entirely.
+# `prefix` implements the e5 instruction convention ("query: ") for the
+# intfloat/e5 family, which is trained to expect it. The prefix is applied only
+# to the text that gets embedded; the unprefixed documents are still what
+# BERTopic uses for the c-TF-IDF topic words. max_entries is bounded to keep
+# cached embedding arrays from accumulating in memory.
+@st.cache_data(show_spinner=False, max_entries=2)
+def compute_embeddings(documents, model_name, prefix=""):
+    embedder = load_sentence_transformer(model_name)
+    texts = [f"{prefix}{doc}" for doc in documents] if prefix else list(documents)
+    return embedder.encode(texts, show_progress_bar=True)
+
+
 # Configuration for Plotly chart download
 configuration = {
     'displaylogo': False,
@@ -590,9 +604,12 @@ if uploaded_file:
                     # Initialize Sentence Transformer model
                     progress.progress(10, text="Initializing and Loading Sentence Transformer model...")
                     if language == "english":
-                        model = load_sentence_transformer("BAAI/bge-small-en-v1.5")
+                        model_name = "BAAI/bge-small-en-v1.5"
+                        embed_prefix = ""
                     else:
-                        model = load_sentence_transformer("intfloat/multilingual-e5-small")
+                        model_name = "intfloat/multilingual-e5-small"
+                        embed_prefix = "query: "  # e5 models are trained to expect this
+                    model = load_sentence_transformer(model_name)
 
                     # Initialize UMAP model
                     progress.progress(25, text="Setting up dimensionality reduction...")
@@ -627,14 +644,14 @@ if uploaded_file:
 
                         vectorizer_model = CountVectorizer(
                             stop_words=stop_word_list,
-                            min_df=1,
+                            min_df=2,
                             max_df=0.9,
                             ngram_range=(1, 3)
                             )
                     else:
                         vectorizer_model = CountVectorizer(
                             stop_words="english",
-                            min_df=1,
+                            min_df=2,
                             max_df=0.9,
                             ngram_range=(1, 3)
                             )
@@ -660,6 +677,7 @@ if uploaded_file:
                             openai_llm = LiteLLM(
                                 model=f"openai/{openai_model_choice}",
                                 prompt=label_prompt,
+                                generator_kwargs={"temperature": 0},
                                 delay_in_seconds=3
                             )
                             representation_model["LLM Topic Label"] = openai_llm
@@ -674,6 +692,7 @@ if uploaded_file:
                             claude_model = LiteLLM(
                                 model=f"anthropic/{claude_model_choice}",
                                 prompt=label_prompt,
+                                generator_kwargs={"temperature": 0},
                                 delay_in_seconds=2
                             )
                             representation_model["LLM Topic Label"] = claude_model
@@ -691,13 +710,23 @@ if uploaded_file:
                             top_n_words=10,
                             nr_topics=nr_topics,
                             #language=language,
-                            calculate_probabilities=True,
+                            # The full document-by-topic probability matrix was computed
+                            # and never used; the displayed Probability column comes from
+                            # get_document_info (HDBSCAN's native assigned-topic membership),
+                            # which is still populated when this is False. Off = big memory
+                            # and time saving on large corpora.
+                            calculate_probabilities=False,
                             verbose=True
                         )
 
-                    # Fit and transform the topic model
-                    progress.progress(85, text="Fitting topic model...")
-                    topics, probs = BERTmodel.fit_transform(text_data)
+                    # Embed once (cached) and fit. For the multilingual e5 model
+                    # the documents are prefixed with "query: " per the e5
+                    # convention; the prefix is used only for embedding, not for
+                    # the c-TF-IDF topic words.
+                    progress.progress(85, text="Embedding documents...")
+                    embeddings = compute_embeddings(text_data, model_name, embed_prefix)
+                    progress.progress(90, text="Fitting topic model...")
+                    topics, _ = BERTmodel.fit_transform(text_data, embeddings=embeddings)
                     st.session_state.BERTmodel = BERTmodel
                     st.session_state.topics = topics
                     st.session_state.umap_random_state = umap_random_state
@@ -877,9 +906,16 @@ if uploaded_file:
                     try:
                         progress.progress(10, text="Initializing and Loading Sentence Transformer model...")
                         if language == "english":
-                            model = load_sentence_transformer("thenlper/gte-small")
+                            model_name = "thenlper/gte-small"
                         else:
-                            model = load_sentence_transformer("intfloat/multilingual-e5-small")
+                            model_name = "intfloat/multilingual-e5-small"
+                        # No e5 "query: " prefix in zero-shot mode: BERTopic embeds
+                        # the zero-shot topic labels itself (unprefixed), so prefixing
+                        # only the documents would put docs and labels in different
+                        # embedding modes and degrade the cosine matching. Keeping both
+                        # unprefixed keeps the label-vs-document comparison consistent.
+                        embed_prefix = ""
+                        model = load_sentence_transformer(model_name)
 
                         progress.progress(25, text="Setting up dimensionality reduction...")
                         if umap_random_state is None:
@@ -908,6 +944,7 @@ if uploaded_file:
                                 openai_llm = LiteLLM(
                                     model=f"openai/{openai_model_choice}",
                                     prompt=label_prompt,
+                                    generator_kwargs={"temperature": 0},
                                     delay_in_seconds=3
                                 )
                                 representation_model["LLM Topic Label"] = openai_llm
@@ -922,6 +959,7 @@ if uploaded_file:
                                 claude_model = LiteLLM(
                                     model=f"anthropic/{claude_model_choice}",
                                     prompt=label_prompt,
+                                    generator_kwargs={"temperature": 0},
                                     delay_in_seconds=2
                                 )
                                 representation_model["LLM Topic Label"] = claude_model
@@ -939,8 +977,9 @@ if uploaded_file:
                                 zeroshot_topic_list=zeroshot_topic_list,
                                 zeroshot_min_similarity=zeroshot_min_similarity)
 
-                        progress.progress(85, text="Fitting topic model...")
-                        topics, _ = BERTmodel.fit_transform(text_data)
+                        progress.progress(85, text="Embedding documents...")
+                        embeddings = compute_embeddings(text_data, model_name, embed_prefix)
+                        topics, _ = BERTmodel.fit_transform(text_data, embeddings=embeddings)
 
                         # Extract topic info
                         topic_info = BERTmodel.get_topic_info()
@@ -956,13 +995,15 @@ if uploaded_file:
                             topic_info['LLM Description'] = topic_info['LLM Description'].str.replace(r"'\]$", "", regex=True)
                             topic_info = topic_info.drop(columns=['LLM Topic Label'])
 
-                        # Check if topics exist before running transform()
+                        # Check if topics exist before building the table
                         unique_topics = set(topics) - {-1}
                         if len(unique_topics) > 0:
-                            topic_docs = BERTmodel.get_document_info(text_data)
-                            probabilities = BERTmodel.transform(text_data)
-                            probabilities = pd.DataFrame({'Topic': probabilities[0], 'Probability': probabilities[1]})
-                            topic_docs = pd.concat([topic_docs[['Document']], probabilities], axis=1)
+                            # Reuse the fitted assignments from get_document_info rather
+                            # than calling transform() again, which would re-embed the
+                            # whole corpus and can return slightly different assignments.
+                            doc_info = BERTmodel.get_document_info(text_data)
+                            cols = [c for c in ["Document", "Topic", "Probability"] if c in doc_info.columns]
+                            topic_docs = doc_info[cols].copy()
                         else:
                             st.warning("**Warning:** No valid topics were found. Skipping probability calculation.")
                             topic_docs = pd.DataFrame()
