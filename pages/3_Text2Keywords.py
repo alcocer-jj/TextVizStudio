@@ -201,7 +201,13 @@ def discover_ngrams(text_data, top_n, language="English"):
     for file_name, text in text_data:
         for ngram_range, label in zip(ngram_ranges, ngram_labels):
             vectorizer = CountVectorizer(ngram_range=ngram_range, stop_words=stopword_list)
-            ngram_counts = vectorizer.fit_transform([text])
+            try:
+                ngram_counts = vectorizer.fit_transform([text])
+            except ValueError:
+                # CountVectorizer raises "empty vocabulary" when this document
+                # has no terms for the n-gram range (blank text, or only
+                # stopwords/punctuation). Skip it rather than crashing the run.
+                continue
             ngram_sum = ngram_counts.sum(axis=0).A1
             ngram_names = vectorizer.get_feature_names_out()
             ngram_freq = pd.DataFrame({'N-gram': ngram_names, 'Frequency': ngram_sum})
@@ -209,6 +215,12 @@ def discover_ngrams(text_data, top_n, language="English"):
             ngram_freq['Document'] = file_name
             ngram_freq['Ngram_Type'] = label
             ngram_results.append(ngram_freq)
+
+    if not ngram_results:
+        # No usable n-grams in any document. Return an empty, correctly-typed
+        # frame so callers can show a message instead of pd.concat raising
+        # "No objects to concatenate".
+        return pd.DataFrame(columns=['N-gram', 'Frequency', 'Document', 'Ngram_Type'])
 
     combined_df = pd.concat(ngram_results, ignore_index=True)
     return combined_df
@@ -307,6 +319,14 @@ def display_custom_keyword_results(keyword_df, color_scheme, colormap_options):
 
 def display_combined_ngram_results(combined_df, color_scheme, colormap_options):
     wordcloud_images = {}
+
+    if combined_df.empty:
+        st.info(
+            "No n-grams could be extracted from the uploaded text. This usually "
+            "means the documents were empty or contained only stopwords. Try a "
+            "different file, a lower frequency threshold, or another language setting."
+        )
+        return
 
     tab_labels = ["DataFrame", "Unigram Word Cloud", "Bigram Word Cloud", "Trigram Word Cloud"]
     tabs = st.tabs(tab_labels)
