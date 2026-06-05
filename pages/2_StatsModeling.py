@@ -524,4 +524,10 @@ if st.button("Run Models"):
                 data=latex,
                 file_name="regression_table.tex")
             st.warning("**⚠︎** Downloading the LaTeX table will reset the whole interface. Make sure it is the last action you perform.")
-            st.components.v1.html(html, height=3000, scrolling=False)
+            # st.iframe replaces the deprecated st.components.v1.html; fall back
+            # on older Streamlit. The Stargazer output is a static styled HTML
+            # table, rendered in an iframe at a fixed height.
+            if hasattr(st, "iframe"):
+                st.iframe(html, height=3000)
+            else:
+                st.components.v1.html(html, height=3000, scrolling=False)
