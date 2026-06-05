@@ -257,8 +257,8 @@ if uploaded_file:
         colProp, colPropTable = st.columns(2)
         with colProp:
             # User selects categorical variables for the proportion table
-            cat_var1 = st.selectbox("Select first categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
-            cat_var2 = st.selectbox("Select second categorical variable", ["None"] + [col for col in selected_data.select_dtypes(include=['object', 'str', 'category']).columns if col != cat_var1])
+            cat_var1 = st.selectbox("Select first categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
+            cat_var2 = st.selectbox("Select second categorical variable", ["None"] + [col for col in selected_data.select_dtypes(include=['object', 'category']).columns if col != cat_var1])
 
             # Weight selection (only numeric columns are shown)
             weight_column = st.selectbox("Choose a weight column (optional)", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
@@ -385,7 +385,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
 
             # Option for one-tailed or two-tailed test
             tail_option = st.selectbox("Select test type", ["Two-Tailed", "One-Tailed"])
@@ -429,7 +429,7 @@ if uploaded_file:
             st.write("Select two or more categorical variables to perform pairwise Chi-Square Tests.")
 
             # Select multiple categorical variables from `selected_data`
-            cat_vars = selected_data.select_dtypes(include=['object', 'str', 'category']).columns
+            cat_vars = selected_data.select_dtypes(include=['object', 'category']).columns
             selected_vars = st.multiselect("Select categorical variables for Chi-Square Test", cat_vars)
 
             # Run Chi-Square Test for each pair of selected variables
@@ -470,7 +470,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable for ANOVA", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable for ANOVA", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable for ANOVA", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
 
             # Check if a valid numeric and categorical variable are selected
             if numeric_var != "None" and categorical_var != "None":
@@ -502,7 +502,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable for Mann-Whitney", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable for Mann-Whitney", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable for Mann-Whitney", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
 
             # Check if valid variables are selected
             if numeric_var != "None" and categorical_var != "None":
@@ -535,7 +535,7 @@ if uploaded_file:
 
             # Select numeric and categorical variables
             numeric_var = st.selectbox("Select numeric variable for Kruskal-Wallis", ["None"] + list(selected_data.select_dtypes(include=['int64', 'float64']).columns))
-            categorical_var = st.selectbox("Select categorical variable for Kruskal-Wallis", ["None"] + list(selected_data.select_dtypes(include=['object', 'str', 'category']).columns))
+            categorical_var = st.selectbox("Select categorical variable for Kruskal-Wallis", ["None"] + list(selected_data.select_dtypes(include=['object', 'category']).columns))
 
             # Check if a valid numeric and categorical variable are selected
             if numeric_var != "None" and categorical_var != "None":
