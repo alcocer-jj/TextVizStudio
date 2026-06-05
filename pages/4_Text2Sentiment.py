@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import torch
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from transformers import pipeline, AutoModelForSequenceClassification, XLMRobertaTokenizer, AutoConfig
+from transformers import AutoModelForSequenceClassification, XLMRobertaTokenizer, AutoConfig
 import hashlib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -12,9 +12,7 @@ from collections import defaultdict
 import re
 from datetime import datetime
 from pathlib import Path
-from io import BytesIO, StringIO
 from scipy.special import softmax
-import sentencepiece
 import stanza
 
 
