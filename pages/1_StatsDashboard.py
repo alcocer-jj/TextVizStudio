@@ -128,6 +128,7 @@ if uploaded_file:
 
     except Exception as e:
         st.error(f"Failed to read the CSV file: {e}")
+        st.stop()  # halt here so the rest of the page doesn't run with `data` undefined
 
     # Define a function to initialize session state
     def initialize_session_state():
